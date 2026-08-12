@@ -29,17 +29,17 @@
     </form>
 
     <div class="tabla-envoltorio" data-revelar>
-        <table class="tabla">
-            <thead><tr><th>Plan</th><th>Precio</th><th>Duración</th><th>Membresías vendidas</th><th>Estado</th><th></th></tr></thead>
+        <table class="tabla tabla--tarjetas">
+            <thead><tr><th>Plan</th><th>Precio</th><th class="tabla__oculta-movil">Duración</th><th class="tabla__oculta-movil">Membresías vendidas</th><th>Estado</th><th></th></tr></thead>
             <tbody>
                 @forelse ($planes as $plan)
                     <tr>
-                        <td class="es-fuerte">{{ $plan->name }} @if($plan->is_featured)<span class="etiqueta etiqueta--fuego">Destacado</span>@endif</td>
-                        <td>S/ {{ number_format($plan->price, 0) }}</td>
-                        <td>{{ $plan->duracion_legible }}</td>
-                        <td>{{ $plan->memberships_count }}</td>
-                        <td><span class="estado estado--{{ $plan->is_active ? 'activo' : 'inactivo' }}">{{ $plan->is_active ? 'Activo' : 'Inactivo' }}</span></td>
-                        <td style="display:flex;gap:var(--e-2)">
+                        <td class="es-fuerte" data-etiqueta="Plan">{{ $plan->name }} @if($plan->is_featured)<span class="etiqueta etiqueta--fuego">Destacado</span>@endif</td>
+                        <td data-etiqueta="Precio">S/ {{ number_format($plan->price, 0) }}</td>
+                        <td class="tabla__oculta-movil" data-etiqueta="Duración">{{ $plan->duracion_legible }}</td>
+                        <td class="tabla__oculta-movil" data-etiqueta="Vendidas">{{ $plan->memberships_count }}</td>
+                        <td data-etiqueta="Estado"><span class="estado estado--{{ $plan->is_active ? 'activo' : 'inactivo' }}">{{ $plan->is_active ? 'Activo' : 'Inactivo' }}</span></td>
+                        <td data-etiqueta="nada">
                             <button class="btn btn--desnudo" type="button" title="Editar"
                                     @click="window.dispatchEvent(new CustomEvent('abrir-plan', { detail: @js([
                                         'id' => $plan->id,

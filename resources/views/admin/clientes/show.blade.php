@@ -97,18 +97,18 @@
                 </form>
 
                 <div class="tabla-envoltorio">
-                    <table class="tabla">
+                    <table class="tabla tabla--tarjetas">
                         <thead><tr><th>Fecha</th><th>Peso</th><th>% Grasa</th><th>IMC</th></tr></thead>
                         <tbody>
                             @forelse ($cliente->measurements->sortByDesc('measured_at') as $m)
                                 <tr>
-                                    <td>{{ $m->measured_at->translatedFormat('d M Y') }}</td>
-                                    <td class="es-fuerte">{{ $m->weight_kg }} kg</td>
-                                    <td>{{ $m->body_fat_pct ? $m->body_fat_pct . '%' : '—' }}</td>
-                                    <td>{{ $m->bmi ?? '—' }} <span style="color:var(--humo)">{{ $m->bmi_category }}</span></td>
+                                    <td data-etiqueta="Fecha">{{ $m->measured_at->translatedFormat('d M Y') }}</td>
+                                    <td class="es-fuerte" data-etiqueta="Peso">{{ $m->weight_kg }} kg</td>
+                                    <td data-etiqueta="% Grasa">{{ $m->body_fat_pct ? $m->body_fat_pct . '%' : '—' }}</td>
+                                    <td data-etiqueta="IMC">{{ $m->bmi ?? '—' }} <span style="color:var(--humo)">{{ $m->bmi_category }}</span></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="tabla__vacio"><x-estado-vacio icono="grafico" texto="Sin medidas registradas." /></td></tr>
+                                <tr><td colspan="4" class="tabla__vacio" data-etiqueta=""><x-estado-vacio icono="grafico" texto="Sin medidas registradas." /></td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -142,18 +142,18 @@
                 </form>
 
                 <div class="tabla-envoltorio">
-                    <table class="tabla">
+                    <table class="tabla tabla--tarjetas">
                         <thead><tr><th>Plan</th><th>Periodo</th><th>Precio</th><th>Estado</th></tr></thead>
                         <tbody>
                             @forelse ($cliente->memberships as $mem)
                                 <tr>
-                                    <td class="es-fuerte">{{ $mem->plan_name }}</td>
-                                    <td>{{ $mem->starts_at->format('d/m/y') }} – {{ $mem->ends_at->format('d/m/y') }}</td>
-                                    <td>S/ {{ number_format($mem->total, 2) }}</td>
-                                    <td><span class="estado estado--{{ $mem->status }}">{{ ucfirst($mem->status) }}</span></td>
+                                    <td class="es-fuerte" data-etiqueta="Plan">{{ $mem->plan_name }}</td>
+                                    <td data-etiqueta="Periodo">{{ $mem->starts_at->format('d/m/y') }} – {{ $mem->ends_at->format('d/m/y') }}</td>
+                                    <td data-etiqueta="Precio">S/ {{ number_format($mem->total, 2) }}</td>
+                                    <td data-etiqueta="Estado"><span class="estado estado--{{ $mem->status }}">{{ ucfirst($mem->status) }}</span></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="tabla__vacio"><x-estado-vacio icono="tarjetas" texto="Sin membresías todavía." /></td></tr>
+                                <tr><td colspan="4" class="tabla__vacio" data-etiqueta=""><x-estado-vacio icono="tarjetas" texto="Sin membresías todavía." /></td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -161,36 +161,36 @@
             </div>
 
             <div x-show="tab==='pagos'" x-cloak class="tabla-envoltorio">
-                <table class="tabla">
+                <table class="tabla tabla--tarjetas">
                     <thead><tr><th>Fecha</th><th>Concepto</th><th>Monto</th><th>Método</th></tr></thead>
                     <tbody>
                         @forelse ($cliente->sales as $pago)
                             <tr>
-                                <td>{{ $pago->sold_at->format('d/m/y H:i') }}</td>
-                                <td class="es-fuerte">{{ $pago->concept ?? ($pago->sale_type === 'producto' ? 'Venta de producto' : ucfirst($pago->sale_type)) }}</td>
-                                <td>S/ {{ number_format($pago->total, 2) }}</td>
-                                <td>{{ $pago->metodo_legible }}</td>
+                                <td data-etiqueta="Fecha">{{ $pago->sold_at->format('d/m/y H:i') }}</td>
+                                <td class="es-fuerte" data-etiqueta="Concepto">{{ $pago->concept ?? ($pago->sale_type === 'producto' ? 'Venta de producto' : ucfirst($pago->sale_type)) }}</td>
+                                <td data-etiqueta="Monto">S/ {{ number_format($pago->total, 2) }}</td>
+                                <td data-etiqueta="Método">{{ $pago->metodo_legible }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="tabla__vacio"><x-estado-vacio icono="billetera" texto="Sin ventas todavía." /></td></tr>
+                            <tr><td colspan="4" class="tabla__vacio" data-etiqueta=""><x-estado-vacio icono="billetera" texto="Sin ventas todavía." /></td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
 
             <div x-show="tab==='asistencia'" x-cloak class="tabla-envoltorio">
-                <table class="tabla">
+                <table class="tabla tabla--tarjetas">
                     <thead><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Método</th></tr></thead>
                     <tbody>
                         @forelse ($cliente->attendances as $a)
                             <tr>
-                                <td>{{ $a->checked_in_at->translatedFormat('d M Y') }}</td>
-                                <td class="es-fuerte">{{ $a->checked_in_at->format('H:i') }}</td>
-                                <td>{{ $a->checked_out_at?->format('H:i') ?? '—' }}</td>
-                                <td>{{ ucfirst($a->method) }}</td>
+                                <td data-etiqueta="Fecha">{{ $a->checked_in_at->translatedFormat('d M Y') }}</td>
+                                <td class="es-fuerte" data-etiqueta="Entrada">{{ $a->checked_in_at->format('H:i') }}</td>
+                                <td data-etiqueta="Salida">{{ $a->checked_out_at?->format('H:i') ?? '—' }}</td>
+                                <td data-etiqueta="Método">{{ ucfirst($a->method) }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="tabla__vacio"><x-estado-vacio icono="entrada" texto="Sin asistencias todavía." /></td></tr>
+                            <tr><td colspan="4" class="tabla__vacio" data-etiqueta=""><x-estado-vacio icono="entrada" texto="Sin asistencias todavía." /></td></tr>
                         @endforelse
                     </tbody>
                 </table>

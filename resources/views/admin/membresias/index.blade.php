@@ -19,23 +19,23 @@
     </form>
 
     <div class="tabla-envoltorio" data-revelar>
-        <table class="tabla">
-            <thead><tr><th>Socio</th><th>Plan</th><th>Periodo</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+        <table class="tabla tabla--tarjetas">
+            <thead><tr><th>Socio</th><th>Plan</th><th class="tabla__oculta-movil">Periodo</th><th>Total</th><th>Estado</th><th></th></tr></thead>
             <tbody>
                 @forelse ($membresias as $mem)
                     <tr>
-                        <td class="es-fuerte">
+                        <td class="es-fuerte" data-etiqueta="Socio">
                             @if ($mem->member)
                                 <a href="{{ route('admin.clientes.show', $mem->member) }}">{{ $mem->member->full_name }}</a>
                             @else
                                 <span style="color:var(--humo)">Socio no activo</span>
                             @endif
                         </td>
-                        <td>{{ $mem->plan_name }}</td>
-                        <td>{{ $mem->starts_at->format('d/m/y') }} – {{ $mem->ends_at->format('d/m/y') }}</td>
-                        <td>S/ {{ number_format($mem->total, 2) }}</td>
-                        <td><span class="estado estado--{{ $mem->status }}">{{ ucfirst($mem->status) }}</span></td>
-                        <td>
+                        <td data-etiqueta="Plan">{{ $mem->plan_name }}</td>
+                        <td class="tabla__oculta-movil" data-etiqueta="Periodo">{{ $mem->starts_at->format('d/m/y') }} – {{ $mem->ends_at->format('d/m/y') }}</td>
+                        <td data-etiqueta="Total">S/ {{ number_format($mem->total, 2) }}</td>
+                        <td data-etiqueta="Estado"><span class="estado estado--{{ $mem->status }}">{{ ucfirst($mem->status) }}</span></td>
+                        <td data-etiqueta="nada">
                             @if ($mem->status === 'activa')
                                 <button class="btn btn--desnudo" type="button"
                                         @click="$store.confirmar.abrir({

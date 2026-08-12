@@ -33,17 +33,17 @@
     </form>
 
     <div class="tabla-envoltorio" data-revelar>
-        <table class="tabla">
-            <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th class="tabla__oculta-movil">Sede</th><th>Estado</th><th></th></tr></thead>
+        <table class="tabla tabla--tarjetas">
+            <thead><tr><th>Nombre</th><th>Correo</th><th class="tabla__oculta-movil">Rol</th><th class="tabla__oculta-movil">Sede</th><th>Estado</th><th></th></tr></thead>
             <tbody>
                 @forelse ($usuarios as $u)
                     <tr>
-                        <td class="es-fuerte">{{ $u->name }}</td>
-                        <td>{{ $u->email }}</td>
-                        <td><span class="estado">{{ $u->role?->name ?? '—' }}</span></td>
-                        <td class="tabla__oculta-movil"><span class="estado">{{ $u->gym?->name ?? '—' }}</span></td>
-                        <td><span class="estado estado--{{ $u->is_active ? 'activo' : 'inactivo' }}">{{ $u->is_active ? 'Activo' : 'Inactivo' }}</span></td>
-                        <td style="display:flex;gap:var(--e-2)">
+                        <td class="es-fuerte" data-etiqueta="Nombre">{{ $u->name }}</td>
+                        <td data-etiqueta="Correo">{{ $u->email }}</td>
+                        <td class="tabla__oculta-movil" data-etiqueta="Rol"><span class="estado">{{ $u->role?->name ?? '—' }}</span></td>
+                        <td class="tabla__oculta-movil" data-etiqueta="Sede"><span class="estado">{{ $u->gym?->name ?? '—' }}</span></td>
+                        <td data-etiqueta="Estado"><span class="estado estado--{{ $u->is_active ? 'activo' : 'inactivo' }}">{{ $u->is_active ? 'Activo' : 'Inactivo' }}</span></td>
+                        <td data-etiqueta="nada">
                             <button class="btn btn--desnudo" type="button" title="Editar"
                                     @click="window.dispatchEvent(new CustomEvent('abrir-usuario', { detail: @js([
                                         'id' => $u->id,

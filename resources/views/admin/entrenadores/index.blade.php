@@ -30,16 +30,16 @@
     </form>
 
     <div class="tabla-envoltorio" data-revelar>
-        <table class="tabla">
+        <table class="tabla tabla--tarjetas">
             <thead><tr><th>Nombre</th><th class="tabla__oculta-movil">Especialidad</th><th>Correo</th><th>Estado</th><th></th></tr></thead>
             <tbody>
                 @forelse ($entrenadores as $e)
                     <tr>
-                        <td class="es-fuerte">{{ $e->nombre }}</td>
-                        <td class="tabla__oculta-movil">{{ $e->specialty ?? '—' }}</td>
-                        <td>{{ $e->user?->email }}</td>
-                        <td><span class="estado estado--{{ $e->is_active ? 'activo' : 'inactivo' }}">{{ $e->is_active ? 'Activo' : 'Inactivo' }}</span></td>
-                        <td style="display:flex;gap:var(--e-2)">
+                        <td class="es-fuerte" data-etiqueta="Nombre">{{ $e->nombre }}</td>
+                        <td class="tabla__oculta-movil" data-etiqueta="Especialidad">{{ $e->specialty ?? '—' }}</td>
+                        <td data-etiqueta="Correo">{{ $e->user?->email }}</td>
+                        <td data-etiqueta="Estado"><span class="estado estado--{{ $e->is_active ? 'activo' : 'inactivo' }}">{{ $e->is_active ? 'Activo' : 'Inactivo' }}</span></td>
+                        <td data-etiqueta="nada">
                             <button class="btn btn--desnudo" type="button" title="Editar"
                                     @click="window.dispatchEvent(new CustomEvent('abrir-entrenador', { detail: @js([
                                         'id' => $e->id,

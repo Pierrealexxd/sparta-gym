@@ -32,16 +32,16 @@
     </form>
 
     <div class="tabla-envoltorio" data-revelar>
-        <table class="tabla">
-            <thead><tr><th>Nombre</th><th>Ciudad</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead>
+        <table class="tabla tabla--tarjetas">
+            <thead><tr><th>Nombre</th><th class="tabla__oculta-movil">Ciudad</th><th class="tabla__oculta-movil">Teléfono</th><th>Estado</th><th></th></tr></thead>
             <tbody>
                 @forelse ($sedes as $sede)
                     <tr>
-                        <td class="es-fuerte">{{ $sede->name }}</td>
-                        <td>{{ $sede->city ?? '—' }}</td>
-                        <td>{{ $sede->phone ?? '—' }}</td>
-                        <td><span class="estado estado--{{ $sede->is_active ? 'activo' : 'inactivo' }}">{{ $sede->is_active ? 'Activa' : 'Inactiva' }}</span></td>
-                        <td style="display:flex;gap:var(--e-2)">
+                        <td class="es-fuerte" data-etiqueta="Nombre">{{ $sede->name }}</td>
+                        <td class="tabla__oculta-movil" data-etiqueta="Ciudad">{{ $sede->city ?? '—' }}</td>
+                        <td class="tabla__oculta-movil" data-etiqueta="Teléfono">{{ $sede->phone ?? '—' }}</td>
+                        <td data-etiqueta="Estado"><span class="estado estado--{{ $sede->is_active ? 'activo' : 'inactivo' }}">{{ $sede->is_active ? 'Activa' : 'Inactiva' }}</span></td>
+                        <td data-etiqueta="nada">
                             <a class="btn btn--desnudo" href="{{ route('admin.sedes.qr', $sede) }}" title="QR de asistencia"><x-icono nombre="qr" /></a>
                             <button class="btn btn--desnudo" type="button" title="Editar"
                                     @click="window.dispatchEvent(new CustomEvent('abrir-sede', { detail: @js([
