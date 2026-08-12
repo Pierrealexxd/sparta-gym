@@ -1,0 +1,15 @@
+.git
+.env
+.env.backup
+.vscode
+.idea
+node_modules
+vendor
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/logs/*
+IMAGENES
+graphify-out
+ngrok.exe
