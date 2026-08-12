@@ -363,19 +363,19 @@
     </div>
 
     <div class="tabla-envoltorio">
-        <table class="tabla">
+        <table class="tabla tabla--tarjetas">
             <thead><tr><th>Fecha</th><th>Peso</th><th>% Grasa</th><th>IMC</th><th>Nota</th></tr></thead>
             <tbody>
                 @forelse ($socio->measurements->sortByDesc('measured_at') as $m)
                     <tr>
-                        <td>{{ $m->measured_at->translatedFormat('d M Y') }}</td>
-                        <td class="es-fuerte">{{ $m->weight_kg }} kg</td>
-                        <td>{{ $m->body_fat_pct ? $m->body_fat_pct . '%' : '—' }}</td>
-                        <td>{{ $m->bmi ?? '—' }}</td>
-                        <td class="tabla__nota">{{ $m->notes ?? '—' }}</td>
+                        <td data-etiqueta="Fecha">{{ $m->measured_at->translatedFormat('d M Y') }}</td>
+                        <td class="es-fuerte" data-etiqueta="Peso">{{ $m->weight_kg }} kg</td>
+                        <td data-etiqueta="% Grasa">{{ $m->body_fat_pct ? $m->body_fat_pct . '%' : '—' }}</td>
+                        <td data-etiqueta="IMC">{{ $m->bmi ?? '—' }}</td>
+                        <td class="tabla__nota" data-etiqueta="Nota">{{ $m->notes ?? '—' }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="tabla__vacio">Todavía no tienes medidas registradas.</td></tr>
+                    <tr><td colspan="5" class="tabla__vacio" data-etiqueta="">Todavía no tienes medidas registradas.</td></tr>
                 @endforelse
             </tbody>
         </table>

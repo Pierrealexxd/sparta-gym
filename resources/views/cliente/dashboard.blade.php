@@ -60,10 +60,10 @@
                         {{ $dia->name }} @if($dia->focus) · {{ $dia->focus }} @endif
                     </p>
                     <div class="tabla-envoltorio">
-                        <table class="tabla">
+                        <table class="tabla tabla--tarjetas">
                             <tbody>
                                 @foreach ($dia->exercises as $re)
-                                    <tr><td class="es-fuerte">{{ $re->exercise->name }}</td><td>{{ $re->prescripcion }}</td></tr>
+                                    <tr><td class="es-fuerte" data-etiqueta="Ejercicio">{{ $re->exercise->name }}</td><td data-etiqueta="Prescripción">{{ $re->prescripcion }}</td></tr>
                                 @endforeach
                             </tbody>
                         </table>
@@ -79,12 +79,12 @@
         <article class="tarjeta">
             <h3 style="font-size:var(--t-lg);margin-bottom:var(--e-4)">Últimas ventas</h3>
             <div class="tabla-envoltorio">
-                <table class="tabla">
+                <table class="tabla tabla--tarjetas">
                     <tbody>
                         @forelse ($socio->sales as $pago)
-                            <tr><td>{{ $pago->sold_at->format('d/m/y') }}</td><td class="es-fuerte">{{ $pago->concept ?? ucfirst($pago->sale_type) }}</td><td>S/ {{ number_format($pago->total, 2) }}</td></tr>
+                            <tr><td data-etiqueta="Fecha">{{ $pago->sold_at->format('d/m/y') }}</td><td class="es-fuerte" data-etiqueta="Concepto">{{ $pago->concept ?? ucfirst($pago->sale_type) }}</td><td data-etiqueta="Monto">S/ {{ number_format($pago->total, 2) }}</td></tr>
                         @empty
-                            <tr><td class="tabla__vacio">Sin ventas todavía.</td></tr>
+                            <tr><td class="tabla__vacio" data-etiqueta="">Sin ventas todavía.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -94,12 +94,12 @@
         <article class="tarjeta">
             <h3 style="font-size:var(--t-lg);margin-bottom:var(--e-4)">Mi asistencia reciente</h3>
             <div class="tabla-envoltorio">
-                <table class="tabla">
+                <table class="tabla tabla--tarjetas">
                     <tbody>
                         @forelse ($socio->attendances as $a)
-                            <tr><td>{{ $a->checked_in_at->translatedFormat('d M') }}</td><td class="es-fuerte">{{ $a->checked_in_at->format('H:i') }}</td><td>{{ $a->checked_out_at?->format('H:i') ?? 'En curso' }}</td></tr>
+                            <tr><td data-etiqueta="Fecha">{{ $a->checked_in_at->translatedFormat('d M') }}</td><td class="es-fuerte" data-etiqueta="Entrada">{{ $a->checked_in_at->format('H:i') }}</td><td data-etiqueta="Salida">{{ $a->checked_out_at?->format('H:i') ?? 'En curso' }}</td></tr>
                         @empty
-                            <tr><td class="tabla__vacio">Sin visitas registradas.</td></tr>
+                            <tr><td class="tabla__vacio" data-etiqueta="">Sin visitas registradas.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

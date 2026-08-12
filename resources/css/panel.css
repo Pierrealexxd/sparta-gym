@@ -193,6 +193,10 @@
         box-shadow: var(--s-xl);
     }
     .panel__lateral.is-abierta { transform: translateX(0); }
+
+    /* Un poco más discreto junto al resto de elementos apilados del cajón
+       móvil (nombre, correo y el botón de salir en la misma fila). */
+    .panel__avatar { width: 34px; height: 34px; }
 }
 
 /* ---------- Sidebar comprimido (sólo escritorio) ----------
@@ -411,7 +415,18 @@
 
 /* ---------- KPIs ---------- */
 
-.kpis { display: grid; gap: var(--e-4); grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.kpis { display: grid; gap: var(--e-4); grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+/* A partir de 2 KPIs quepan 180px reales (auto-fit ya los apila a 1
+   columna sola bastante antes), se fuerzan 2 columnas parejas en vez de
+   dejar que un tercero rompa a una columna descompensada: en el celular es
+   donde más se agradece ver los indicadores "de dos en dos" en vez de
+   apilados uno debajo del otro. */
+@media (max-width: 560px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .kpi { padding: var(--e-4); }
+    .kpi__valor { font-size: var(--t-xl); }
+}
 
 .kpi { display: grid; gap: var(--e-2); padding: var(--e-5); }
 .kpi__cabecera { display: flex; align-items: center; justify-content: space-between; }
@@ -663,7 +678,11 @@
    de 220px desbordaba (y ".tarjeta" con overflow:hidden lo recortaba, sin
    scroll) en contenedores más angostos de 220px, como el modal de venta o
    el wizard de inscripción en un iPhone SE de 320px. */
-.formulario-panel__fila { display: grid; gap: var(--e-4); grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); }
+/* clamp(180px, 5vw, 100%) en vez de min(220px, 100%): dentro de un
+   contenedor apenas menor a 220px (p. ej. el modal de venta con su propio
+   padding), min() todavía podía dejar la columna un pelo más ancha que el
+   espacio real antes de que auto-fit reaccionara; clamp() da más margen. */
+.formulario-panel__fila { display: grid; gap: var(--e-4); grid-template-columns: repeat(auto-fit, minmax(clamp(180px, 5vw, 100%), 1fr)); }
 .formulario-panel__acciones { display: flex; gap: var(--e-3); justify-content: flex-end; padding-top: var(--e-4); border-top: 1px solid var(--acero); }
 
 /* Fila de un formulario repetible (horario, ítems de venta) con un botón
@@ -832,6 +851,14 @@
    un formulario angosto — el ancho normal (34rem) cortaba las columnas de
    la guía de porciones a la mitad. */
 .modal__caja--ancho { width: min(48rem, 100%); }
+
+/* En móvil, 88dvh deja menos margen del que parece cuando además hay
+   contenido denso (tablas, formularios): más conservador aquí que en
+   escritorio, para que no dependa de que el usuario descubra el scroll
+   interno por su cuenta. */
+@media (max-width: 480px) {
+    .modal__caja { max-height: 82dvh; }
+}
 .modal__cabecera { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--e-5); }
 .modal__cerrar { width: 32px; height: 32px; display: grid; place-items: center; color: var(--humo); border-radius: var(--r-md); }
 .modal__cerrar:hover { color: var(--hueso); background: var(--relleno-hover); }
@@ -869,6 +896,10 @@
    grid-template-columns inline suelto en cada Blade. */
 .g-2-1 { display: grid; gap: var(--e-5); grid-template-columns: 2fr 1fr; }
 .g-1-1 { display: grid; gap: var(--e-5); grid-template-columns: 1fr 1fr; }
+/* min-width:0 en las celdas: sin esto, una tabla o texto largo dentro de
+   una columna puede negarse a encogerse por debajo de su contenido y
+   empujar el ancho de la columna vecina antes de llegar al breakpoint. */
+.g-2-1 > *, .g-1-1 > * { min-width: 0; }
 @media (max-width: 900px) { .g-2-1, .g-1-1 { grid-template-columns: 1fr; } }
 
 /* Paginación */
