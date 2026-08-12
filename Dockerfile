@@ -19,7 +19,7 @@ RUN apk add --no-cache icu-dev oniguruma-dev \
     && docker-php-ext-enable opcache
 COPY --from=deps /app /app
 COPY --from=assets /app/public/build /app/public/build
-ADD https://certs.aiven.io/ca.pem /app/certs/aiven-ca.pem
+COPY docker/certs/aiven-ca.pem /app/certs/aiven-ca.pem
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh \
     && mkdir -p storage/logs bootstrap/cache \
