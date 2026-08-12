@@ -72,7 +72,7 @@
              "Todas", un punto por tarjeta sería más ruido que ayuda. Se
              reconstruye solo con "filtro-cambiado" (arriba), no con cada
              cambio de x-show individual. --}}
-        <div class="carrusel__control" data-carrusel-control data-carrusel-objetivo=".biblioteca" data-carrusel-modo="flechas" aria-hidden="true">
+        <div class="carrusel__control" data-carrusel-control data-carrusel-objetivo=".biblioteca" data-carrusel-modo="flechas" data-carrusel-auto="6500" aria-hidden="true">
             <button type="button" class="carrusel__flecha" data-carrusel-prev aria-label="Ejercicio anterior">‹</button>
             <span class="carrusel__contador" data-carrusel-contador>1 / 1</span>
             <button type="button" class="carrusel__flecha" data-carrusel-next aria-label="Siguiente ejercicio">›</button>

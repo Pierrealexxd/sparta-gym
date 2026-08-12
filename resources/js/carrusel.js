@@ -20,9 +20,57 @@
  * la propia pista, detecta el cambio de filtro sin acoplarse a los botones
  * ni a los tiempos de Alpine ($nextTick no siempre llegaba a tiempo aquí),
  * y recalcula qué tarjetas son visibles.
+ *
+ * Auto-avance opcional (data-carrusel-auto="<ms>" en el control): en bucle,
+ * pero cuidando no gastar ciclos de más ni marear a quien lo está usando:
+ *  - un solo setInterval por carrusel (nada de requestAnimationFrame en
+ *    bucle) y solo mientras la pista está realmente en pantalla
+ *    (IntersectionObserver) y la pestaña está visible;
+ *  - se detiene apenas alguien toca o arrastra, y retoma tras un respiro;
+ *  - respeta prefers-reduced-motion: quien lo pidió, no ve nada moviéndose
+ *    solo.
  */
 function tarjetasVisibles(pista) {
     return [...pista.children].filter((el) => el.offsetParent !== null);
+}
+
+function activarAutoplay(control, pista, avanzar) {
+    const intervaloMs = Number(control.dataset.carruselAuto);
+    if (!intervaloMs || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let temporizador = null;
+    let enPantalla = false;
+    let reanudar;
+
+    function detener() {
+        clearInterval(temporizador);
+        temporizador = null;
+    }
+    function iniciar() {
+        detener();
+        if (!enPantalla || document.hidden) return;
+        temporizador = setInterval(avanzar, intervaloMs);
+    }
+    function pausarYReanudar() {
+        detener();
+        clearTimeout(reanudar);
+        reanudar = setTimeout(iniciar, intervaloMs);
+    }
+
+    new IntersectionObserver(([entrada]) => {
+        enPantalla = entrada.isIntersecting;
+        enPantalla ? iniciar() : detener();
+    }, { threshold: .4 }).observe(pista);
+
+    document.addEventListener('visibilitychange', () => (document.hidden ? detener() : iniciar()));
+
+    // Cualquier gesto del usuario sobre la pista, o un toque a los botones
+    // del control, pausa el auto-avance para no pelearse con quien lo está
+    // usando a mano.
+    ['pointerdown', 'touchstart'].forEach((evento) => {
+        pista.addEventListener(evento, pausarYReanudar, { passive: true });
+    });
+    control.addEventListener('click', pausarYReanudar);
 }
 
 function construirCarrusel(control) {
@@ -116,6 +164,9 @@ function construirCarrusel(control) {
     }).observe(pista, { attributes: true, attributeFilter: ['style'], subtree: true });
 
     reconstruir();
+
+    // Bucle: de la última tarjeta vuelve a la primera en vez de detenerse.
+    activarAutoplay(control, pista, () => irA((activo + 1) % Math.max(items.length, 1)));
 }
 
 export function iniciarCarruseles() {

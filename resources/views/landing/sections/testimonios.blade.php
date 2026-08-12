@@ -31,7 +31,7 @@
             @endforeach
         </div>
 
-        <div class="carrusel__control" data-carrusel-control data-carrusel-objetivo=".testimonios" data-carrusel-modo="puntos" aria-hidden="true">
+        <div class="carrusel__control" data-carrusel-control data-carrusel-objetivo=".testimonios" data-carrusel-modo="puntos" data-carrusel-auto="6000" aria-hidden="true">
             <div class="carrusel__puntos" data-carrusel-puntos></div>
         </div>
     </div>

@@ -42,7 +42,7 @@
 
         {{-- Paginación de puntos: solo visible en móvil, donde ".planes" es
              un carrusel de una tarjeta (ver landing.css y carrusel.js). --}}
-        <div class="carrusel__control" data-carrusel-control data-carrusel-objetivo=".planes" data-carrusel-modo="puntos" aria-hidden="true">
+        <div class="carrusel__control" data-carrusel-control data-carrusel-objetivo=".planes" data-carrusel-modo="puntos" data-carrusel-auto="5500" aria-hidden="true">
             <div class="carrusel__puntos" data-carrusel-puntos></div>
         </div>
     </div>

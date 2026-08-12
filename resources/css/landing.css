@@ -106,7 +106,7 @@
 .nav__acciones { display: flex; align-items: center; gap: var(--e-3); }
 
 /* Botón hamburguesa: tres barras que se convierten en aspa */
-.nav__menu { display: none; width: 44px; height: 44px; place-items: center; }
+.nav__menu { display: none; width: 44px; height: 44px; place-items: center; transition: opacity var(--v-rapido) var(--curva); }
 .nav__menu span {
     display: block;
     width: 22px; height: 2px;
@@ -144,9 +144,47 @@
     }
     .nav__enlaces.is-abierto { transform: translateX(0); }
 
+    /* Cabecera del cajón: marca + aspa de cerrar, sobre el fondo sólido
+       del propio panel (ver nav.blade.php). Antes no había cabecera y el
+       cierre dependía del mismo botón hamburguesa de la barra, que al
+       abrirse quedaba sobre el video atenuado por el velo, a medio ver. */
+    .nav__enlaces-cabecera {
+        flex: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--e-3) var(--e-3) var(--e-4);
+        border-bottom: 1px solid var(--acero);
+    }
+    .nav__enlaces-marca {
+        display: inline-flex;
+        align-items: center;
+        font-family: var(--f-display);
+        font-size: var(--t-base);
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+    .nav__enlaces-marca span { color: var(--hueso); }
+    .nav__enlaces-marca em { font-style: normal; color: var(--sangre); }
+    .nav__enlaces-cerrar {
+        width: 36px; height: 36px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--acero);
+        border-radius: var(--r-md);
+        background: transparent;
+        color: var(--ceniza);
+        cursor: pointer;
+        transition: color var(--v-rapido) var(--curva), border-color var(--v-rapido) var(--curva);
+    }
+    .nav__enlaces-cerrar:hover { color: var(--hueso); border-color: var(--acero-claro); }
+
     /* flex:1 + justify-content:center reparte la lista en el medio del
-       cajón en vez de dejarla pegada arriba con un vacío grande antes del
-       pie de cuenta — con solo 6 enlaces, pegada arriba se veía huérfana. */
+       espacio que queda entre la cabecera y el pie, en vez de dejarla
+       pegada arriba con un vacío grande — con solo 6 enlaces, pegada
+       arriba se veía huérfana. */
     .nav__enlaces-lista {
         flex: 1;
         display: flex;
@@ -156,15 +194,13 @@
         padding: var(--e-3);
     }
 
-    /* La hamburguesa (única acción visible en .nav__acciones a este ancho,
-       ver más abajo) se muda dentro del cajón cuando está abierto: sobre
-       fondo sólido del propio panel, no sobre el video atenuado por el
-       velo, que es donde quedaba a medio ver y descuadrada. */
-    .nav__enlaces.is-abierto ~ .nav__acciones {
-        position: fixed;
-        z-index: calc(var(--z-nav) + 1);
-        top: var(--e-4);
-        left: calc(min(80vw, 19rem) - 44px - var(--e-3));
+    /* La hamburguesa de la barra ya no hace falta mientras el cajón está
+       abierto: el aspa de la cabecera de arriba toma su lugar (sobre
+       fondo sólido, no sobre el video atenuado por el velo). Se oculta en
+       vez de quitarla del DOM para no perder el foco/tabulación de golpe. */
+    .nav__enlaces.is-abierto ~ .nav__acciones .nav__menu {
+        opacity: 0;
+        pointer-events: none;
     }
 
     /* Velo: cubre el resto de la pantalla, apaga el fondo y da dónde tocar

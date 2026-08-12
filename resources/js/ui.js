@@ -28,6 +28,9 @@ function menuMovil() {
     const boton = document.querySelector('[data-menu]');
     const panel = document.querySelector('[data-menu-panel]');
     const velo = document.querySelector('[data-menu-velo]');
+    // Aspa propia dentro del cajón (ver nav.blade.php): mismo cierre que el
+    // velo o Escape, distinto del botón que lo abre desde la barra.
+    const botonesCerrar = document.querySelectorAll('[data-menu-cerrar]');
     if (!boton || !panel) return;
 
     const alternar = (abrir) => {
@@ -41,6 +44,8 @@ function menuMovil() {
     boton.addEventListener('click', () => {
         alternar(boton.getAttribute('aria-expanded') !== 'true');
     });
+
+    botonesCerrar.forEach((b) => b.addEventListener('click', () => alternar(false)));
 
     // Tocar el velo (el resto de la pantalla) cierra el cajón.
     velo?.addEventListener('click', () => alternar(false));

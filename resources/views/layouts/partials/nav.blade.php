@@ -8,6 +8,20 @@
     <div class="nav__velo" data-menu-velo></div>
 
     <nav class="nav__enlaces" data-menu-panel aria-label="Secciones">
+        {{-- Cabecera propia del cajón: la marca lo identifica (antes,
+             abierto, no se veía ni el logo ni de qué sitio era el menú) y
+             el aspa de cerrar vive aquí, sobre el fondo sólido del propio
+             panel — antes era el mismo botón hamburguesa de la barra, que
+             al abrirse quedaba sobre el video atenuado por el velo, a
+             medio ver. Ese botón se oculta mientras el cajón está abierto
+             (ver landing.css) y este toma su lugar. --}}
+        <div class="nav__enlaces-cabecera">
+            <span class="nav__enlaces-marca"><span>Sparta</span><em>Gym</em></span>
+            <button type="button" class="nav__enlaces-cerrar" data-menu-cerrar aria-label="Cerrar menú">
+                <x-icono nombre="cerrar" />
+            </button>
+        </div>
+
         <div class="nav__enlaces-lista">
             <a class="nav__enlace" href="#historia">Historia</a>
             <a class="nav__enlace" href="#ejercicios">Biblioteca</a>
