@@ -6,7 +6,10 @@
             <p class="lead">Pagas y entrenas. Si un mes no puedes venir, no pagas ese mes.</p>
         </div>
 
-        <div class="planes" data-revelar data-revelar-grupo>
+        {{-- data-carrusel: en móvil esta rejilla se vuelve un carrusel que
+             avanza solo cada 3,2 s, en bucle y sin botones (ver
+             carrusel.js). En escritorio el atributo no hace nada. --}}
+        <div class="planes" data-carrusel="3200" data-revelar data-revelar-grupo>
             @foreach ($planes as $plan)
                 <article @class(['tarjeta', 'tarjeta--interactiva', 'plan', 'plan--destacado' => $plan->is_featured])>
                     <span class="tarjeta__filo"></span>
@@ -38,12 +41,6 @@
                     </a>
                 </article>
             @endforeach
-        </div>
-
-        {{-- Paginación de puntos: solo visible en móvil, donde ".planes" es
-             un carrusel de una tarjeta (ver landing.css y carrusel.js). --}}
-        <div class="carrusel__control" data-carrusel-control data-carrusel-objetivo=".planes" data-carrusel-modo="puntos" data-carrusel-auto="5500" aria-hidden="true">
-            <div class="carrusel__puntos" data-carrusel-puntos></div>
         </div>
     </div>
 </section>

@@ -22,7 +22,10 @@
             @endforeach
         </div>
 
-        <div class="biblioteca" data-revelar data-revelar-grupo>
+        {{-- Ver planes.blade.php. Aquí el bucle no clona tarjetas (Alpine
+             gobierna el filtro y el modal de video de cada una), así que al
+             final vuelve al principio de una sola vez — ver carrusel.js. --}}
+        <div class="biblioteca" data-carrusel="4000" data-revelar data-revelar-grupo>
             @foreach ($ejercicios as $ejercicio)
                 <article class="tarjeta ejercicio"
                          x-show="activa === 'todas' || activa === '{{ $ejercicio->category }}'">
@@ -66,16 +69,6 @@
                     @endif
                 </article>
             @endforeach
-        </div>
-
-        {{-- Flechas + contador (no puntos): con hasta 18 tarjetas en
-             "Todas", un punto por tarjeta sería más ruido que ayuda. Se
-             reconstruye solo con "filtro-cambiado" (arriba), no con cada
-             cambio de x-show individual. --}}
-        <div class="carrusel__control" data-carrusel-control data-carrusel-objetivo=".biblioteca" data-carrusel-modo="flechas" data-carrusel-auto="6500" aria-hidden="true">
-            <button type="button" class="carrusel__flecha" data-carrusel-prev aria-label="Ejercicio anterior">‹</button>
-            <span class="carrusel__contador" data-carrusel-contador>1 / 1</span>
-            <button type="button" class="carrusel__flecha" data-carrusel-next aria-label="Siguiente ejercicio">›</button>
         </div>
 
         <p class="biblioteca__nota" data-revelar>

@@ -133,10 +133,11 @@
         z-index: var(--z-nav);
         top: 0; bottom: 0;
         left: var(--riel);
-        /* Antes min(86vw, 21rem): cubría casi toda la pantalla. Recortado
-           a poco más de la mitad de un móvil típico (~68vw, tope 16rem)
-           para que quede claro que es un cajón, no una pantalla completa. */
-        width: min(68vw, 16rem);
+        /* Fue bajando de 86vw → 68vw → 60vw: el cajón debe leerse como una
+           tira lateral, no como media pantalla. 60vw (tope 14rem) deja ver
+           bien la página detrás y sigue dando sitio de sobra a "Contacto",
+           el enlace más largo, sin que se parta en dos líneas. */
+        width: min(60vw, 14rem);
         display: flex;
         flex-direction: column;
         background: rgba(10, 10, 11, .97);
@@ -161,8 +162,12 @@
     .nav__enlaces-cabecera {
         display: flex;
         align-items: center;
+        /* Centrado a propósito: es el membrete del cajón, no un elemento
+           más de la lista — que sea lo único centrado lo separa de los
+           enlaces, que van pegados al borde izquierdo. */
+        justify-content: center;
         flex: none;
-        padding: var(--e-4) var(--e-4);
+        padding: var(--e-4) var(--e-3);
         border-bottom: 1px solid var(--acero);
     }
     .nav__enlaces-marca {
@@ -180,14 +185,15 @@
     /* Pegada justo debajo de la cabecera (no centrada a la mitad del
        cajón): centrar dejaba un vacío grande arriba Y otro abajo antes del
        pie de cuenta. Así solo queda un espacio, entre el último enlace y
-       el pie — el patrón habitual de un sidebar. Padding horizontal más
-       chico (e-3 en vez de e-4) para que ícono y texto queden pegados al
-       borde izquierdo del cajón, no flotando con aire de más a los lados. */
+       el pie — el patrón habitual de un sidebar. Sin padding horizontal
+       propio: el poco margen que hay lo pone cada enlace (ver .nav__enlace),
+       de modo que íconos y texto arrancan pegados al borde izquierdo del
+       cajón en vez de flotando con aire de más a los lados. */
     .nav__enlaces-lista {
         display: flex;
         flex-direction: column;
         gap: 2px;
-        padding: var(--e-4) var(--e-2);
+        padding: var(--e-4) var(--e-1);
     }
 
     /* La hamburguesa de la barra ya no hace falta mientras el cajón está
@@ -224,9 +230,9 @@
         font-size: var(--t-lg);
         letter-spacing: .02em;
         color: var(--hueso);
-        /* Poco padding horizontal (e-2, no e-3): con el cajón más angosto
-           esto es lo que deja el ícono y el texto pegados al borde
-           izquierdo en vez de flotando con aire de más a los costados. */
+        /* Este es el único margen horizontal de la fila (la lista ya no
+           pone el suyo): deja el ícono a ~12px del borde del cajón, lo
+           justo para que el fondo del :active no quede cortado al ras. */
         padding: var(--e-3) var(--e-2);
         border-radius: var(--r-md);
         transition: background var(--v-rapido);
@@ -237,7 +243,10 @@
     .nav__enlaces-pie {
         flex: none;
         margin-top: auto;
-        padding: var(--e-4) var(--e-3) var(--e-6);
+        /* Mismo margen lateral corto que los enlaces (e-2): con el cajón
+           angosto, el botón "Inscribirme" necesita casi todo el ancho
+           disponible para no partir su texto en dos líneas. */
+        padding: var(--e-4) var(--e-2) var(--e-5);
         border-top: 1px solid var(--acero);
         display: flex;
         flex-direction: column;
@@ -246,11 +255,14 @@
     .nav__enlace--cuenta { color: var(--bronce); font-size: var(--t-sm); }
     /* El CTA principal se ve como botón también adentro del cajón — no
        como un enlace de texto más, para que siga siendo lo más fácil de
-       tocar de la lista. */
+       tocar de la lista. Padding lateral propio, más corto que el de .btn
+       por defecto (1.9rem), que en 14rem de cajón desbordaba. */
     .nav__enlace--inscribirme {
         text-align: center;
+        justify-content: center;
         font-family: var(--f-sans);
-        font-size: var(--t-base);
+        font-size: var(--t-sm);
+        padding-inline: var(--e-3);
     }
 
     /* Comprimido de verdad: en vez de dejar "Inscribirme" suelto junto al
@@ -695,53 +707,6 @@
     }
     .planes::-webkit-scrollbar { display: none; }
     .plan { flex: 0 0 84%; scroll-snap-align: center; }
-}
-
-/* ---------- Control de carrusel (puntos y flechas) ----------
-   Compartido por planes, testimonios y biblioteca; solo existe en móvil
-   (arriba de ese ancho las rejillas se ven completas y no hace falta). */
-.carrusel__control {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    gap: var(--e-4);
-    margin-top: var(--e-5);
-}
-@media (max-width: 740px) {
-    .carrusel__control { display: flex; }
-}
-.carrusel__puntos { display: flex; gap: var(--e-2); }
-.carrusel__punto {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    border: none;
-    background: var(--acero-claro);
-    cursor: pointer;
-    transition: background var(--v-rapido) var(--curva), transform var(--v-rapido) var(--curva);
-}
-.carrusel__punto.is-activo { background: var(--fuego); transform: scale(1.25); }
-.carrusel__flecha {
-    width: 36px; height: 36px;
-    display: grid;
-    place-items: center;
-    border: 1px solid var(--acero);
-    border-radius: 50%;
-    background: transparent;
-    color: var(--hueso);
-    font-size: 1.1rem;
-    line-height: 1;
-    cursor: pointer;
-    transition: border-color var(--v-rapido) var(--curva), color var(--v-rapido) var(--curva);
-}
-.carrusel__flecha:hover { border-color: var(--acero-claro); }
-.carrusel__flecha:disabled { opacity: .35; cursor: default; }
-.carrusel__contador {
-    font-family: var(--f-mono);
-    font-size: var(--t-xs);
-    letter-spacing: .1em;
-    color: var(--humo);
-    min-width: 4.5ch;
-    text-align: center;
 }
 
 /* ============================================================
