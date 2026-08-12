@@ -63,7 +63,7 @@
                                             'min_stock' => $producto->min_stock,
                                             'stock' => $producto->stock,
                                             'is_active' => (bool) $producto->is_active,
-                                        ]) })})">
+                                        ]) }))">
                                     <x-icono nombre="lapiz" />
                                 </button>
                                 <button class="btn btn--desnudo" type="button"
