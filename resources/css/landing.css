@@ -90,6 +90,13 @@
     border-radius: var(--r-full);
     transition: color var(--v-rapido) var(--curva);
 }
+/* Los íconos son solo del cajón móvil (ver el bloque @media más abajo,
+   donde se muestran y se les da flex). Sin esto, el reset global "svg {
+   display: block }" (base.css) tira cada ícono a su propia línea encima
+   del texto también en escritorio, agrandando cada enlace del nav y
+   empujando/tapando el hero de abajo — el nav de escritorio nunca tuvo
+   íconos por diseño. */
+.nav__enlace svg { display: none; }
 .nav__enlace::before {
     content: '';
     position: absolute;
@@ -237,7 +244,7 @@
         border-radius: var(--r-md);
         transition: background var(--v-rapido);
     }
-    .nav__enlace svg { flex: none; width: 1.1em; height: 1.1em; color: var(--brasa); }
+    .nav__enlace svg { display: block; flex: none; width: 1.1em; height: 1.1em; color: var(--brasa); }
     .nav__enlace:hover, .nav__enlace:active { background: rgba(255, 255, 255, .06); }
 
     .nav__enlaces-pie {
