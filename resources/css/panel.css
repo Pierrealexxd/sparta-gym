@@ -1038,6 +1038,11 @@
 }
 .filtro-sedes__toggler svg { width: 1.1em; height: 1.1em; color: var(--brasa); }
 .filtro-sedes__cuerpo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-4); }
+/* El <form> con los checkboxes es, de por sí, un solo hijo flex del cuerpo
+   — sin esto, en 320px podía negarse a encogerse por debajo de su
+   contenido (varias sedes en una sola línea) antes de que el wrap del
+   padre entrara a ayudar. */
+.filtro-sedes__cuerpo form { display: flex; flex-wrap: wrap; gap: var(--e-4); min-width: 0; }
 .filtro-sedes__opcion {
     display: inline-flex; align-items: center; gap: var(--e-2);
     font-size: var(--t-sm); color: var(--ceniza); cursor: pointer;

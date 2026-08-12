@@ -145,19 +145,19 @@
         <article class="tarjeta">
             <h3 style="font-size:var(--t-lg);margin-bottom:var(--e-4)">Vencen esta semana</h3>
             <div class="tabla-envoltorio">
-                <table class="tabla">
+                <table class="tabla tabla--tarjetas">
                     <thead><tr><th>Cliente</th><th>Código</th><th>Vence</th></tr></thead>
                     <tbody>
                         @forelse ($porVencer as $socio)
                             <tr>
-                                <td class="es-fuerte">
+                                <td class="es-fuerte" data-etiqueta="Cliente">
                                     <a href="{{ route('admin.clientes.show', $socio) }}">{{ $socio->full_name }}</a>
                                 </td>
-                                <td>{{ $socio->code }}</td>
-                                <td>{{ $socio->currentMembership?->ends_at->translatedFormat('d M') }}</td>
+                                <td data-etiqueta="Código">{{ $socio->code }}</td>
+                                <td data-etiqueta="Vence">{{ $socio->currentMembership?->ends_at->translatedFormat('d M') }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="3" class="tabla__vacio"><x-estado-vacio icono="reloj" texto="Nadie vence esta semana." /></td></tr>
+                            <tr><td colspan="3" class="tabla__vacio" data-etiqueta=""><x-estado-vacio icono="reloj" texto="Nadie vence esta semana." /></td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -167,17 +167,17 @@
         <article class="tarjeta">
             <h3 style="font-size:var(--t-lg);margin-bottom:var(--e-4)">Últimas ventas</h3>
             <div class="tabla-envoltorio">
-                <table class="tabla">
+                <table class="tabla tabla--tarjetas">
                     <thead><tr><th>Cliente</th><th>Monto</th><th>Método</th></tr></thead>
                     <tbody>
                         @forelse ($ultimasVentas as $venta)
                             <tr>
-                                <td class="es-fuerte">{{ $venta->member?->full_name ?? '—' }}</td>
-                                <td>S/ {{ number_format($venta->total, 2) }}</td>
-                                <td>{{ config("sparta.metodos_pago.$venta->method", $venta->method) }}</td>
+                                <td class="es-fuerte" data-etiqueta="Cliente">{{ $venta->member?->full_name ?? '—' }}</td>
+                                <td data-etiqueta="Monto">S/ {{ number_format($venta->total, 2) }}</td>
+                                <td data-etiqueta="Método">{{ config("sparta.metodos_pago.$venta->method", $venta->method) }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="3" class="tabla__vacio"><x-estado-vacio icono="billetera" texto="Sin ventas todavía." /></td></tr>
+                            <tr><td colspan="3" class="tabla__vacio" data-etiqueta=""><x-estado-vacio icono="billetera" texto="Sin ventas todavía." /></td></tr>
                         @endforelse
                     </tbody>
                 </table>
