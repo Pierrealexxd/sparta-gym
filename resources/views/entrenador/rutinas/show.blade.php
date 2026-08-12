@@ -28,14 +28,14 @@
                 </div>
 
                 <div class="tabla-envoltorio">
-                    <table class="tabla">
+                    <table class="tabla tabla--tarjetas">
                         <thead><tr><th>Ejercicio</th><th>Prescripción</th><th></th></tr></thead>
                         <tbody>
                             @forelse ($dia->exercises as $re)
                                 <tr>
-                                    <td class="es-fuerte">{{ $re->exercise->name }}</td>
-                                    <td>{{ $re->prescripcion }}</td>
-                                    <td>
+                                    <td class="es-fuerte" data-etiqueta="Ejercicio">{{ $re->exercise->name }}</td>
+                                    <td data-etiqueta="Prescripción">{{ $re->prescripcion }}</td>
+                                    <td data-etiqueta="nada">
                                         <form method="POST" action="{{ route('entrenador.ejercicios.destroy', $re) }}">
                                             @csrf @method('DELETE')
                                             <button class="btn btn--desnudo" type="submit"><x-icono nombre="cerrar" /></button>
@@ -43,7 +43,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="3" class="tabla__vacio">Sin ejercicios en este día.</td></tr>
+                                <tr><td colspan="3" class="tabla__vacio" data-etiqueta="">Sin ejercicios en este día.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

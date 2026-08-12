@@ -203,10 +203,16 @@
         background var(--v-medio) var(--curva);
 }
 
-.tarjeta:hover {
-    --elevar: -4px;
-    border-color: var(--acero-claro);
-    background: var(--grafito-alto);
+/* @media(hover:hover) evita el "sticky hover" táctil: sin esto, tocar una
+   tarjeta en el celular la dejaba elevada/teñida hasta el siguiente toque
+   en otro sitio (los KPI del dashboard del entrenador, por ejemplo), porque
+   el táctil no tiene un momento real de "salir" del elemento. */
+@media (hover: hover) {
+    .tarjeta:hover {
+        --elevar: -4px;
+        border-color: var(--acero-claro);
+        background: var(--grafito-alto);
+    }
 }
 
 /* ---------- Tarjeta interactiva ----------

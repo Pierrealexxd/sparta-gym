@@ -37,12 +37,16 @@
                         <p style="color:var(--ceniza);font-size:var(--t-sm);margin-bottom:var(--e-2)">
                             Escaneá para marcar tu <b style="color:var(--hueso)">entrada</b>. Elegí el turno:
                         </p>
-                        <div style="display:flex;gap:var(--e-2)">
-                            <button type="button" class="btn" :class="turno === 'manana' ? 'btn--fuego' : 'btn--vidrio'"
+                        {{-- flex-wrap + flex:1 en los botones (mismo patrón que
+                             mi-marcacion.blade.php): sin esto, los 3 botones
+                             (~360px) no caben en los ~208px de contenido que
+                             deja el modal en un viewport de 320px. --}}
+                        <div style="display:flex;flex-wrap:wrap;gap:var(--e-2)">
+                            <button type="button" class="btn" style="flex:1;min-width:5.5rem" :class="turno === 'manana' ? 'btn--fuego' : 'btn--vidrio'"
                                     @click="elegirTurno('manana')">Mañana</button>
-                            <button type="button" class="btn" :class="turno === 'tarde' ? 'btn--fuego' : 'btn--vidrio'"
+                            <button type="button" class="btn" style="flex:1;min-width:5.5rem" :class="turno === 'tarde' ? 'btn--fuego' : 'btn--vidrio'"
                                     @click="elegirTurno('tarde')">Tarde</button>
-                            <button type="button" class="btn" :class="turno === 'doble' ? 'btn--fuego' : 'btn--vidrio'"
+                            <button type="button" class="btn" style="flex:1;min-width:5.5rem" :class="turno === 'doble' ? 'btn--fuego' : 'btn--vidrio'"
                                     @click="elegirTurno('doble')">Doble</button>
                         </div>
                     </div>

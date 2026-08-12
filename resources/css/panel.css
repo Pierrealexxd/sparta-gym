@@ -310,7 +310,10 @@
 
 /* Migas de contexto: la cabecera queda para navegar —el título grande vive
    en el membrete de cada módulo—. */
-.panel__migas { display: flex; align-items: center; gap: var(--e-2); min-width: 0; }
+/* flex:1 1 auto (no solo min-width:0): sin un flex-basis explícito, un
+   título largo en 320px podía disputarle espacio a la campana y al botón
+   de tema en vez de ceder el suyo primero. */
+.panel__migas { display: flex; flex: 1 1 auto; align-items: center; gap: var(--e-2); min-width: 0; max-width: 100%; }
 .panel__migas-base {
     font-family: var(--f-display);
     font-size: var(--t-base);
@@ -328,6 +331,10 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    /* Es quien de verdad varía de largo (el título de cada módulo): que
+       sea el que se encoja con elipsis, no "Sparta /" ni los iconos. */
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 /* Interruptor claro/oscuro del panel. Sólo aquí; la landing nunca lo usa. */
@@ -652,7 +659,11 @@
 /* ---------- Formularios en dos columnas ---------- */
 
 .formulario-panel { display: grid; gap: var(--e-4); }
-.formulario-panel__fila { display: grid; gap: var(--e-4); grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+/* minmax(min(220px, 100%), 1fr) en vez de minmax(220px, 1fr): el mínimo fijo
+   de 220px desbordaba (y ".tarjeta" con overflow:hidden lo recortaba, sin
+   scroll) en contenedores más angostos de 220px, como el modal de venta o
+   el wizard de inscripción en un iPhone SE de 320px. */
+.formulario-panel__fila { display: grid; gap: var(--e-4); grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); }
 .formulario-panel__acciones { display: flex; gap: var(--e-3); justify-content: flex-end; padding-top: var(--e-4); border-top: 1px solid var(--acero); }
 
 /* Fila de un formulario repetible (horario, ítems de venta) con un botón
@@ -948,6 +959,18 @@
 .buscador__nombre { font-weight: 600; }
 .buscador__codigo { font-family: var(--f-mono); font-size: var(--t-xs); color: var(--humo); flex: none; }
 
+/* Dentro de un modal (".modal__caja" ya hace scroll con overflow-y:auto),
+   el desplegable abriendo hacia abajo puede aterrizar fuera de la zona
+   visible en móvil (modal alto + teclado virtual reduce el alto útil) y el
+   scroll del modal no llega hasta ahí, porque es un hijo position:absolute
+   fuera del flujo. Abrir hacia arriba evita el recorte. */
+@media (max-width: 640px) {
+    .modal__caja .buscador__lista {
+        top: auto;
+        bottom: calc(100% + var(--e-2));
+    }
+}
+
 /* ---------- Selector de sede activa (multi-sede) ---------- */
 .panel__sede { padding: 0 var(--e-4) var(--e-4); position: relative; }
 .panel__sede-boton {
@@ -1049,7 +1072,11 @@
 @media (max-width: 720px) {
     .calendario { gap: var(--e-1); padding: var(--e-2); }
     .calendario__celda { min-height: 70px; padding: var(--e-2); }
-    .calendario__contador { font-size: .58rem; overflow-wrap: anywhere; }
+    /* hyphens:auto + text-wrap:balance en vez de overflow-wrap:anywhere:
+       ese "anywhere" partía "12 asistencias" en cualquier punto ("12
+       asistenci" / "as") en celdas de ~36px; balance reparte las líneas
+       de forma más pareja y los guiones, si hacen falta, van en sílaba. */
+    .calendario__contador { font-size: .58rem; overflow-wrap: normal; hyphens: auto; text-wrap: balance; }
 }
 
 /* Listado de movimientos (pagos, matrículas, rutinas) dentro del modal del día */
