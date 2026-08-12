@@ -144,11 +144,27 @@
     }
     .nav__enlaces.is-abierto { transform: translateX(0); }
 
+    /* flex:1 + justify-content:center reparte la lista en el medio del
+       cajón en vez de dejarla pegada arriba con un vacío grande antes del
+       pie de cuenta — con solo 6 enlaces, pegada arriba se veía huérfana. */
     .nav__enlaces-lista {
+        flex: 1;
         display: flex;
         flex-direction: column;
+        justify-content: center;
         gap: 2px;
         padding: var(--e-3);
+    }
+
+    /* La hamburguesa (única acción visible en .nav__acciones a este ancho,
+       ver más abajo) se muda dentro del cajón cuando está abierto: sobre
+       fondo sólido del propio panel, no sobre el video atenuado por el
+       velo, que es donde quedaba a medio ver y descuadrada. */
+    .nav__enlaces.is-abierto ~ .nav__acciones {
+        position: fixed;
+        z-index: calc(var(--z-nav) + 1);
+        top: var(--e-4);
+        left: calc(min(80vw, 19rem) - 44px - var(--e-3));
     }
 
     /* Velo: cubre el resto de la pantalla, apaga el fondo y da dónde tocar
@@ -492,6 +508,89 @@
 .bento__pieza--grande .beneficio h3     { font-size: var(--t-2xl); }
 .bento__pieza--grande .beneficio p      { font-size: var(--t-base); max-width: 34ch; }
 
+/* En móvil las cuatro piezas del bento (antes 1 columna, texto completo,
+   scroll largo) se aplanan a una rejilla 2×2 de solo icono + título. El
+   texto completo se lee en el modal que abre el tap (ver
+   beneficios.blade.php). El selector ".bento.beneficios" (dos clases) pesa
+   más que ".bento" a secas, así que gana sin depender del orden en la hoja. */
+@media (max-width: 740px) {
+    .bento.beneficios {
+        grid-template-columns: repeat(2, 1fr);
+        grid-auto-rows: 1fr;
+    }
+    .bento.beneficios .bento__pieza,
+    .bento.beneficios .bento__pieza--ancha,
+    .bento.beneficios .bento__pieza--grande,
+    .bento.beneficios .bento__pieza--alta {
+        grid-column: span 1;
+        grid-row: span 1;
+    }
+    .beneficios .beneficio {
+        align-items: center;
+        text-align: center;
+        gap: var(--e-2);
+    }
+    .beneficios .beneficio p { display: none; }
+    .beneficios .tarjeta { cursor: pointer; padding: var(--e-4) var(--e-3); }
+    .beneficios .bento__pieza--grande .beneficio__icono { width: 46px; height: 46px; }
+    .beneficios .bento__pieza--grande .beneficio h3 { font-size: var(--t-sm); }
+    .beneficios .beneficio__icono { margin: 0; }
+    .beneficios .beneficio h3 { font-size: var(--t-sm); }
+}
+
+/* ---------- Modal informativo genérico ----------
+   Mismo lenguaje visual que el modal de video de la biblioteca, pero para
+   contenido de texto: beneficios y guías lo reutilizan en móvil (ver sus
+   blade y landing.css arriba/abajo). */
+.modal-info {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    display: grid;
+    place-items: center;
+    padding: var(--e-5);
+}
+.modal-info__fondo {
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 8, 9, .82);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+}
+.modal-info__caja {
+    position: relative;
+    width: min(420px, 100%);
+    max-height: 80vh;
+    overflow-y: auto;
+    display: grid;
+    gap: var(--e-4);
+    padding: var(--e-6) var(--e-5) var(--e-5);
+    background: var(--grafito);
+    border: 1px solid var(--acero-claro);
+    border-radius: var(--r-lg);
+    box-shadow: var(--s-xl);
+}
+.modal-info__entra { transition: opacity .32s var(--curva-seca), transform .32s var(--curva-seca); }
+.modal-info__entra-desde { opacity: 0; transform: translateY(14px) scale(.97); }
+.modal-info__entra-hasta { opacity: 1; transform: translateY(0) scale(1); }
+.modal-info__cerrar {
+    position: absolute;
+    top: var(--e-4); right: var(--e-4);
+    width: 40px; height: 40px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--acero);
+    border-radius: var(--r-md);
+    background: transparent;
+    color: var(--ceniza);
+    cursor: pointer;
+    transition: color var(--v-rapido) var(--curva), border-color var(--v-rapido) var(--curva);
+}
+.modal-info__cerrar:hover { color: var(--hueso); border-color: var(--acero-claro); }
+.modal-info__cuerpo h3 { font-family: var(--f-display); font-size: var(--t-xl); text-transform: uppercase; padding-right: 2rem; }
+.modal-info__cuerpo p { color: var(--ceniza); line-height: 1.55; }
+.modal-info__cuerpo .beneficio__icono { margin-bottom: var(--e-2); }
+
 /* ============================================================
    PLANES
    ============================================================ */
@@ -538,6 +637,72 @@
     color: var(--ceniza);
 }
 .plan__beneficios svg { width: 16px; height: 16px; margin-top: .3em; color: var(--brasa); }
+
+/* En móvil, un carrusel de una tarjeta a la vez con scroll-snap en vez del
+   scroll vertical largo de 4 tarjetas completas: ".planes" sigue siendo el
+   mismo contenedor, solo cambia a fila con snap (ver carrusel.js para la
+   paginación de puntos). */
+@media (max-width: 740px) {
+    .planes {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: var(--e-4);
+        margin: 0 calc(-1 * var(--e-4));
+        padding: 0 var(--e-4) var(--e-2);
+    }
+    .planes::-webkit-scrollbar { display: none; }
+    .plan { flex: 0 0 84%; scroll-snap-align: center; }
+}
+
+/* ---------- Control de carrusel (puntos y flechas) ----------
+   Compartido por planes, testimonios y biblioteca; solo existe en móvil
+   (arriba de ese ancho las rejillas se ven completas y no hace falta). */
+.carrusel__control {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: var(--e-4);
+    margin-top: var(--e-5);
+}
+@media (max-width: 740px) {
+    .carrusel__control { display: flex; }
+}
+.carrusel__puntos { display: flex; gap: var(--e-2); }
+.carrusel__punto {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    border: none;
+    background: var(--acero-claro);
+    cursor: pointer;
+    transition: background var(--v-rapido) var(--curva), transform var(--v-rapido) var(--curva);
+}
+.carrusel__punto.is-activo { background: var(--fuego); transform: scale(1.25); }
+.carrusel__flecha {
+    width: 36px; height: 36px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--acero);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--hueso);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color var(--v-rapido) var(--curva), color var(--v-rapido) var(--curva);
+}
+.carrusel__flecha:hover { border-color: var(--acero-claro); }
+.carrusel__flecha:disabled { opacity: .35; cursor: default; }
+.carrusel__contador {
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    letter-spacing: .1em;
+    color: var(--humo);
+    min-width: 4.5ch;
+    text-align: center;
+}
 
 /* ============================================================
    ENTRENADORES
@@ -644,6 +809,23 @@
 .testimonio__nombre small { color: var(--humo); font-size: var(--t-xs); }
 .testimonio__estrellas { display: flex; gap: 2px; color: var(--bronce); }
 .testimonio__estrellas svg { width: 14px; height: 14px; }
+
+/* Mismo tratamiento que planes: carrusel de una tarjeta con snap en móvil,
+   puntos de paginación en vez del scroll vertical largo. */
+@media (max-width: 740px) {
+    .testimonios {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: var(--e-4);
+        margin: 0 calc(-1 * var(--e-4));
+        padding: 0 var(--e-4) var(--e-2);
+    }
+    .testimonios::-webkit-scrollbar { display: none; }
+    .testimonio { flex: 0 0 88%; scroll-snap-align: center; }
+}
 
 /* ============================================================
    GALERÍA
@@ -831,6 +1013,16 @@
     color: var(--humo);
 }
 
+/* En una sola columna (rejilla colapsada), cada bloque queda a la
+   izquierda por defecto y se ve descuadrado contra el resto de la página,
+   que sí centra sus cabeceras de sección. Centrado + las dos líneas del
+   legal (arriba quedaban una a cada punta) también centradas y apiladas. */
+@media (max-width: 640px) {
+    .pie__rejilla { text-align: center; justify-items: center; }
+    .pie__redes { justify-content: center; }
+    .pie__legal { justify-content: center; text-align: center; }
+}
+
 /* ============================================================
    BIBLIOTECA DE EJERCICIOS
    ============================================================ */
@@ -877,6 +1069,27 @@
     display: grid;
     gap: var(--e-5);
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+/* Carrusel en móvil: puede haber hasta 18 ejercicios en "Todas", así que
+   aquí la paginación es de flechas + contador "X / N" (ver carrusel.js),
+   no un punto por tarjeta como en planes/testimonios. Los filtros de
+   Alpine (x-show) siguen ocultando tarjetas con display:none, así que
+   ".biblioteca" solo tiene como hijos en flujo a las visibles: el
+   carrusel las cuenta bien sin tocar el filtro. */
+@media (max-width: 740px) {
+    .biblioteca {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: var(--e-4);
+        margin: 0 calc(-1 * var(--e-4));
+        padding: 0 var(--e-4) var(--e-2);
+    }
+    .biblioteca::-webkit-scrollbar { display: none; }
+    .ejercicio { flex: 0 0 88%; scroll-snap-align: center; }
 }
 
 .ejercicio { display: grid; align-content: start; gap: var(--e-4); }
@@ -1043,8 +1256,11 @@
 }
 .guia__lista b { color: var(--hueso); font-weight: 500; }
 
-/* Los pasos se numeran como discos cargados; las ventajas llevan su bola de fuego */
-.guia ol.guia__lista li::before {
+/* Los pasos se numeran como discos cargados; las ventajas llevan su bola de
+   fuego. Sin ".guia" como ancestro obligatorio: la misma lista se reutiliza
+   dentro de ".modal-info__cuerpo" cuando se abre en móvil (ver
+   guias.blade.php), y ".guia__lista" ya es suficientemente específica. */
+ol.guia__lista li::before {
     counter-increment: paso;
     content: counter(paso, decimal-leading-zero);
     font-family: var(--f-mono);
@@ -1053,12 +1269,19 @@
     color: var(--bronce);
     margin-top: .2em;
 }
-.guia ul.guia__lista li::before {
+ul.guia__lista li::before {
     content: '';
     width: 6px; height: 6px;
     border-radius: 50%;
     background: var(--fuego);
     margin-top: .55em;
+}
+
+/* En móvil cada tarjeta se comprime a número + título; la lista completa
+   solo se ve en el modal que abre el tap (ver guias.blade.php). */
+@media (max-width: 740px) {
+    .guia { cursor: pointer; gap: var(--e-2); }
+    .guia__lista { display: none; }
 }
 
 /* ---------- Franja de rutina personalizada ---------- */
@@ -1089,6 +1312,14 @@
     letter-spacing: .16em;
     text-transform: uppercase;
     color: var(--humo);
+}
+
+/* Bajo los 900px la franja pasa a una columna (ver arriba): el texto y el
+   botón centrados leen mejor que pegados al borde izquierdo. */
+@media (max-width: 899px) {
+    .rutina { text-align: center; }
+    .rutina__cuerpo { justify-items: center; }
+    .rutina__accion { justify-items: center; }
 }
 
 /* ============================================================

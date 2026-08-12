@@ -8,6 +8,7 @@ import { iniciarGraficos, refrescarGraficos } from './graficos';
 import { iniciarInteracciones } from './interacciones';
 import { iniciarQr } from './qr';
 import { iniciarContadorMensajes } from './mensajes';
+import { iniciarCarruseles } from './carrusel';
 import './escaneo-qr';
 
 window.Alpine = Alpine;
@@ -94,6 +95,7 @@ iniciar('graficos', iniciarGraficos);
 iniciar('interacciones', iniciarInteracciones);
 iniciar('qr', iniciarQr);
 iniciar('mensajes-contador', iniciarContadorMensajes);
+iniciar('carruseles', iniciarCarruseles);
 
 // Al cambiar el tema del panel, los gráficos se reconstruyen con la paleta
 // nueva (los tokens se leen en cada construcción).
