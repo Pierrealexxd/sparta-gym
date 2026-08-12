@@ -33,3 +33,6 @@ Thumbs.db
 
 # Herramienta local de túnel; no es parte del proyecto.
 /ngrok.exe
+
+# Certificados de conexión a BD (Aiven); el Dockerfile descarga el suyo propio.
+/storage/certs
