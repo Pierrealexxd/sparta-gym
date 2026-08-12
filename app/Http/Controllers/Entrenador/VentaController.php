@@ -1,0 +1,149 @@
+<?php
+
+namespace App\Http\Controllers\Entrenador;
+
+use App\Http\Controllers\Controller;
+use App\Models\Membership;
+use App\Models\Product;
+use App\Models\Sale;
+use App\Models\StockMovement;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * Versión reducida de Admin\SaleController para el entrenador: la misma
+ * lógica de venta de mostrador (descuenta stock vía StockMovement, congela
+ * precio en sale_items — nunca escribe products.stock directo), sin la
+ * gestión de inventario (crear producto, ajustar stock a mano) que sigue
+ * siendo solo de admin. El entrenador vende lo que hay, no lo repone.
+ *
+ * Dos pestañas: Productos y Registros (matrículas/inscripciones), lo que
+ * el entrenador da de alta — comparten el mismo filtro de fecha, por
+ * defecto hoy, pero se puede mirar hacia atrás sin salir de la pantalla.
+ */
+class VentaController extends Controller
+{
+    public function index(Request $request): View
+    {
+        $tipo  = $request->get('tipo') === 'inscripcion' ? 'inscripcion' : 'producto';
+        $desde = $request->get('desde', now()->toDateString());
+        $hasta = $request->get('hasta', now()->toDateString());
+
+        $rango = [
+            \Illuminate\Support\Carbon::parse($desde)->startOfDay(),
+            \Illuminate\Support\Carbon::parse($hasta)->endOfDay(),
+        ];
+
+        $datos = [
+            'tipo'      => $tipo,
+            'desde'     => $desde,
+            'hasta'     => $hasta,
+            // Siempre disponible: el botón "Registrar venta" (pestaña
+            // Productos) vive en @section('acciones'), fuera del @if de
+            // cada pestaña, así que su modal necesita esto sin importar
+            // cuál esté activa.
+            'productos' => Product::activos()->orderBy('name')->get(),
+        ];
+
+        if ($tipo === 'inscripcion') {
+            $datos['inscripciones'] = Membership::with('member')
+                ->where('created_by', $request->user()->id)
+                ->whereBetween('created_at', $rango)
+                ->latest('created_at')
+                ->get();
+        } else {
+            $datos['ventas'] = Sale::with('items')
+                ->where('sold_by', $request->user()->id)
+                ->completadas()
+                ->whereBetween('sold_at', $rango)
+                ->latest('sold_at')
+                ->get();
+        }
+
+        return view('entrenador.ventas.index', $datos);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $datos = $request->validate([
+            'member_id'          => ['nullable', 'exists:members,id'],
+            'method'             => ['required', 'in:efectivo,transferencia,yape,plin,tarjeta,otro'],
+            'items'              => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required', 'exists:products,id'],
+            'items.*.quantity'   => ['required', 'integer', 'min:1'],
+        ]);
+
+        try {
+            $venta = DB::transaction(function () use ($datos, $request) {
+                $subtotal = 0;
+                $lineas = [];
+
+                foreach ($datos['items'] as $item) {
+                    $producto = Product::where('id', $item['product_id'])->lockForUpdate()->firstOrFail();
+
+                    if ($producto->stock < $item['quantity']) {
+                        throw ValidationException::withMessages([
+                            'items' => "Stock insuficiente de \"{$producto->name}\": quedan {$producto->stock}.",
+                        ]);
+                    }
+
+                    $total = round((float) $producto->sale_price * $item['quantity'], 2);
+                    $subtotal += $total;
+
+                    $lineas[] = [
+                        'producto' => $producto,
+                        'cantidad' => $item['quantity'],
+                        'total'    => $total,
+                    ];
+                }
+
+                $venta = Sale::create([
+                    'member_id' => $datos['member_id'] ?? null,
+                    'sale_type' => 'producto',
+                    'sold_by'   => $request->user()->id,
+                    'number'    => Sale::siguienteNumero(),
+                    'subtotal'  => $subtotal,
+                    'discount'  => 0,
+                    'total'     => $subtotal,
+                    'method'    => $datos['method'],
+                    'status'    => 'completada',
+                    'sold_at'   => now(),
+                ]);
+
+                foreach ($lineas as $linea) {
+                    $venta->items()->create([
+                        'product_id'   => $linea['producto']->id,
+                        'product_name' => $linea['producto']->name,
+                        'quantity'     => $linea['cantidad'],
+                        'unit_price'   => $linea['producto']->sale_price,
+                        'total'        => $linea['total'],
+                    ]);
+
+                    $nuevoStock = $linea['producto']->stock - $linea['cantidad'];
+
+                    StockMovement::create([
+                        'product_id'     => $linea['producto']->id,
+                        'user_id'        => $request->user()->id,
+                        'type'           => 'salida',
+                        'quantity'       => $linea['cantidad'],
+                        'stock_after'    => $nuevoStock,
+                        'reason'         => 'Venta ' . $venta->number,
+                        'reference_type' => Sale::class,
+                        'reference_id'   => $venta->id,
+                    ]);
+
+                    $linea['producto']->update(['stock' => $nuevoStock]);
+                }
+
+                return $venta;
+            });
+        } catch (ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
+        }
+
+        return redirect()->route('entrenador.ventas.index')->with('exito', "Venta {$venta->number} registrada.");
+    }
+}

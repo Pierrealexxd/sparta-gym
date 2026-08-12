@@ -1,0 +1,1104 @@
+/* ============================================================
+   LANDING · secciones de la web pública
+   ============================================================ */
+
+.pagina { padding-left: var(--riel); }
+
+/* ============================================================
+   NAVEGACIÓN
+   ============================================================ */
+
+.nav {
+    position: fixed;
+    top: 0; left: var(--riel); right: 0;
+    z-index: var(--z-nav);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--e-5);
+    padding: var(--e-4) clamp(1rem, 4vw, 3rem);
+    transition: background var(--v-medio) var(--curva),
+                border-color var(--v-medio) var(--curva),
+                padding var(--v-medio) var(--curva);
+    border-bottom: 1px solid transparent;
+}
+
+/* La capa de cristal vive en un pseudo-elemento y NO en .nav: un
+   backdrop-filter sobre .nav lo convierte en el contenedor de referencia
+   (containing block) del menú móvil, que es un hijo position: fixed. Al
+   abrir el menú tras bajar el scroll, el overlay de "inset: 0" pasaría a
+   medir contra la cabecera en vez de contra la pantalla y colapsaría a
+   una tira de 79px. Con la capa en ::before, .nav nunca tiene filtro y
+   el overlay vuelve a anclarse al viewport. */
+.nav::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: transparent;
+    transition: background var(--v-medio) var(--curva);
+}
+
+/* Al bajar, la barra se condensa y se vuelve cristal. */
+.nav.is-pegada {
+    padding-block: var(--e-3);
+    border-bottom-color: var(--acero);
+}
+.nav.is-pegada::before {
+    background: rgba(10, 10, 11, .72);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+}
+
+.nav__marca {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--e-3);
+    font-family: var(--f-display);
+    font-size: var(--t-lg);
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+.nav__marca img { width: 38px; height: 38px; border-radius: var(--r-sm); }
+.nav__marca span { color: var(--hueso); }
+.nav__marca em { font-style: normal; color: var(--sangre); }
+
+/* Gap reducido respecto a antes: el padding nuevo de .nav__enlace (para
+   darle aire a la brasa del hover) ya aporta parte de esa separación. */
+.nav__enlaces { display: flex; align-items: center; gap: var(--e-3); }
+
+/* El pie del cajón es solo del menú móvil: en escritorio la fila de
+   enlaces no debe arrastrarlo, porque las acciones de cuenta ya viven en
+   .nav__acciones y la marca repetida con su aspa ya no existe. */
+.nav__enlaces-pie { display: none; }
+
+/* Al pasar el cursor, una brasa sube detrás de la palabra y el texto se
+   invierte a oscuro al cruzarla — la misma idea de "forma que asciende y
+   voltea el color" de un pill-nav, pero como una ascua (par con
+   .atmosfera-embers) en vez de una píldora blanca, para no romper el
+   lenguaje de riel/metal del resto del sitio. */
+.nav__enlace {
+    position: relative;
+    z-index: 1;
+    padding: .5em .85em;
+    font-size: var(--t-sm);
+    color: var(--ceniza);
+    border-radius: var(--r-full);
+    transition: color var(--v-rapido) var(--curva);
+}
+.nav__enlace::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--fuego);
+    transform: scale(.72, .18);
+    transform-origin: bottom center;
+    opacity: 0;
+    transition: transform var(--v-medio) var(--curva-seca), opacity var(--v-medio) var(--curva-seca);
+}
+.nav__enlace:hover { color: var(--obsidiana); }
+.nav__enlace:hover::before { transform: scale(1); opacity: 1; }
+
+.nav__acciones { display: flex; align-items: center; gap: var(--e-3); }
+
+/* Botón hamburguesa: tres barras que se convierten en aspa */
+.nav__menu { display: none; width: 44px; height: 44px; place-items: center; }
+.nav__menu span {
+    display: block;
+    width: 22px; height: 2px;
+    background: var(--hueso);
+    transition: transform var(--v-medio) var(--curva), opacity var(--v-rapido);
+}
+.nav__menu span + span { margin-top: 5px; }
+.nav__menu[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav__menu[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.nav__menu[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+@media (max-width: 940px) {
+    .nav__menu { display: grid; }
+
+    /* Cajón lateral tipo sidebar: la lista de enlaces compacta abajo (no
+       centrada ni con letras gigantes — eso se veía enorme y desordenado),
+       acciones de cuenta abajo del todo. Cerrar se hace desde la propia
+       hamburguesa (que se vuelve aspa), el velo o Escape: no hay cabecera
+       propia con marca repetida. */
+    .nav__enlaces {
+        position: fixed;
+        z-index: var(--z-nav);
+        top: 0; bottom: 0;
+        left: var(--riel);
+        width: min(80vw, 19rem);
+        display: flex;
+        flex-direction: column;
+        background: rgba(10, 10, 11, .97);
+        -webkit-backdrop-filter: blur(30px);
+        backdrop-filter: blur(30px);
+        border-right: 1px solid var(--acero);
+        transform: translateX(-100%);
+        transition: transform var(--v-medio) var(--curva);
+        overflow-y: auto;
+    }
+    .nav__enlaces.is-abierto { transform: translateX(0); }
+
+    .nav__enlaces-lista {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: var(--e-3);
+    }
+
+    /* Velo: cubre el resto de la pantalla, apaga el fondo y da dónde tocar
+       para cerrar sin tener que encontrar el aspa. */
+    .nav__velo {
+        position: fixed;
+        inset: 0;
+        z-index: calc(var(--z-nav) - 1);
+        background: rgba(0, 0, 0, .55);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity var(--v-medio) var(--curva), visibility var(--v-medio);
+    }
+    .nav__velo.is-abierto { opacity: 1; visibility: visible; }
+
+    /* Tamaño de lista de menú, no de titular de hero: antes usaba
+       --t-2xl (~2rem+) y hacía que seis palabras llenaran toda la
+       pantalla. Con --t-base + padding propio se lee como un sidebar. */
+    .nav__enlace {
+        font-family: var(--f-display);
+        font-size: var(--t-base);
+        letter-spacing: .02em;
+        color: var(--hueso);
+        padding: var(--e-3);
+        border-radius: var(--r-md);
+        transition: background var(--v-rapido);
+    }
+    .nav__enlace:hover, .nav__enlace:active { background: rgba(255, 255, 255, .06); }
+
+    .nav__enlaces-pie {
+        flex: none;
+        margin-top: auto;
+        padding: var(--e-4) var(--e-3) var(--e-6);
+        border-top: 1px solid var(--acero);
+        display: flex;
+        flex-direction: column;
+        gap: var(--e-3);
+    }
+    .nav__enlace--cuenta { color: var(--bronce); font-size: var(--t-sm); }
+    /* El CTA principal se ve como botón también adentro del cajón — no
+       como un enlace de texto más, para que siga siendo lo más fácil de
+       tocar de la lista. */
+    .nav__enlace--inscribirme {
+        text-align: center;
+        font-family: var(--f-sans);
+        font-size: var(--t-base);
+    }
+
+    /* Comprimido de verdad: en vez de dejar "Inscribirme" suelto junto al
+       aspa (y desbordando a 320px), todas las acciones viven dentro del
+       cajón — arriba solo queda el hamburguesa. */
+    .nav__acciones .btn--vidrio,
+    .nav__acciones .btn--fuego { display: none; }
+}
+
+/* ============================================================
+   HERO · el video de fondo
+   Una sola pantalla, sin scroll-jacking: el video arranca solo y se
+   reproduce en bucle detrás del contenido; bajar por la página se
+   comporta como en cualquier otra sección.
+   ============================================================ */
+
+.hero {
+    position: relative;
+    /* Por encima de la marca de agua fija (ver .marca-agua): el video cubre
+       toda la pantalla y no puede dejarla asomar durante el hero. */
+    z-index: 5;
+    height: 100vh;
+    min-height: 560px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--e-4);
+    padding: var(--e-6) var(--e-5) var(--e-9);
+    background: var(--obsidiana);
+}
+
+/* ---------- El video ---------- */
+.hero__video-capa {
+    position: absolute;
+    inset: 0;
+    z-index: var(--z-fondo);
+}
+.hero__video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    /* Etalonaje de película: frío, contrastado, un punto por debajo del
+       blanco — se funde con la obsidiana en vez de brillar como un vídeo. */
+    filter: saturate(.88) contrast(1.06) brightness(.95);
+}
+.hero__vigneta {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 50% 42%, transparent 38%, rgba(6, 6, 7, .62) 100%),
+        linear-gradient(180deg, rgba(8, 8, 9, .38), transparent 26%, transparent 68%, rgba(8, 8, 9, .5));
+    pointer-events: none;
+}
+/* ---------- Ascuas de fondo, en toda la página ----------
+   Antes vivían dentro de .hero__video-capa (sólo el hero); ahora es una
+   capa fija a nivel de <body> (ver layouts/public.blade.php) para que el
+   rastro de fuego siga presente al bajar por Historia, Planes, etc.
+   position:fixed hace que su propio bounding rect sea siempre el viewport,
+   sin importar cuánto mida la página entera —por eso particulas.js no
+   necesitó ningún cambio, sólo se movió el <canvas> de sitio. */
+.atmosfera-embers {
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    mix-blend-mode: screen;
+}
+.atmosfera-embers canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* ---------- La propuesta ---------- */
+.hero__contenido {
+    position: relative;
+    z-index: 3;
+    display: grid;
+    justify-items: center;
+    gap: var(--e-3);
+    text-align: center;
+}
+.hero__moto {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0 var(--e-3);
+    font-size: var(--t-3xl);
+    line-height: 1;
+    letter-spacing: .02em;
+}
+.hero__moto span:nth-child(1) { color: var(--hueso); }
+.hero__moto span:nth-child(2) { color: var(--ceniza); }
+
+.hero__entradilla {
+    max-width: 46ch;
+    font-size: var(--t-sm);
+    color: var(--ceniza);
+}
+.hero__acciones {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--e-4);
+    margin-top: var(--e-2);
+}
+
+/* ---------- Las cifras, en la base ---------- */
+.hero__pie {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    padding: var(--e-4) var(--e-5);
+    border-top: 1px solid var(--acero);
+    background: linear-gradient(180deg, transparent, rgba(8, 8, 9, .65));
+}
+.hero__cifras {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: clamp(1.2rem, 4vw, 3rem);
+    max-width: var(--ancho-max);
+    margin: 0 auto;
+}
+.hero__cifra {
+    display: grid;
+    gap: 2px;
+    text-align: center;
+}
+.hero__cifra b {
+    font-family: var(--f-mono);
+    font-size: var(--t-lg);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--hueso);
+}
+.hero__cifra small {
+    font-family: var(--f-mono);
+    font-size: .6rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--humo);
+}
+
+/* Pantallas bajas: el escenario se compacta en vez de desbordar */
+@media (max-width: 720px) {
+    .hero__moto { font-size: var(--t-2xl); gap: 0 var(--e-2); }
+    .hero__entradilla { font-size: var(--t-xs); max-width: 36ch; }
+    .hero__pie { padding: var(--e-3) var(--e-4); }
+}
+@media (max-width: 480px) {
+    /* --t-xl (21px) quedaba por debajo de los H2 de sección (--t-3xl,
+       40.7px) — el lema de marca no puede ser el texto más chico de la
+       página. --t-2xl lo sube sin perder las tres palabras apiladas. */
+    .hero__moto { font-size: var(--t-2xl); }
+    .hero { padding: var(--e-4) var(--e-3) var(--e-8); gap: var(--e-3); }
+    .hero__cifras { flex-direction: column; gap: var(--e-3); align-items: center; }
+    .hero__cifra { grid-template-columns: 1fr; }
+    .hero__cifra b { font-size: var(--t-base); }
+    .hero__acciones .btn { width: 100%; justify-content: center; }
+}
+@media (max-height: 640px) {
+    .hero { padding: var(--e-4) var(--e-5) var(--e-8); gap: var(--e-2); }
+    .hero__moto { font-size: var(--t-2xl); }
+    .hero__entradilla { display: none; }
+}
+
+/* ---------- La marca de agua: el logotipo, fijo de fondo ----------
+   El video del hero ya lo muestra en movimiento; aquí queda quieto y muy
+   tenue, centrado en la pantalla, por debajo del contenido, presente todo
+   el recorrido de la página (Historia, Planes, etc.) sin desplazarse con
+   el scroll. .hero lo tapa por completo durante el propio hero (ver su
+   z-index más alto), así que sólo se nota a partir de Historia. */
+.marca-agua {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+.marca-agua img {
+    width: min(34vw, 420px);
+    opacity: .05;
+    filter: grayscale(1) contrast(1.1);
+}
+@media (max-width: 720px) {
+    .marca-agua img { width: min(50vw, 260px); }
+}
+
+/* La brasa que respira: la usan también el login y otras páginas. */
+.hero__brasa {
+    position: absolute;
+    top: 42%; left: 50%;
+    width: min(120vw, 1100px);
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle,
+        rgba(255, 106, 31, .20) 0%,
+        rgba(214, 32, 43, .12) 32%,
+        transparent 65%);
+    filter: blur(30px);
+    pointer-events: none;
+}
+
+/* ============================================================
+   HISTORIA
+   ============================================================ */
+
+.historia { display: grid; gap: clamp(2rem, 6vw, 5rem); grid-template-columns: 1fr; }
+@media (min-width: 900px) { .historia { grid-template-columns: 1.1fr .9fr; align-items: center; } }
+
+.historia__texto { display: grid; gap: var(--e-4); max-width: var(--ancho-texto); }
+.historia__texto p { color: var(--ceniza); }
+
+/* Hitos: una línea temporal real, así que aquí la numeración sí informa */
+.historia__hitos { display: grid; gap: var(--e-5); }
+.historia__hito {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--e-5);
+    align-items: start;
+    padding-bottom: var(--e-5);
+    border-bottom: 1px solid var(--acero);
+}
+.historia__hito:last-child { border-bottom: 0; padding-bottom: 0; }
+.historia__hito b {
+    font-family: var(--f-mono);
+    font-size: var(--t-sm);
+    color: var(--brasa);
+    letter-spacing: .1em;
+}
+.historia__hito p { color: var(--ceniza); font-size: var(--t-sm); }
+.historia__hito h4 { font-size: var(--t-lg); margin-bottom: var(--e-1); }
+
+/* ============================================================
+   BENEFICIOS
+   ============================================================ */
+
+/* ---------- El bento ----------
+   Retícula de tamaños desiguales, a la manera de las tarjetas de
+   experimentos de Google Labs: una pieza manda, las demás la acompañan.
+   Genérico (no específico de beneficios) para poder reutilizarlo en
+   instalaciones y cualquier otra sección de tarjetas dispares. */
+.bento {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: minmax(160px, auto);
+    gap: var(--e-4);
+}
+.bento__pieza { grid-column: span 1; grid-row: span 1; }
+.bento__pieza--ancha  { grid-column: span 2; }
+.bento__pieza--alta   { grid-row: span 2; }
+.bento__pieza--grande { grid-column: span 2; grid-row: span 2; }
+
+@media (max-width: 900px) {
+    .bento { grid-template-columns: repeat(2, 1fr); }
+    .bento__pieza--grande, .bento__pieza--ancha { grid-column: span 2; }
+}
+@media (max-width: 560px) {
+    .bento { grid-template-columns: 1fr; grid-auto-rows: auto; }
+    .bento__pieza, .bento__pieza--ancha, .bento__pieza--grande, .bento__pieza--alta {
+        grid-column: span 1; grid-row: span 1;
+    }
+}
+
+.beneficios { display: grid; gap: var(--e-4); }
+
+.beneficio {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.beneficio__icono {
+    width: 46px; height: 46px;
+    display: grid;
+    place-items: center;
+    margin-bottom: var(--e-4);
+    border-radius: var(--r-md);
+    background: rgba(214, 32, 43, .12);
+    border: 1px solid rgba(214, 32, 43, .3);
+    color: var(--sangre-viva);
+}
+.beneficio h3 { margin-bottom: var(--e-2); }
+.beneficio p  { color: var(--ceniza); font-size: var(--t-sm); }
+
+/* La pieza grande sube de escala: es la que lleva el peso de la frase. */
+.bento__pieza--grande .beneficio__icono { width: 58px; height: 58px; }
+.bento__pieza--grande .beneficio h3     { font-size: var(--t-2xl); }
+.bento__pieza--grande .beneficio p      { font-size: var(--t-base); max-width: 34ch; }
+
+/* ============================================================
+   PLANES
+   ============================================================ */
+
+.planes {
+    display: grid;
+    gap: var(--e-5);
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    align-items: stretch;
+}
+
+.plan {
+    display: grid;
+    grid-template-rows: auto auto auto 1fr auto;
+    gap: var(--e-4);
+}
+
+/* El destacado no crece de tamaño: se enciende. Escalar tarjetas
+   descoloca la rejilla y es el recurso de siempre. */
+.plan--destacado {
+    border-color: rgba(214, 32, 43, .45);
+    background: linear-gradient(180deg, rgba(214,32,43,.09), transparent 45%), var(--grafito);
+}
+.plan--destacado .tarjeta__filo { transform: scaleX(1); }
+
+.plan__nombre { font-size: var(--t-xl); }
+.plan__lema   { color: var(--humo); font-size: var(--t-sm); min-height: 2.6em; }
+
+.plan__precio { display: flex; align-items: baseline; gap: var(--e-2); }
+.plan__precio b {
+    font-family: var(--f-mono);
+    font-size: var(--t-2xl);
+    font-weight: 600;
+    color: var(--hueso);
+}
+.plan__precio small { font-family: var(--f-mono); font-size: var(--t-xs); color: var(--humo); }
+
+.plan__beneficios { display: grid; gap: var(--e-3); list-style: none; padding: 0; }
+.plan__beneficios li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--e-3);
+    font-size: var(--t-sm);
+    color: var(--ceniza);
+}
+.plan__beneficios svg { width: 16px; height: 16px; margin-top: .3em; color: var(--brasa); }
+
+/* ============================================================
+   ENTRENADORES
+   ============================================================ */
+
+.entrenadores {
+    display: grid;
+    gap: var(--e-5);
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.entrenador { padding: 0; }
+
+.entrenador__foto {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    display: grid;
+    place-items: center;
+    background: var(--metal);
+    overflow: hidden;
+}
+.entrenador__foto img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Sin foto cargada, las iniciales ocupan su sitio con dignidad */
+.entrenador__iniciales {
+    font-family: var(--f-display);
+    font-size: var(--t-4xl);
+    color: var(--acero-claro);
+}
+
+.entrenador__datos { padding: var(--e-5); display: grid; gap: var(--e-2); }
+.entrenador__datos h3 { font-size: var(--t-lg); }
+.entrenador__especialidad { font-family: var(--f-mono); font-size: var(--t-xs); letter-spacing: .12em; text-transform: uppercase; color: var(--brasa); }
+.entrenador__bio { font-size: var(--t-sm); color: var(--ceniza); }
+
+/* ============================================================
+   INSTALACIONES Y MÁQUINAS
+   ============================================================ */
+
+.instalacion {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.instalacion h3 { margin-bottom: var(--e-1); }
+.instalacion__lema { font-family: var(--f-mono); font-size: var(--t-xs); letter-spacing: .1em; text-transform: uppercase; color: var(--brasa); margin-bottom: var(--e-3); }
+.instalacion p { color: var(--ceniza); font-size: var(--t-sm); }
+
+/* La pieza grande (la zona de peso libre, la carta de presentación) sube
+   de escala igual que en el bento de beneficios. */
+.bento__pieza--grande .instalacion h3 { font-size: var(--t-2xl); }
+.bento__pieza--grande .instalacion p  { font-size: var(--t-base); max-width: 40ch; }
+
+/* Las máquinas se listan como un inventario, porque eso es lo que son */
+.maquinas {
+    display: grid;
+    gap: 0;
+    margin-top: var(--e-7);
+    border-top: 1px solid var(--acero);
+}
+.maquina {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--e-5);
+    align-items: center;
+    padding: var(--e-4) var(--e-2);
+    border-bottom: 1px solid var(--acero);
+    transition: background var(--v-rapido) var(--curva), padding-left var(--v-medio) var(--curva);
+}
+.maquina:hover { background: rgba(255,255,255,.02); padding-left: var(--e-5); }
+.maquina__nombre { font-family: var(--f-display); font-size: var(--t-lg); text-transform: uppercase; }
+.maquina__zona   { font-size: var(--t-sm); color: var(--humo); }
+.maquina__cant   { font-family: var(--f-mono); font-size: var(--t-sm); color: var(--brasa); }
+
+@media (max-width: 640px) {
+    .maquina { grid-template-columns: 1fr auto; }
+    .maquina__zona { display: none; }
+}
+
+/* ============================================================
+   TESTIMONIOS
+   ============================================================ */
+
+.testimonios {
+    display: grid;
+    gap: var(--e-5);
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.testimonio { display: grid; gap: var(--e-4); }
+.testimonio__texto { font-size: var(--t-lg); font-weight: 300; line-height: 1.5; }
+.testimonio__autor { display: flex; align-items: center; gap: var(--e-3); }
+.testimonio__avatar {
+    width: 42px; height: 42px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    background: var(--metal);
+    border: 1px solid var(--acero-claro);
+    font-family: var(--f-mono);
+    font-size: var(--t-sm);
+    color: var(--ceniza);
+}
+.testimonio__nombre b { display: block; font-weight: 500; }
+.testimonio__nombre small { color: var(--humo); font-size: var(--t-xs); }
+.testimonio__estrellas { display: flex; gap: 2px; color: var(--bronce); }
+.testimonio__estrellas svg { width: 14px; height: 14px; }
+
+/* ============================================================
+   GALERÍA
+   ============================================================ */
+
+.galeria {
+    display: grid;
+    gap: var(--e-3);
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.galeria__pieza {
+    position: relative;
+    aspect-ratio: 1;
+    background: var(--metal);
+    border: 1px solid var(--acero);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    transition: transform var(--v-medio) var(--curva);
+}
+.galeria__pieza:hover { transform: scale(1.02); }
+.galeria__pieza img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Marcador de posición mientras no hay fotos cargadas */
+.galeria__hueco {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    letter-spacing: .2em;
+    color: var(--humo);
+}
+
+/* Dos piezas mandan sobre el resto: rompe la monotonía de la cuadrícula */
+@media (min-width: 700px) {
+    .galeria__pieza:nth-child(1),
+    .galeria__pieza:nth-child(6) { grid-column: span 2; grid-row: span 2; aspect-ratio: auto; }
+}
+
+/* ============================================================
+   PREGUNTAS FRECUENTES
+   ============================================================ */
+
+.faq { display: grid; gap: 0; border-top: 1px solid var(--acero); }
+
+.faq__item { border-bottom: 1px solid var(--acero); }
+
+.faq__pregunta {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--e-5);
+    align-items: center;
+    padding: var(--e-5) 0;
+    text-align: left;
+    font-family: var(--f-display);
+    font-size: var(--t-lg);
+    text-transform: uppercase;
+    color: var(--hueso);
+    transition: color var(--v-rapido) var(--curva);
+}
+.faq__pregunta:hover { color: var(--brasa); }
+
+/* Cruz que gira a "menos" al abrir */
+.faq__signo { position: relative; width: 16px; height: 16px; flex: none; }
+.faq__signo::before, .faq__signo::after {
+    content: '';
+    position: absolute;
+    inset: 50% 0 auto;
+    height: 1.5px;
+    background: var(--brasa);
+    transition: transform var(--v-medio) var(--curva);
+}
+.faq__signo::after { transform: rotate(90deg); }
+.faq__item.is-abierto .faq__signo::after { transform: rotate(0); }
+
+/* La altura la anima GSAP; aquí sólo el recorte. */
+.faq__respuesta { overflow: hidden; height: 0; }
+.faq__respuesta p { padding-bottom: var(--e-5); color: var(--ceniza); max-width: 70ch; }
+
+/* ============================================================
+   CONTACTO
+   ============================================================ */
+
+.contacto { display: grid; gap: clamp(2rem, 5vw, 4rem); }
+@media (min-width: 900px) { .contacto { grid-template-columns: 1fr 1fr; } }
+
+.contacto__datos { display: grid; gap: var(--e-5); align-content: start; }
+
+.dato { display: grid; grid-template-columns: auto 1fr; gap: var(--e-4); align-items: start; }
+.dato__icono {
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    border: 1px solid var(--acero);
+    border-radius: var(--r-md);
+    color: var(--brasa);
+}
+.dato b { display: block; font-family: var(--f-mono); font-size: var(--t-xs); letter-spacing: .16em; text-transform: uppercase; color: var(--humo); }
+.dato span, .dato a { font-size: var(--t-base); color: var(--hueso); }
+.dato a { display: inline-block; padding-block: .2em; }
+.dato a:hover { color: var(--brasa); }
+
+.horario { display: grid; gap: var(--e-2); }
+.horario__fila { display: flex; justify-content: space-between; gap: var(--e-4); font-size: var(--t-sm); padding-bottom: var(--e-2); border-bottom: 1px solid var(--acero); }
+.horario__fila span:first-child { color: var(--ceniza); }
+.horario__fila span:last-child  { font-family: var(--f-mono); color: var(--hueso); }
+
+.formulario { display: grid; gap: var(--e-4); padding: var(--e-6); }
+.formulario__fila { display: grid; gap: var(--e-4); grid-template-columns: 1fr 1fr; }
+@media (max-width: 560px) { .formulario__fila { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   MAPA
+   ============================================================ */
+
+.mapa {
+    height: clamp(280px, 40vh, 460px);
+    border: 1px solid var(--acero);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    /* El mapa llega en colores claros; esto lo alinea con la marca. */
+    filter: grayscale(1) invert(.92) contrast(.85) hue-rotate(180deg);
+}
+.mapa iframe { width: 100%; height: 100%; border: 0; }
+
+/* ============================================================
+   PIE
+   ============================================================ */
+
+.pie {
+    padding-block: var(--e-8) var(--e-6);
+    border-top: 1px solid var(--acero);
+    background: var(--grafito);
+}
+
+.pie__rejilla {
+    display: grid;
+    gap: var(--e-6);
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    margin-bottom: var(--e-7);
+}
+
+.pie h4 {
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    font-weight: 500;
+    letter-spacing: .2em;
+    color: var(--humo);
+    margin-bottom: var(--e-4);
+}
+
+.pie__lista { display: grid; gap: var(--e-1); list-style: none; padding: 0; }
+/* display:inline-block + padding en vez de subir el line-height: da un
+   target táctil de ~24px sin agrandar visualmente el texto (antes 17-19px
+   de alto real, por debajo del mínimo recomendado). */
+.pie__lista a {
+    display: inline-block;
+    padding-block: .35em;
+    font-size: var(--t-sm);
+    color: var(--ceniza);
+    transition: color var(--v-rapido);
+}
+.pie__lista a:hover { color: var(--brasa); }
+
+.pie__redes { display: flex; gap: var(--e-3); }
+.pie__red {
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    border: 1px solid var(--acero);
+    border-radius: var(--r-md);
+    color: var(--ceniza);
+    transition: all var(--v-rapido) var(--curva);
+}
+.pie__red:hover { border-color: var(--sangre); color: var(--sangre-viva); transform: translateY(-2px); }
+
+.pie__legal {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--e-4);
+    padding-top: var(--e-5);
+    border-top: 1px solid var(--acero);
+    font-size: var(--t-xs);
+    color: var(--humo);
+}
+
+/* ============================================================
+   BIBLIOTECA DE EJERCICIOS
+   ============================================================ */
+
+.filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--e-2);
+    margin-bottom: var(--e-6);
+}
+
+.filtro {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--e-2);
+    padding: .55rem 1.15rem;
+    border: 1px solid var(--acero);
+    border-radius: var(--r-full);
+    background: transparent;
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ceniza);
+    cursor: pointer;
+    transition: color var(--v-rapido) var(--curva),
+                border-color var(--v-rapido) var(--curva),
+                background var(--v-rapido) var(--curva);
+}
+.filtro b {
+    font-weight: 500;
+    color: var(--humo);
+    transition: color var(--v-rapido) var(--curva);
+}
+.filtro:hover { color: var(--hueso); border-color: var(--acero-claro); }
+.filtro.is-activo {
+    color: #FF8A6B;
+    border-color: rgba(214, 32, 43, .45);
+    background: rgba(214, 32, 43, .12);
+}
+.filtro.is-activo b { color: var(--brasa); }
+
+.biblioteca {
+    display: grid;
+    gap: var(--e-5);
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.ejercicio { display: grid; align-content: start; gap: var(--e-4); }
+
+.ejercicio__migas { display: flex; align-items: center; gap: var(--e-2); }
+.ejercicio__nivel {
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--humo);
+}
+
+.ejercicio__nombre {
+    font-family: var(--f-display);
+    font-size: var(--t-xl);
+    text-transform: uppercase;
+    letter-spacing: .02em;
+}
+
+.ejercicio__equipo {
+    display: flex;
+    align-items: center;
+    gap: var(--e-2);
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ceniza);
+}
+.ejercicio__equipo svg { color: var(--bronce); }
+
+.ejercicio__musculos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--e-2);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.ejercicio__musculos li {
+    padding: .25rem .7rem;
+    border: 1px solid var(--acero);
+    border-radius: var(--r-full);
+    font-family: var(--f-mono);
+    font-size: .68rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--humo);
+}
+
+.ejercicio__claves {
+    display: grid;
+    gap: var(--e-3);
+    padding-top: var(--e-3);
+    border-top: 1px solid var(--acero);
+}
+.ejercicio__clave b {
+    display: block;
+    font-family: var(--f-mono);
+    font-size: .62rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--bronce);
+    margin-bottom: 2px;
+}
+.ejercicio__clave--evita b { color: var(--sangre-viva); }
+.ejercicio__clave p { font-size: var(--t-sm); color: var(--ceniza); line-height: 1.55; }
+
+.ejercicio__video { justify-self: start; margin-top: var(--e-2); }
+
+.biblioteca__nota { margin-top: var(--e-7); font-size: var(--t-sm); color: var(--humo); max-width: 46ch; }
+
+/* ---------- Modal de video ---------- */
+
+.video {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    display: grid;
+    place-items: center;
+    padding: var(--e-5);
+}
+.video__fondo {
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 8, 9, .82);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+}
+.video__caja {
+    position: relative;
+    width: min(880px, 100%);
+    display: grid;
+    gap: var(--e-4);
+    padding: var(--e-5);
+    background: var(--grafito);
+    border: 1px solid var(--acero-claro);
+    border-radius: var(--r-lg);
+    box-shadow: var(--s-xl);
+}
+.video__titulo {
+    font-family: var(--f-display);
+    font-size: var(--t-2xl);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    padding-right: 3rem;
+}
+.video__cerrar {
+    position: absolute;
+    top: var(--e-4); right: var(--e-4);
+    width: 40px; height: 40px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--acero);
+    border-radius: var(--r-md);
+    background: transparent;
+    color: var(--ceniza);
+    cursor: pointer;
+    transition: color var(--v-rapido) var(--curva), border-color var(--v-rapido) var(--curva);
+}
+.video__cerrar:hover { color: var(--hueso); border-color: var(--acero-claro); }
+.video__marco {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: #000;
+}
+.video__marco iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+/* ============================================================
+   GUÍAS PARA EMPEZAR
+   ============================================================ */
+
+.guias {
+    display: grid;
+    gap: var(--e-5);
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.guia { display: grid; align-content: start; gap: var(--e-3); }
+.guia__numero {
+    font-family: var(--f-mono);
+    font-size: var(--t-sm);
+    letter-spacing: .2em;
+    color: var(--brasa);
+}
+.guia h3 { font-size: var(--t-xl); }
+.guia__lista { display: grid; gap: var(--e-3); list-style: none; padding: 0; margin: 0; counter-reset: paso; }
+.guia__lista li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--e-3);
+    font-size: var(--t-sm);
+    color: var(--ceniza);
+    line-height: 1.55;
+}
+.guia__lista b { color: var(--hueso); font-weight: 500; }
+
+/* Los pasos se numeran como discos cargados; las ventajas llevan su bola de fuego */
+.guia ol.guia__lista li::before {
+    counter-increment: paso;
+    content: counter(paso, decimal-leading-zero);
+    font-family: var(--f-mono);
+    font-size: .68rem;
+    letter-spacing: .1em;
+    color: var(--bronce);
+    margin-top: .2em;
+}
+.guia ul.guia__lista li::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--fuego);
+    margin-top: .55em;
+}
+
+/* ---------- Franja de rutina personalizada ---------- */
+
+.rutina {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    gap: var(--e-6);
+    margin-top: var(--e-8);
+    padding: var(--e-7) clamp(1.5rem, 4vw, 3rem);
+    border: 1px solid rgba(214, 32, 43, .45);
+    border-radius: var(--r-lg);
+    background:
+        linear-gradient(120deg, rgba(214, 32, 43, .16), rgba(255, 106, 31, .05) 55%, transparent),
+        var(--grafito);
+}
+@media (min-width: 900px) {
+    .rutina { grid-template-columns: 1fr auto; align-items: center; }
+}
+.rutina__cuerpo { display: grid; gap: var(--e-3); }
+.rutina__cuerpo h3 { font-size: var(--t-2xl); line-height: 1.05; }
+.rutina__cuerpo p { color: var(--ceniza); max-width: 52ch; }
+.rutina__accion { display: grid; gap: var(--e-3); justify-items: start; }
+.rutina__nota {
+    font-family: var(--f-mono);
+    font-size: .68rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--humo);
+}
+
+/* ============================================================
+   REVELADO AL HACER SCROLL
+   El estado inicial vive en CSS para que no haya parpadeo antes de que
+   GSAP arranque. animations.js sólo se encarga de llevarlo al final.
+   ============================================================ */
+
+[data-revelar] {
+    opacity: 0;
+    transform: translateY(28px);
+    will-change: transform, opacity;
+}

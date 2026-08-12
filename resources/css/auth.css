@@ -1,0 +1,96 @@
+/* ============================================================
+   ACCESO · login y registro
+   La misma tarjeta de cristal, centrada en la brasa de fondo.
+   Móvil y tablet aflojan los paddings para que el formulario
+   respire igual que en escritorio; las acciones secundarias
+   (registrarse, ver planes) se reparten bien en cada ancho.
+   ============================================================ */
+
+.auth {
+    position: relative;
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: var(--e-6);
+    /* La brasa de fondo es un halo centrado de más de un viewport de
+       ancho; hay que recortarla al contenedor para que no desborde. */
+    overflow: hidden;
+}
+
+.auth__vidrio {
+    position: relative;
+    width: min(30rem, 100%);
+    padding: var(--e-7);
+}
+
+/* El registro trae filas de dos campos; un poco más de ancho. */
+.auth__vidrio--ancho { width: min(34rem, 100%); }
+
+/* Marca centrada: la cabecera del panel de acceso */
+.auth__marca {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--e-6);
+}
+
+.auth__cabecera {
+    text-align: center;
+    margin-bottom: var(--e-6);
+}
+
+.auth__cabecera h1 { font-size: var(--t-2xl); margin-bottom: var(--e-2); }
+
+.auth__cabecera p {
+    color: var(--ceniza);
+    font-size: var(--t-sm);
+    max-width: 42ch;
+    margin-inline: auto;
+}
+
+.auth__formulario { display: grid; gap: var(--e-4); }
+
+/* Recordar sesión: fila de un solo golpe, el check con la brasa del sistema */
+.auth__recordar {
+    display: flex;
+    align-items: center;
+    gap: var(--e-3);
+    font-size: var(--t-sm);
+    color: var(--ceniza);
+    cursor: pointer;
+}
+
+.auth__recordar input { accent-color: var(--brasa); }
+
+/* Pie de la tarjeta: las acciones secundarias del acceso */
+.auth__pie {
+    margin-top: var(--e-6);
+    padding-top: var(--e-5);
+    border-top: 1px solid var(--acero);
+    font-size: var(--t-sm);
+    color: var(--humo);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--e-3) var(--e-5);
+}
+
+.auth__pie--centro { justify-content: center; }
+
+/* ---------- Móvil ---------- */
+@media (max-width: 560px) {
+    .auth { padding: var(--e-5) var(--e-4); }
+
+    .auth__vidrio,
+    .auth__vidrio--ancho { padding: var(--e-6) var(--e-5); }
+
+    /* Las acciones del pie pasan a apilarse, centradas */
+    .auth__pie {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+        gap: var(--e-2);
+    }
+
+    .auth__pie .btn--desnudo { justify-content: center; }
+}

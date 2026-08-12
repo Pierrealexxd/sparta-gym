@@ -1,0 +1,19 @@
+/* ============================================================
+   Sparta Gym · hoja principal
+
+   Sin Tailwind a propósito: la identidad de Sparta es un sistema de
+   tokens propio (tokens.css). Traer un framework de utilidades
+   significaría dos resets y dos escalas tipográficas compitiendo.
+
+   El orden importa: cada capa sólo depende de las anteriores.
+   ============================================================ */
+
+/* display=swap evita el texto invisible mientras cargan las tipografías. */
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800&family=Sora:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@import './tokens.css';
+@import './base.css';
+@import './components.css';
+@import './landing.css';
+@import './auth.css';
+@import './panel.css';

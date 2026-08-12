@@ -1,0 +1,168 @@
+/* ============================================================
+   TOKENS · el sistema de diseño de Sparta
+   Un único lugar donde vive la identidad. Ningún componente
+   escribe un color o un tamaño a mano.
+   ============================================================ */
+
+:root {
+    /* ---------- Color ----------
+       Derivado del logotipo: armadura de hueso, capa carmesí, fuego naranja
+       y filo metálico. El rojo nunca va solo sobre negro —eso es un neón—;
+       va acompañado de brasa y bronce, que es lo que lo hace fuego. */
+    --obsidiana:   #0A0A0B;   /* fondo base */
+    --grafito:     #16171A;   /* superficies elevadas */
+    --grafito-alto:#1E2025;   /* tarjetas, hover */
+    --acero:       #2A2D33;   /* bordes, filos */
+    --acero-claro: #3D424B;
+
+    --sangre:      #D6202B;   /* acción, acento principal */
+    --sangre-viva: #FF2E3C;   /* estados hover */
+    --brasa:       #FF6A1F;   /* calor, gradientes, datos */
+    --bronce:      #B0894A;   /* detalles metálicos, cifras */
+
+    --hueso:       #F2EFEA;   /* texto principal */
+    --ceniza:      #9BA0A8;   /* texto secundario */
+    --humo:        #62666E;   /* texto terciario, deshabilitado */
+
+    /* Gradientes de marca */
+    --fuego: linear-gradient(135deg, var(--sangre) 0%, var(--brasa) 100%);
+    --metal: linear-gradient(180deg, #4A4F58 0%, #23262B 45%, #34383F 55%, #191B1F 100%);
+    --filo:  linear-gradient(90deg, transparent, var(--acero-claro) 20%, var(--acero-claro) 80%, transparent);
+
+    /* Cristal: el vidrio de la interfaz */
+    --vidrio:        rgba(255, 255, 255, .04);
+    --vidrio-borde:  rgba(255, 255, 255, .09);
+    --vidrio-alto:   rgba(255, 255, 255, .07);
+
+    /* ---------- Tipografía ----------
+       Big Shoulders: condensada e inscripcional, monumental sin ser la
+       Bebas Neue de todos los gimnasios.
+       Sora: geométrica, moderna, legible en párrafo largo.
+       JetBrains Mono: las cifras leen como instrumentación, no como adorno. */
+    --f-display: 'Big Shoulders Display', 'Arial Narrow', sans-serif;
+    --f-texto:   'Sora', system-ui, -apple-system, sans-serif;
+    --f-mono:    'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+
+    /* Escala tipográfica fluida: sin saltos entre breakpoints */
+    --t-xs:  clamp(.69rem, .66rem + .12vw, .75rem);
+    --t-sm:  clamp(.81rem, .78rem + .15vw, .88rem);
+    --t-base:clamp(.94rem, .90rem + .20vw, 1.03rem);
+    --t-lg:  clamp(1.09rem, 1.02rem + .34vw, 1.31rem);
+    --t-xl:  clamp(1.31rem, 1.16rem + .70vw, 1.75rem);
+    --t-2xl: clamp(1.75rem, 1.44rem + 1.55vw, 2.75rem);
+    --t-3xl: clamp(2.44rem, 1.81rem + 3.13vw, 4.38rem);
+    --t-4xl: clamp(3.25rem, 2.06rem + 5.94vw, 7rem);
+    --t-5xl: clamp(4rem, 1.75rem + 11.25vw, 11rem);
+
+    /* ---------- Espacio ----------
+       Escala de 4 px. Los nombres son tallas, no números mágicos. */
+    --e-1: .25rem;  --e-2: .5rem;   --e-3: .75rem;  --e-4: 1rem;
+    --e-5: 1.5rem;  --e-6: 2rem;    --e-7: 3rem;    --e-8: 4rem;
+    --e-9: 6rem;    --e-10: 8rem;   --e-11: 12rem;
+
+    /* Aire vertical entre secciones, fluido */
+    --seccion: clamp(4.5rem, 9vw, 9rem);
+
+    /* ---------- Forma ---------- */
+    --r-sm: 6px;  --r-md: 12px;  --r-lg: 18px;  --r-xl: 26px;  --r-full: 999px;
+
+    /* ---------- Sombra ----------
+       Negro puro con poca opacidad: sobre fondo oscuro, las sombras grises
+       ensucian en vez de elevar. */
+    --s-sm:  0 1px 2px rgba(0,0,0,.4);
+    --s-md:  0 6px 20px rgba(0,0,0,.45);
+    --s-lg:  0 18px 50px rgba(0,0,0,.55);
+    --s-xl:  0 32px 80px rgba(0,0,0,.65);
+    --s-fuego: 0 10px 40px rgba(214, 32, 43, .28);
+
+    /* ---------- Movimiento ---------- */
+    --v-rapido: 160ms;
+    --v-medio:  320ms;
+    --v-lento:  620ms;
+    --curva:      cubic-bezier(.22, .61, .36, 1);
+    --curva-seca: cubic-bezier(.16, 1, .3, 1);
+
+    /* ---------- Disposición ---------- */
+    --ancho-max:   1280px;
+    --ancho-texto: 68ch;
+    --riel:        0px;
+
+    /* ---------- Capas ---------- */
+    --z-fondo: 0;  --z-contenido: 10;  --z-riel: 40;
+    --z-nav: 60;   --z-modal: 80;      --z-aviso: 90;      --z-splash: 100;
+
+    /* ---------- Semánticos de interfaz ----------
+       Capa sobre el color de marca: lo que un componente necesita expresar
+       (éxito, alerta, rellenos, fondos de control) sin escribir un literal.
+       Los fondos tintados usan color-mix sobre estos tokens, así que al
+       cambiar un color base el tinte se adapta solo. */
+    --ok:            #7BE3A6;   /* dinero en verde, como el hierro sin óxido */
+    --alerta:        #FF8A6B;   /* el rojo de alarma que tira a brasa */
+
+    --panel-cabecera:     rgba(10, 10, 11, .85);
+    --control-fondo:     rgba(0, 0, 0, .35);
+    --control-fondo-foco: rgba(0, 0, 0, .55);
+    --relleno-suave:     rgba(255, 255, 255, .02);   /* cabeceras de tabla, celdas */
+    --relleno-hover:     rgba(255, 255, 255, .04);   /* filas, enlaces, menús */
+    --relleno-fuerte:    rgba(255, 255, 255, .06);   /* botones compactos */
+    --fondo-modal:       rgba(4, 3, 7, .7);
+
+    --grafico-texto:   #9BA0A8;
+    --grafico-rejilla: rgba(255, 255, 255, .08);
+    --grafico-rejilla-suave: rgba(255, 255, 255, .06);
+    --tooltip-fondo:   #16171A;
+    --tooltip-borde:   #2A2D33;
+    --tooltip-titulo:  #F2EFEA;
+    --tooltip-texto:   #9BA0A8;
+}
+
+/* El sistema es oscuro por definición: el claro no forma parte de la marca.
+   Se declara para que el navegador pinte los controles nativos en oscuro. */
+:root { color-scheme: dark; }
+
+/* ---------- Tema claro (sólo el panel) ----------
+   El admin lo pide con el interruptor de la cabecera; la landing nunca pone
+   data-tema, así que la marca de la web pública sigue siendo oscura.
+   Aquí se invierten los neutros (obsidiana↔hueso) y se aflojan las sombras:
+   el rojo y el fuego se quedan, porque sobre claro también son marca. */
+:root[data-tema="claro"] {
+    --obsidiana:    #F4F2EE;
+    --grafito:      #FFFFFF;
+    --grafito-alto: #FBFAF7;
+    --acero:        #DCD7CE;
+    --acero-claro:  #C2BCB0;
+
+    --hueso:  #1A1B1E;
+    --ceniza: #565B63;
+    --humo:   #8A8F96;
+
+    --vidrio:       rgba(0, 0, 0, .03);
+    --vidrio-borde: rgba(0, 0, 0, .08);
+    --vidrio-alto:  rgba(0, 0, 0, .05);
+
+    --s-sm: 0 1px 2px rgba(15, 15, 20, .06);
+    --s-md: 0 6px 20px rgba(15, 15, 20, .10);
+    --s-lg: 0 18px 50px rgba(15, 15, 20, .14);
+    --s-xl: 0 32px 80px rgba(15, 15, 20, .18);
+
+    --ok:     #14804C;
+    --alerta: #D9532F;
+
+    --panel-cabecera:      rgba(255, 255, 255, .85);
+    --control-fondo:      rgba(0, 0, 0, .03);
+    --control-fondo-foco: rgba(0, 0, 0, .07);
+    --relleno-suave:      rgba(0, 0, 0, .03);
+    --relleno-hover:      rgba(0, 0, 0, .04);
+    --relleno-fuerte:     rgba(0, 0, 0, .06);
+    --fondo-modal:        rgba(20, 18, 26, .45);
+
+    --grafico-texto:   #565B63;
+    --grafico-rejilla: rgba(0, 0, 0, .08);
+    --grafico-rejilla-suave: rgba(0, 0, 0, .06);
+    --tooltip-fondo:   #FFFFFF;
+    --tooltip-borde:   #DCD7CE;
+    --tooltip-titulo:  #1A1B1E;
+    --tooltip-texto:   #565B63;
+
+    color-scheme: light;
+}
