@@ -61,12 +61,35 @@ class LandingController extends Controller
     /**
      * El video de fondo del hero. Devuelve null si todavía no se ha
      * subido, y el hero cae de vuelta a la variante sin video.
+     *
+     * Vive en storage/, no en public/videos, y se sirve por una ruta propia
+     * (ver heroVideoStream) — no como archivo estático directo. Motivo: el
+     * servidor de producción (php artisan serve) sirve los archivos que
+     * encuentra físicamente bajo public/ con su propio mini servidor
+     * estático, que no entiende peticiones "Range". Sin eso, Safari/iOS no
+     * reproduce el video en absoluto (ni con autoplay ni a mano): se queda
+     * con el ícono nativo de "play" pausado. Al mover el archivo fuera de
+     * public/, esa ruta pasa sí o sí por Laravel, cuyo response()->file()
+     * (BinaryFileResponse de Symfony) sí responde 206 con Content-Range.
      */
     private function heroVideo(): ?string
     {
-        $archivo = public_path('videos/hero.mp4');
+        $archivo = storage_path('app/media/hero.mp4');
 
-        return is_file($archivo) ? asset('videos/hero.mp4') . '?v=' . filemtime($archivo) : null;
+        return is_file($archivo) ? route('landing.hero-video') . '?v=' . filemtime($archivo) : null;
+    }
+
+    /** Sirve el video del hero con soporte real de "Range requests" (ver heroVideo). */
+    public function heroVideoStream()
+    {
+        $archivo = storage_path('app/media/hero.mp4');
+
+        abort_unless(is_file($archivo), 404);
+
+        return response()->file($archivo, [
+            'Content-Type'  => 'video/mp4',
+            'Cache-Control' => 'public, max-age=31536000, immutable',
+        ]);
     }
 
     /**

@@ -16,6 +16,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 
+// El video del hero se sirve por esta ruta (no como archivo estático directo
+// de /public) para que Laravel/Symfony respondan bien a "Range requests":
+// Safari/iOS exige eso para reproducir video en absoluto, y menos aún en
+// autoplay (ver LandingController::heroVideoStream).
+Route::get('/videos/hero.mp4', [LandingController::class, 'heroVideoStream'])->name('landing.hero-video');
+
 Route::post('/contacto', [LandingController::class, 'contactar'])
     ->middleware('throttle:6,1')          // un formulario de contacto no necesita más
     ->name('contacto.enviar');

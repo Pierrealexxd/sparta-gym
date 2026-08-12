@@ -133,7 +133,7 @@
         z-index: var(--z-nav);
         top: 0; bottom: 0;
         left: var(--riel);
-        width: min(80vw, 19rem);
+        width: min(86vw, 21rem);
         display: flex;
         flex-direction: column;
         background: rgba(10, 10, 11, .97);
@@ -203,16 +203,21 @@
 
     /* Tamaño de lista de menú, no de titular de hero: antes usaba
        --t-2xl (~2rem+) y hacía que seis palabras llenaran toda la
-       pantalla. Con --t-base + padding propio se lee como un sidebar. */
+       pantalla. --t-lg (subido desde --t-base) + el ícono delante llenan
+       mejor el ancho del cajón sin volver a ese extremo. */
     .nav__enlace {
+        display: flex;
+        align-items: center;
+        gap: var(--e-3);
         font-family: var(--f-display);
-        font-size: var(--t-base);
+        font-size: var(--t-lg);
         letter-spacing: .02em;
         color: var(--hueso);
-        padding: var(--e-3);
+        padding: var(--e-4) var(--e-3);
         border-radius: var(--r-md);
         transition: background var(--v-rapido);
     }
+    .nav__enlace svg { flex: none; width: 1.1em; height: 1.1em; color: var(--brasa); }
     .nav__enlace:hover, .nav__enlace:active { background: rgba(255, 255, 255, .06); }
 
     .nav__enlaces-pie {
@@ -1299,10 +1304,14 @@ ul.guia__lista li::before {
 }
 
 /* En móvil cada tarjeta se comprime a número + título; la lista completa
-   solo se ve en el modal que abre el tap (ver guias.blade.php). */
+   solo se ve en el modal que abre el tap (ver guias.blade.php).
+   ".guia .guia__lista" (con el ancestro), no ".guia__lista" a secas: sin el
+   ancestro, esta regla también ocultaba la copia de la lista que vive
+   dentro de ".modal-info__cuerpo" — el modal abría, mostraba el título,
+   pero la lista completa nunca se veía, en ningún tamaño de pantalla. */
 @media (max-width: 740px) {
     .guia { cursor: pointer; gap: var(--e-2); }
-    .guia__lista { display: none; }
+    .guia .guia__lista { display: none; }
 }
 
 /* ---------- Franja de rutina personalizada ---------- */

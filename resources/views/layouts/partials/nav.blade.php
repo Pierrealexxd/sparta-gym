@@ -18,12 +18,12 @@
         </div>
 
         <div class="nav__enlaces-lista">
-            <a class="nav__enlace" href="#historia">Historia</a>
-            <a class="nav__enlace" href="#ejercicios">Biblioteca</a>
-            <a class="nav__enlace" href="#guias">Guías</a>
-            <a class="nav__enlace" href="#planes">Planes</a>
-            <a class="nav__enlace" href="#preguntas">Preguntas</a>
-            <a class="nav__enlace" href="#contacto">Contacto</a>
+            <a class="nav__enlace" href="#historia"><x-icono nombre="reloj" /> Historia</a>
+            <a class="nav__enlace" href="#ejercicios"><x-icono nombre="pesa" /> Biblioteca</a>
+            <a class="nav__enlace" href="#guias"><x-icono nombre="lista" /> Guías</a>
+            <a class="nav__enlace" href="#planes"><x-icono nombre="tarjetas" /> Planes</a>
+            <a class="nav__enlace" href="#preguntas"><x-icono nombre="chat" /> Preguntas</a>
+            <a class="nav__enlace" href="#contacto"><x-icono nombre="correo" /> Contacto</a>
         </div>
 
         {{-- Los botones de .nav__acciones se ocultan en móvil/tablet (ver

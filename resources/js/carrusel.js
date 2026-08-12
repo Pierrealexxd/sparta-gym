@@ -26,7 +26,11 @@
  *  - un solo setInterval por carrusel (nada de requestAnimationFrame en
  *    bucle) y solo mientras la pista está realmente en pantalla
  *    (IntersectionObserver) y la pestaña está visible;
- *  - se detiene apenas alguien toca o arrastra, y retoma tras un respiro;
+ *  - se detiene apenas la persona arrastra la pista de verdad (no con
+ *    cualquier toque: un "touchstart" también dispara al simplemente pasar
+ *    el dedo por encima para bajar la página, así que el disparador real es
+ *    el evento "scroll" — y solo cuando NO lo generamos nosotros mismos con
+ *    irA(), marcado con la bandera "programado" — y retoma tras un respiro;
  *  - respeta prefers-reduced-motion: quien lo pidió, no ve nada moviéndose
  *    solo.
  */
@@ -36,7 +40,7 @@ function tarjetasVisibles(pista) {
 
 function activarAutoplay(control, pista, avanzar) {
     const intervaloMs = Number(control.dataset.carruselAuto);
-    if (!intervaloMs || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!intervaloMs || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
 
     let temporizador = null;
     let enPantalla = false;
@@ -64,13 +68,11 @@ function activarAutoplay(control, pista, avanzar) {
 
     document.addEventListener('visibilitychange', () => (document.hidden ? detener() : iniciar()));
 
-    // Cualquier gesto del usuario sobre la pista, o un toque a los botones
-    // del control, pausa el auto-avance para no pelearse con quien lo está
-    // usando a mano.
-    ['pointerdown', 'touchstart'].forEach((evento) => {
-        pista.addEventListener(evento, pausarYReanudar, { passive: true });
-    });
+    // Un toque en los botones del control (flechas/puntos) sí cuenta como
+    // interacción manual — eso no pasa "por accidente".
     control.addEventListener('click', pausarYReanudar);
+
+    return { pausarYReanudar };
 }
 
 function construirCarrusel(control) {
@@ -83,12 +85,20 @@ function construirCarrusel(control) {
     let items = [];
     let puntos = [];
     let activo = 0;
+    // Distingue un scroll que provocamos nosotros (irA, incluido el propio
+    // auto-avance) de uno que arrastró la persona a mano: solo el segundo
+    // debe pausar el auto-avance (ver el listener de "scroll" más abajo).
+    let scrollProgramado = false;
 
     function irA(indice) {
         const el = items[indice];
         if (!el) return;
         const centrado = el.offsetLeft - (pista.clientWidth - el.offsetWidth) / 2;
+        scrollProgramado = true;
         pista.scrollTo({ left: Math.max(0, centrado), behavior: 'smooth' });
+        // Un scroll suave tarda varios cuadros en completarse; se limpia la
+        // bandera cuando ya debió terminar, no de inmediato.
+        setTimeout(() => { scrollProgramado = false; }, 600);
         // No esperar al evento "scroll" para reflejar el cambio: en scroll
         // suave el navegador tarda varios cuadros en emitirlo (y en algún
         // entorno de prueba sin compositor activo no llega a emitirse
@@ -147,9 +157,13 @@ function construirCarrusel(control) {
     });
 
     let cuadro;
+    let autoplay;
     pista.addEventListener('scroll', () => {
         cancelAnimationFrame(cuadro);
         cuadro = requestAnimationFrame(actualizarActivo);
+        // Arrastre real del usuario (no nuestro propio irA): pausa el
+        // auto-avance en vez de pelearse con la mano de quien lo mueve.
+        if (!scrollProgramado) autoplay?.pausarYReanudar();
     }, { passive: true });
 
     window.addEventListener('resize', reconstruir);
@@ -166,7 +180,7 @@ function construirCarrusel(control) {
     reconstruir();
 
     // Bucle: de la última tarjeta vuelve a la primera en vez de detenerse.
-    activarAutoplay(control, pista, () => irA((activo + 1) % Math.max(items.length, 1)));
+    autoplay = activarAutoplay(control, pista, () => irA((activo + 1) % Math.max(items.length, 1)));
 }
 
 export function iniciarCarruseles() {
