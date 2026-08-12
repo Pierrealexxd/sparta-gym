@@ -69,10 +69,12 @@
    darle aire a la brasa del hover) ya aporta parte de esa separación. */
 .nav__enlaces { display: flex; align-items: center; gap: var(--e-3); }
 
-/* El pie del cajón es solo del menú móvil: en escritorio la fila de
-   enlaces no debe arrastrarlo, porque las acciones de cuenta ya viven en
-   .nav__acciones y la marca repetida con su aspa ya no existe. */
-.nav__enlaces-pie { display: none; }
+/* El pie y la cabecera del cajón son solo del menú móvil: en escritorio
+   ".nav__enlaces" vuelve a ser la fila de enlaces en línea, y sin esto la
+   cabecera (marca) se colaba como un hijo flex más, suelto debajo de la
+   barra — el bug del recuadro "SpartaGym" flotando en escritorio. */
+.nav__enlaces-pie,
+.nav__enlaces-cabecera { display: none; }
 
 /* Al pasar el cursor, una brasa sube detrás de la palabra y el texto se
    invierte a oscuro al cruzarla — la misma idea de "forma que asciende y
@@ -144,16 +146,14 @@
     }
     .nav__enlaces.is-abierto { transform: translateX(0); }
 
-    /* Cabecera del cajón: marca + aspa de cerrar, sobre el fondo sólido
-       del propio panel (ver nav.blade.php). Antes no había cabecera y el
-       cierre dependía del mismo botón hamburguesa de la barra, que al
-       abrirse quedaba sobre el video atenuado por el velo, a medio ver. */
+    /* Cabecera del cajón: solo la marca, sobre el fondo sólido del propio
+       panel — identifica de qué sitio es el menú (antes, abierto, no se
+       veía ni el logo). Sin botón de cerrar aquí: se cierra tocando el
+       velo, eligiendo un enlace o con Escape (ver ui.js); un aspa aparte
+       junto al logo quedaba de más. */
     .nav__enlaces-cabecera {
         flex: none;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: var(--e-3) var(--e-3) var(--e-4);
+        padding: var(--e-4) var(--e-3);
         border-bottom: 1px solid var(--acero);
     }
     .nav__enlaces-marca {
@@ -167,37 +167,22 @@
     }
     .nav__enlaces-marca span { color: var(--hueso); }
     .nav__enlaces-marca em { font-style: normal; color: var(--sangre); }
-    .nav__enlaces-cerrar {
-        width: 36px; height: 36px;
-        flex: none;
-        display: grid;
-        place-items: center;
-        border: 1px solid var(--acero);
-        border-radius: var(--r-md);
-        background: transparent;
-        color: var(--ceniza);
-        cursor: pointer;
-        transition: color var(--v-rapido) var(--curva), border-color var(--v-rapido) var(--curva);
-    }
-    .nav__enlaces-cerrar:hover { color: var(--hueso); border-color: var(--acero-claro); }
 
-    /* flex:1 + justify-content:center reparte la lista en el medio del
-       espacio que queda entre la cabecera y el pie, en vez de dejarla
-       pegada arriba con un vacío grande — con solo 6 enlaces, pegada
-       arriba se veía huérfana. */
+    /* Pegada justo debajo de la cabecera (no centrada a la mitad del
+       cajón): centrar dejaba un vacío grande arriba Y otro abajo antes del
+       pie de cuenta. Así solo queda un espacio, entre el último enlace y
+       el pie — el patrón habitual de un sidebar. */
     .nav__enlaces-lista {
-        flex: 1;
         display: flex;
         flex-direction: column;
-        justify-content: center;
         gap: 2px;
-        padding: var(--e-3);
+        padding: var(--e-4) var(--e-3);
     }
 
     /* La hamburguesa de la barra ya no hace falta mientras el cajón está
-       abierto: el aspa de la cabecera de arriba toma su lugar (sobre
-       fondo sólido, no sobre el video atenuado por el velo). Se oculta en
-       vez de quitarla del DOM para no perder el foco/tabulación de golpe. */
+       abierto: no hay ninguna otra X que la reemplace (se cierra tocando
+       el velo, un enlace o Escape). Se oculta en vez de quitarla del DOM
+       para no perder el foco/tabulación de golpe. */
     .nav__enlaces.is-abierto ~ .nav__acciones .nav__menu {
         opacity: 0;
         pointer-events: none;
