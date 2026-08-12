@@ -11,7 +11,7 @@
     @if ($logo = \App\Support\GymContext::current()?->logo_path)
         <link rel="icon" href="{{ asset('storage/' . $logo) }}">
     @endif
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app-panel.js'])
 
     {{-- Disponible en TODas las páginas del panel (no solo /mensajes): la
          campanita vive en la cabecera compartida, así que necesita sus

@@ -1,14 +1,16 @@
+/**
+ * Entry point del panel (admin/entrenador/cliente). Ver app-public.js para
+ * el porqué de la separación.
+ */
 import './bootstrap';
 
 import Alpine from 'alpinejs';
-import { iniciarInterfaz } from './ui';
+import { iniciarInterfazPanel } from './ui';
 import { iniciarAnimaciones } from './animations';
-import { iniciarParticulas } from './particulas';
 import { iniciarGraficos, refrescarGraficos } from './graficos';
 import { iniciarInteracciones } from './interacciones';
 import { iniciarQr } from './qr';
 import { iniciarContadorMensajes } from './mensajes';
-import { iniciarCarruseles } from './carrusel';
 import './escaneo-qr';
 
 window.Alpine = Alpine;
@@ -82,20 +84,16 @@ function iniciar(nombre, fn) {
     try {
         fn();
     } catch (error) {
-        console.error(`[app.js] fallo al iniciar "${nombre}":`, error);
+        console.error(`[app-panel.js] fallo al iniciar "${nombre}":`, error);
     }
 }
 
-// La interfaz (menú, acordeón, cabecera) tiene que responder desde el primer
-// instante y no depende de GSAP; las animaciones se montan justo después.
-iniciar('interfaz', iniciarInterfaz);
+iniciar('interfaz', iniciarInterfazPanel);
 iniciar('animaciones', iniciarAnimaciones);
-iniciar('particulas', () => iniciarParticulas(document.querySelector('[data-particulas]')));
 iniciar('graficos', iniciarGraficos);
 iniciar('interacciones', iniciarInteracciones);
 iniciar('qr', iniciarQr);
 iniciar('mensajes-contador', iniciarContadorMensajes);
-iniciar('carruseles', iniciarCarruseles);
 
 // Al cambiar el tema del panel, los gráficos se reconstruyen con la paleta
 // nueva (los tokens se leen en cada construcción).

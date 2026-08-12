@@ -7,7 +7,7 @@
     <title>Acceder · Sparta Gym</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app-public.js'])
 </head>
 <body>
     <main class="auth">

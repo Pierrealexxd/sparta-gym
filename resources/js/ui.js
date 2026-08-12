@@ -215,12 +215,17 @@ function splash() {
     Promise.all([minimo, listo]).then(ocultar);
 }
 
-export function iniciarInterfaz() {
+/** Páginas públicas (landing, login, registro): nada de lo que toca el panel. */
+export function iniciarInterfazPublica() {
     splash();
     cabecera();
     menuMovil();
     acordeon();
     seccionActiva();
+}
+
+/** Panel (admin/entrenador/cliente): nada de lo que toca la landing. */
+export function iniciarInterfazPanel() {
     tooltipsPanel();
     temaPanel();
 }
