@@ -79,7 +79,7 @@
                     <b>{{ auth()->user()->name }}</b>
                     <small>{{ auth()->user()->role?->name }}</small>
                 </span>
-                <form method="POST" action="{{ route('logout') }}">
+                <form method="POST" action="{{ route('salir') }}">
                     @csrf
                     <button class="panel__salir" type="submit" title="Cerrar sesión" aria-label="Cerrar sesión">
                         <x-icono nombre="entrada" style="transform: rotate(180deg)" />
@@ -166,6 +166,16 @@
             </header>
 
             <main class="panel__contenido">
+                {{-- Bienvenida de login/registro: a diferencia del toast de
+                     abajo (usado para confirmaciones de acciones dentro del
+                     panel), esta va arriba del todo, en el mismo lugar/estilo
+                     que el aviso de error del formulario de login — es lo
+                     primero que ves al entrar, no algo que hay que notar de
+                     reojo en una esquina. --}}
+                @if (session('bienvenida'))
+                    <div class="aviso aviso--exito" role="status" data-revelar>{{ session('bienvenida') }}</div>
+                @endif
+
                 <section class="membrete" data-revelar>
                     <div class="membrete__texto">
                         <span class="membrete__sede">{{ \App\Support\GymContext::current()?->name ?? 'Todas las sedes' }}</span>

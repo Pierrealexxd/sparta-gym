@@ -103,6 +103,22 @@
                     </label>
                 </div>
 
+                @unless ($usuario->member)
+                    {{-- Staff (hoy solo entrenadores lo usan): el DNI se carga
+                         una vez acá y de ahí lo toma el escaneo QR de
+                         asistencia laboral — no se vuelve a pedir cada vez
+                         que marca. --}}
+                    <div class="formulario-panel__fila">
+                        <label class="campo">
+                            <span class="campo__etiqueta">DNI (opcional)</span>
+                            <input class="campo__control" type="text" name="dni" maxlength="20"
+                                   placeholder="Para el escaneo QR de asistencia"
+                                   value="{{ old('dni', $usuario->dni) }}">
+                            @error('dni')<span class="campo__error">{{ $message }}</span>@enderror
+                        </label>
+                    </div>
+                @endunless
+
                 @if ($usuario->member)
                     <h3 class="perfil__seccion-titulo">Datos personales</h3>
                     <div class="formulario-panel__fila">

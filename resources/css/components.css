@@ -359,6 +359,40 @@
 
 .campo__control[aria-invalid="true"] { border-color: var(--sangre); }
 
+/* Selector de color nativo: .campo__control está pensado para texto (padding
+   grande, ancho completo) y queda enorme alrededor de la muestra chica que
+   pinta el navegador — este es su propio tamaño, mismo radio/borde que el
+   resto de los controles. */
+.campo__color {
+    width: 2.75rem; height: 2.75rem; padding: .2rem;
+    background: var(--control-fondo);
+    border: 1px solid var(--acero);
+    border-radius: var(--r-md);
+    cursor: pointer;
+}
+.campo__color::-webkit-color-swatch-wrapper { padding: 0; }
+.campo__color::-webkit-color-swatch { border: none; border-radius: var(--r-sm); }
+
+.campo__control-envoltorio { position: relative; display: flex; }
+
+.campo__control-envoltorio .campo__control { padding-right: 2.75rem; }
+
+.ojo {
+    position: absolute;
+    top: 50%;
+    right: 1rem;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    color: var(--ceniza);
+    cursor: pointer;
+    transition: color var(--v-rapido) var(--curva);
+}
+
+.ojo:hover { color: var(--hueso); }
+
+.ojo svg { width: 1.15rem; height: 1.15rem; }
+
 .campo__error {
     font-size: var(--t-sm);
     color: var(--alerta);

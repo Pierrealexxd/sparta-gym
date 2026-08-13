@@ -93,6 +93,6 @@ class RegisterController extends Controller
         $request->session()->regenerate();
 
         return redirect()->route($usuario->rutaDeInicio())
-            ->with('exito', '¡Bienvenido a Sparta Gym! Tu cuenta ya está lista.');
+            ->with('bienvenida', '¡Bienvenido a Sparta Gym! Tu cuenta ya está lista.');
     }
 }

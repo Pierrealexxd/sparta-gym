@@ -41,7 +41,8 @@ class LoginController extends Controller
         $usuario = $request->user();
         $usuario->forceFill(['last_login_at' => now()])->saveQuietly();
 
-        return redirect()->intended(route($usuario->rutaDeInicio()));
+        return redirect()->intended(route($usuario->rutaDeInicio()))
+            ->with('bienvenida', "¡Bienvenido de nuevo, {$usuario->name}!");
     }
 
     public function salir(Request $request): RedirectResponse

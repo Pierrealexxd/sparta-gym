@@ -36,6 +36,7 @@ class PerfilController extends Controller
         $reglas = [
             'email' => ['required', 'email', 'max:180', Rule::unique('users', 'email')->ignore($usuario->id)],
             'phone' => ['nullable', 'string', 'max:40'],
+            'dni'   => ['nullable', 'string', 'max:20'],
             'avatar' => ['nullable', 'image', 'max:3072'],
         ];
 
@@ -76,6 +77,7 @@ class PerfilController extends Controller
 
             $usuario->email = $datos['email'];
             $usuario->phone = $datos['phone'] ?? null;
+            $usuario->dni   = $datos['dni'] ?? null;
 
             if ($request->hasFile('avatar')) {
                 if ($usuario->avatar_path) {

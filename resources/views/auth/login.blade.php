@@ -28,9 +28,9 @@
             <form method="POST" action="{{ route('login') }}" class="auth__formulario">
                 @csrf
 
-                @error('email')
-                    <div class="aviso aviso--error" role="alert">{{ $message }}</div>
-                @enderror
+                @if ($errors->any())
+                    <div class="aviso aviso--error" role="alert">{{ $errors->first() }}</div>
+                @endif
 
                 <label class="campo">
                     <span class="campo__etiqueta">Correo</span>
@@ -41,12 +41,14 @@
 
                 <label class="campo">
                     <span class="campo__etiqueta">Contraseña</span>
-                    <input class="campo__control" type="password" name="password" required
-                           id="login-password"
-                           autocomplete="current-password" placeholder="••••••••">
-                    <span class="ojo" onclick="togglePassword('login-password')">
-                        <x-icono nombre="ojo" />
-                    </span>
+                    <div class="campo__control-envoltorio">
+                        <input class="campo__control" type="password" name="password" required
+                               id="login-password"
+                               autocomplete="current-password" placeholder="••••••••">
+                        <span class="ojo" onclick="togglePassword('login-password')">
+                            <x-icono nombre="ojo" />
+                        </span>
+                    </div>
                 </label>
 
                 <label class="auth__recordar">

@@ -74,19 +74,25 @@
                 <div class="formulario-panel__fila">
                     <label class="campo">
                         <span class="campo__etiqueta">Contraseña</span>
-                        <input class="campo__control" type="password" name="password" required
-                               minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres">
-                        <span class="ojo" onclick="togglePassword('registro-password')">
-                            <x-icono nombre="ojo" />
-                        </span>
+                        <div class="campo__control-envoltorio">
+                            <input class="campo__control" type="password" name="password" required
+                                   id="registro-password"
+                                   minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres">
+                            <span class="ojo" onclick="togglePassword('registro-password')">
+                                <x-icono nombre="ojo" />
+                            </span>
+                        </div>
                     </label>
                     <label class="campo">
                         <span class="campo__etiqueta">Repetir contraseña</span>
-                        <input class="campo__control" type="password" name="password_confirmation" required
-                               minlength="8" autocomplete="new-password">
-                        <span class="ojo" onclick="togglePassword('registro-password-confirm')">
-                            <x-icono nombre="ojo" />
-                        </span>
+                        <div class="campo__control-envoltorio">
+                            <input class="campo__control" type="password" name="password_confirmation" required
+                                   id="registro-password-confirm"
+                                   minlength="8" autocomplete="new-password">
+                            <span class="ojo" onclick="togglePassword('registro-password-confirm')">
+                                <x-icono nombre="ojo" />
+                            </span>
+                        </div>
                     </label>
                 </div>
 
