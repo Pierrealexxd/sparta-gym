@@ -259,7 +259,7 @@
         flex-direction: column;
         gap: var(--e-3);
     }
-    .nav__enlace--cuenta { color: var(--bronce); font-size: var(--t-sm); }
+    .nav__enlace--cuenta { justify-content: center; color: var(--bronce); font-size: var(--t-sm); }
     .nav__enlace--cuenta svg { color: var(--bronce); }
     /* El CTA principal se ve como botón también adentro del cajón — no
        como un enlace de texto más, para que siga siendo lo más fácil de
