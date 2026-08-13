@@ -32,7 +32,8 @@ class AttendanceEditRequestController extends Controller
             ->when(GymContext::id(), fn ($q, $gymId) => $q->where('gym_id', $gymId))
             ->{$estado}()
             ->latest()
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         return view('admin.asistencia.solicitudes', [
             'solicitudes' => $solicitudes,
@@ -67,8 +68,8 @@ class AttendanceEditRequestController extends Controller
                 'id'     => $s->id,
                 'nombre' => 'Corrección de asistencia',
                 'detalle' => ($s->requestedBy?->name ?? 'Alguien del staff')
-                    . ' pide corregir '
-                    . ($s->tipo === 'cliente'
+                    . ' pide ' . ($s->es_eliminacion ? 'eliminar ' : 'corregir ')
+                    . ($s->objeto === 'cliente'
                         ? 'la entrada de ' . ($s->attendance?->member?->full_name ?? 'un cliente') . ' del '
                           . ($s->attendance?->checked_in_at?->translatedFormat('d M') ?? '—')
                         : 'su entrada del ' . ($s->staffAttendance?->clocked_in_at?->translatedFormat('d M') ?? '—'))

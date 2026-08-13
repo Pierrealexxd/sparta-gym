@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Entrenador\AttendanceController;
-use App\Http\Controllers\Entrenador\DashboardController;
 use App\Http\Controllers\Entrenador\InscripcionController;
 use App\Http\Controllers\Entrenador\MemberController;
 use App\Http\Controllers\Entrenador\RoutineController;
@@ -19,7 +18,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('entrenador')->name('entrenador.')->middleware('rol:entrenador')->group(function () {
 
-    Route::get('/', DashboardController::class)->name('dashboard');
+    // El "Resumen" con KPIs generales se dio de baja (13-08-2026): los
+    // indicadores se movieron a vivir dentro de cada módulo que los usa
+    // (Rutinas/Inscripciones, Ventas, Asistencia) en vez de una pantalla
+    // aparte. La ruta/nombre 'entrenador.dashboard' se conserva como
+    // redirect — es la que usa config('sparta.inicio_por_rol') al loguearse.
+    Route::get('/', fn () => redirect()->route('entrenador.inscripciones.index'))->name('dashboard');
 
     Route::get('clientes/{member}', [MemberController::class, 'show'])->name('clientes.show');
     Route::post('clientes/{member}/medidas', [MemberController::class, 'guardarMedida'])->name('clientes.medidas.store');
@@ -27,17 +31,20 @@ Route::prefix('entrenador')->name('entrenador.')->middleware('rol:entrenador')->
     // Constructor de rutinas de ejercicio (rutina → día → ejercicio). Antes
     // vivía en /entrenador/rutinas; el módulo de Inscripciones (que se llama
     // "Rutinas" en el menú) se quedó con esa URL, así que el constructor se
-    // movió a /entrenador/entrenamientos. Los NOMBRES de ruta siguen siendo
-    // entrenador.rutinas.* y entrenador.dias.*/entrenador.ejercicios.* — las
+    // movió a /entrenador/entrenamientos. Los NOMBRES de ruta ya coinciden
+    // con la URL (entrenador.entrenamientos.*) — antes eran
+    // entrenador.rutinas.*, cruzados con el módulo de Inscripciones (que
+    // vive en /entrenador/rutinas), corregido el 14-08-2026 (ver /investigate).
+    // dias.*/ejercicios.* quedan igual, nunca tuvieron el choque. Las
     // vistas usan route() por nombre, no por URL. Se llega a él desde la
     // ficha del cliente.
     Route::resource('entrenamientos', RoutineController::class)
         ->parameters(['entrenamientos' => 'routine'])
-        ->names('rutinas');
-    Route::post('entrenamientos/{routine}/dias', [RoutineController::class, 'agregarDia'])->name('rutinas.dias.store');
+        ->names('entrenamientos');
+    Route::post('entrenamientos/{routine}/dias', [RoutineController::class, 'agregarDia'])->name('entrenamientos.dias.store');
     Route::delete('dias/{routineDay}', [RoutineController::class, 'eliminarDia'])->name('dias.destroy');
     Route::post('dias/{routineDay}/ejercicios', [RoutineController::class, 'agregarEjercicio'])->name('dias.ejercicios.store');
-    Route::delete('ejercicios-rutina/{routineExercise}', [RoutineController::class, 'eliminarEjercicio'])->name('ejercicios.destroy');
+    Route::delete('ejercicios-rutina/{routineExercise}', [RoutineController::class, 'eliminarEjercicio'])->name('entrenamientos.ejercicios.destroy');
 
     // Inscripciones (matricular clientes): mismo trámite guiado que usa
     // recepción, sin las pantallas de configuración que un entrenador no

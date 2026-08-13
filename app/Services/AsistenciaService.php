@@ -62,10 +62,23 @@ class AsistenciaService
      * así que se fuerza explícita y la consulta de la abierta atraviesa el
      * aislamiento a propósito.
      *
+     * $metodo: 'manual' (panel), 'qr' (escaneo) o 'geo' (geolocalización del
+     * navegador) — solo para auditoría/reportes, la regla de entrada/salida
+     * es la misma para las tres vías. $lat/$lng solo se usan con 'geo' y
+     * quedan NULL en las otras dos.
+     *
      * Devuelve ['tipo' => 'entrada'|'salida', 'marcacion' => StaffAttendance].
      */
-    public function marcarStaff(User $usuario, string $turno, ?int $gymId = null, bool $porQr = false): array
-    {
+    public function marcarStaff(
+        User $usuario,
+        string $turno,
+        ?int $gymId = null,
+        bool $porQr = false,
+        ?float $lat = null,
+        ?float $lng = null,
+    ): array {
+        $metodo = $porQr ? 'qr' : ($lat !== null || $lng !== null ? 'geo' : 'manual');
+
         // Anti-doble-escaneo: dos lecturas seguidas del mismo QR no deben
         // abrir y cerrar un turno de un segundo. No aplica al clic manual.
         if ($porQr) {
@@ -90,7 +103,13 @@ class AsistenciaService
         // toca: escribir la hora de hoy en la fila de ayer sería corregir
         // sin pasar por aprobación; queda para el flujo de corrección.
         if ($abierta && $abierta->clocked_in_at->isToday()) {
-            $abierta->update(['clocked_out_at' => now()]);
+            // La ubicación de salida es la última conocida: si entró por QR
+            // o manual y ahora cierra por geo, igual vale la pena guardarla.
+            $abierta->update([
+                'clocked_out_at' => now(),
+                'location_lat'   => $lat ?? $abierta->location_lat,
+                'location_lng'   => $lng ?? $abierta->location_lng,
+            ]);
 
             return ['tipo' => 'salida', 'marcacion' => $abierta];
         }
@@ -104,7 +123,9 @@ class AsistenciaService
             'gym_id'        => $gymId,
             'clocked_in_at' => now(),
             'turno'         => $valido['turno'],
-            'method'        => $porQr ? 'qr' : 'manual',
+            'method'        => $metodo,
+            'location_lat'  => $lat,
+            'location_lng'  => $lng,
         ]);
 
         return ['tipo' => 'entrada', 'marcacion' => $marcacion];
@@ -127,6 +148,7 @@ class AsistenciaService
         return AttendanceEditRequest::create([
             $columna         => $registro->id,
             'requested_by'   => $solicitante->id,
+            'tipo'           => 'edicion',
             'checked_in_at'  => $valido['checked_in_at'],
             'checked_out_at' => $valido['checked_out_at'] ?? null,
             'reason'         => $valido['reason'] ?? null,
@@ -134,19 +156,52 @@ class AsistenciaService
         ]);
     }
 
-    /** Aplicar la corrección aprobada al registro real; nunca se edita directo. */
+    /**
+     * Borrar una marcación propia ya no se aplica directo — queda pendiente
+     * como una solicitud más, para que el admin la vea (y la pueda auditar)
+     * por la misma campanita que las correcciones. Antes se borraba al
+     * toque porque "es obvio que pasó, el registro ya no está"; se decidió
+     * que igual conviene que quede un aviso, como con editar.
+     */
+    public function solicitarEliminacion(Attendance|StaffAttendance $registro, User $solicitante, ?string $motivo = null): AttendanceEditRequest
+    {
+        $columna = $registro instanceof Attendance ? 'attendance_id' : 'staff_attendance_id';
+
+        if (AttendanceEditRequest::where($columna, $registro->id)->pendientes()->exists()) {
+            throw ValidationException::withMessages(['asistencia' => 'Ya hay una solicitud pendiente para este registro.']);
+        }
+
+        return AttendanceEditRequest::create([
+            $columna       => $registro->id,
+            'requested_by' => $solicitante->id,
+            'tipo'         => 'eliminacion',
+            'reason'       => $motivo,
+            'status'       => 'pendiente',
+        ]);
+    }
+
+    /**
+     * Aplicar la solicitud aprobada al registro real; nunca se edita/borra
+     * directo. 'edicion' pisa la hora con la propuesta; 'eliminacion' borra
+     * el registro — mismo objetivo, distinto efecto.
+     */
     public function aprobar(AttendanceEditRequest $solicitud, User $revisor): void
     {
         abort_if($solicitud->status !== 'pendiente', 422, 'Esta solicitud ya fue revisada.');
 
         $objetivo = $solicitud->objetivo;
-        $entrada  = $objetivo instanceof Attendance ? 'checked_in_at' : 'clocked_in_at';
-        $salida   = $objetivo instanceof Attendance ? 'checked_out_at' : 'clocked_out_at';
 
-        $objetivo->update([
-            $entrada => $solicitud->checked_in_at,
-            $salida  => $solicitud->checked_out_at,
-        ]);
+        if ($solicitud->es_eliminacion) {
+            $objetivo?->delete();
+        } else {
+            $entrada = $objetivo instanceof Attendance ? 'checked_in_at' : 'clocked_in_at';
+            $salida  = $objetivo instanceof Attendance ? 'checked_out_at' : 'clocked_out_at';
+
+            $objetivo->update([
+                $entrada => $solicitud->checked_in_at,
+                $salida  => $solicitud->checked_out_at,
+            ]);
+        }
 
         $solicitud->update([
             'status'      => 'aprobada',

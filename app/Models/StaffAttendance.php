@@ -17,7 +17,10 @@ class StaffAttendance extends Model
 {
     use BelongsToGym;
 
-    protected $fillable = ['gym_id', 'user_id', 'clocked_in_at', 'clocked_out_at', 'turno', 'method'];
+    protected $fillable = [
+        'gym_id', 'user_id', 'clocked_in_at', 'clocked_out_at', 'turno', 'method',
+        'location_lat', 'location_lng',
+    ];
 
     protected function casts(): array
     {
@@ -49,6 +52,7 @@ class StaffAttendance extends Model
     {
         return match ($this->method) {
             'qr'     => 'QR',
+            'geo'    => 'Ubicación',
             default  => 'Manual',
         };
     }

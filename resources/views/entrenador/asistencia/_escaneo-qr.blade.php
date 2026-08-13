@@ -63,6 +63,12 @@
             </div>
         </template>
 
+        {{-- Ubicación en tiempo real: si no hay permiso o el navegador no la
+             tiene, no bloquea — sigue igual a "procesando" sin coordenadas. --}}
+        <template x-if="estado === 'ubicando'">
+            <p style="color:var(--ceniza)">Obteniendo tu ubicación…</p>
+        </template>
+
         {{-- Registrando la marcación --}}
         <template x-if="estado === 'procesando'">
             <p style="color:var(--ceniza)">Registrando la marcación…</p>
@@ -74,6 +80,10 @@
                 <p style="font-size:var(--t-lg)">
                     <b style="color:var(--hueso)" x-text="resultado.tipo === 'salida' ? 'Salida' : 'Entrada'"></b>
                     marcada a las <b style="color:var(--hueso)" x-text="resultado.hora"></b>
+                </p>
+                <p style="color:var(--ceniza);font-size:var(--t-sm)">
+                    <span x-text="resultado.nombre"></span>
+                    <span x-show="resultado.dni"> · DNI <span x-text="resultado.dni"></span></span>
                 </p>
                 <p style="color:var(--ceniza);font-size:var(--t-sm)">Sede: <span x-text="resultado.sede"></span></p>
                 <div class="formulario-panel__acciones">

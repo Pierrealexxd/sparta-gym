@@ -12,7 +12,7 @@ class AttendanceEditRequest extends Model
     use BelongsToGym;
 
     protected $fillable = [
-        'gym_id', 'attendance_id', 'staff_attendance_id', 'requested_by',
+        'gym_id', 'attendance_id', 'staff_attendance_id', 'requested_by', 'tipo',
         'checked_in_at', 'checked_out_at', 'reason',
         'status', 'reviewed_by', 'reviewed_at',
     ];
@@ -52,8 +52,20 @@ class AttendanceEditRequest extends Model
         return $this->attendance ?? $this->staffAttendance;
     }
 
-    public function getTipoAttribute(): string
+    /**
+     * 'cliente' o 'staff' — de qué tabla es el registro apuntado. Antes se
+     * llamaba `tipo`, pero ese nombre pasó a ser la columna real que
+     * distingue 'edicion' de 'eliminacion' (ver migración
+     * add_tipo_to_attendance_edit_requests), así que se renombró para no
+     * chocar con el accessor automático de Eloquent.
+     */
+    public function getObjetoAttribute(): string
     {
         return ($this->relationLoaded('attendance') && $this->attendance) ? 'cliente' : 'staff';
+    }
+
+    public function getEsEliminacionAttribute(): bool
+    {
+        return $this->tipo === 'eliminacion';
     }
 }

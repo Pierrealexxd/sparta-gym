@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AttendanceController;
 use App\Http\Controllers\Admin\AttendanceEditRequestController;
+use App\Http\Controllers\Admin\ContactoController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ExerciseController;
 use App\Http\Controllers\Admin\FaqController;
@@ -59,21 +60,20 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
         ->name('matricula.store')->middleware('permiso:clientes.crear');
 
     Route::get('membresias', [MembershipController::class, 'index'])->name('membresias.index');
-    Route::post('clientes/{member}/membresias', [MembershipController::class, 'store'])->name('membresias.store');
+    // Nombre "clientes.membresias.store" (no "membresias.store" a secas):
+    // la URL vive anidada bajo clientes, no bajo /admin/membresias — antes
+    // el nombre no lo reflejaba y confundía con el módulo de arriba
+    // (ver /investigate del 14-08-2026).
+    Route::post('clientes/{member}/membresias', [MembershipController::class, 'store'])->name('clientes.membresias.store');
     Route::post('membresias/{membership}/cancelar', [MembershipController::class, 'cancelar'])->name('membresias.cancelar');
 
-// Módulo único "Asistencia": calendario de clientes (vista principal, con el
-    // botón "Marcar entrada" como modal), "Personal" (marcaciones laborales del
-    // staff, donde aparecen las de QR) y solicitudes de corrección como
-    // pestañas de la misma pantalla — ver admin/asistencia/_pestanas.blade.php.
+// Módulo único "Asistencia": el calendario de marcaciones LABORALES del
+    // staff (antes vivía en la pestaña aparte "Personal"; el calendario de
+    // entradas de clientes y el registro por torno se dieron de baja — ver
+    // decisión del 13-08-2026) y solicitudes de corrección, como pestañas de
+    // la misma pantalla — ver admin/asistencia/_pestanas.blade.php.
     Route::get('asistencia/calendario', [AttendanceController::class, 'calendario'])
         ->name('asistencia.calendario')->middleware('permiso:asistencia.ver');
-    Route::get('asistencia/personal', [AttendanceController::class, 'personal'])
-        ->name('asistencia.personal')->middleware('permiso:asistencia.ver');
-    Route::post('asistencia', [AttendanceController::class, 'entrar'])
-        ->name('asistencia.entrar')->middleware('permiso:asistencia.registrar');
-    Route::post('asistencia/{attendance}/salida', [AttendanceController::class, 'salir'])
-        ->name('asistencia.salir')->middleware('permiso:asistencia.registrar');
 
     Route::middleware('permiso:asistencia.aprobar')->prefix('asistencia/solicitudes')->name('asistencia.solicitudes.')->group(function () {
         Route::get('/', [AttendanceEditRequestController::class, 'index'])->name('index');
@@ -146,13 +146,20 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
         Route::post('testimonios/{testimonio}/ocultar', [TestimonialController::class, 'ocultar'])
             ->name('testimonios.ocultar');
         Route::resource('testimonios', TestimonialController::class)->except(['show']);
+
+        // Contacto de la página pública: formulario de una sola instancia que
+        // edita el gimnasio activo (el que sirve la landing). Sin recurso CRUD.
+        Route::get('contenido/contacto', [ContactoController::class, 'editar'])
+            ->name('contenido.contacto');
+        Route::post('contenido/contacto', [ContactoController::class, 'guardar'])
+            ->name('contenido.contacto.guardar');
     });
 
     Route::middleware('permiso:inventario.ver')->group(function () {
         Route::get('inventario', [ProductController::class, 'index'])->name('inventario.index');
-        Route::get('inventario/nuevo', [ProductController::class, 'create'])->name('inventario.create')->middleware('permiso:inventario.gestionar');
+        Route::get('inventario/create', [ProductController::class, 'create'])->name('inventario.create')->middleware('permiso:inventario.gestionar');
         Route::post('inventario', [ProductController::class, 'store'])->name('inventario.store')->middleware('permiso:inventario.gestionar');
-        Route::get('inventario/{producto}/editar', [ProductController::class, 'edit'])->name('inventario.edit')->middleware('permiso:inventario.gestionar');
+        Route::get('inventario/{producto}/edit', [ProductController::class, 'edit'])->name('inventario.edit')->middleware('permiso:inventario.gestionar');
         Route::put('inventario/{producto}', [ProductController::class, 'update'])->name('inventario.update')->middleware('permiso:inventario.gestionar');
         Route::delete('inventario/{producto}', [ProductController::class, 'destroy'])->name('inventario.destroy')->middleware('permiso:inventario.gestionar');
         Route::post('inventario/{producto}/movimiento', [ProductController::class, 'registrarMovimiento'])->name('inventario.movimiento')->middleware('permiso:inventario.gestionar');

@@ -22,9 +22,8 @@ use Illuminate\Validation\ValidationException;
  *
  *  - "Mi marcación": su asistencia LABORAL (StaffAttendance), como hasta
  *    ahora — elegir turno, marcar entrada/salida, pedir corrección.
- *    Puede borrar sus propios registros libremente (reversible: el admin
- *    puede volver a marcarlo). Editar una hora ya guardada NO se aplica
- *    directo — queda pendiente hasta que el admin la aprueba.
+ *    Ni editar ni borrar un registro ya guardado se aplican directo — las
+ *    dos quedan pendientes hasta que el admin las aprueba o rechaza.
  *
  *  - "Mis clientes": el calendario de las asistencias de clientes que él
  *    mismo registró (Attendance con registered_by = él). Registrar aquí una
@@ -100,8 +99,31 @@ class AttendanceController extends Controller
             ->latest('clocked_in_at')
             ->get();
 
+        // La vista de lista pagina aparte: el calendario y los KPIs siguen
+        // usando $marcaciones completo del mes.
+        $marcacionesPag = StaffAttendance::with(['editRequests' => fn ($q) => $q->pendientes()])
+            ->where('user_id', $request->user()->id)
+            ->whereBetween('clocked_in_at', [$inicio, $fin])
+            ->when($turno, fn ($q, $t) => $q->where('turno', $t))
+            ->latest('clocked_in_at')
+            ->paginate(10)
+            ->withQueryString();
+
         $porDia = $marcaciones->groupBy(fn (StaffAttendance $s) => $s->clocked_in_at->toDateString());
         $offset = $inicio->dayOfWeek === 0 ? 6 : $inicio->dayOfWeek - 1;
+
+        // Indicadores del módulo, del mes que se está mirando (antes vivían
+        // en el "Resumen" aparte, que se dio de baja) — a partir de la misma
+        // colección de arriba, sin consultas extra.
+        $kpis = [
+            'diasTrabajados'   => $porDia->count(),
+            'horasTrabajadas'  => round(
+                $marcaciones->sum(fn (StaffAttendance $s) => $s->clocked_out_at
+                    ? $s->clocked_in_at->diffInMinutes($s->clocked_out_at) / 60
+                    : 0),
+                1
+            ),
+        ];
 
         // "En turno ahora" no depende del mes que se esté mirando — se busca
         // aparte para que cambiar de mes no le esconda el botón de salida.
@@ -113,8 +135,9 @@ class AttendanceController extends Controller
             ->first();
 
         return view('entrenador.asistencia.mi-marcacion', [
-            'marcaciones' => $marcaciones,
-            'abierta'     => $abierta,
+            'marcaciones'    => $marcaciones,
+            'marcacionesPag' => $marcacionesPag,
+            'abierta'        => $abierta,
             'mes'         => $mes,
             'anio'        => $anio,
             'nombreMes'   => $inicio->translatedFormat('F Y'),
@@ -126,6 +149,7 @@ class AttendanceController extends Controller
             'celdas'      => $porDia->map->count(),
             'turno'       => $turno,
             'filtros'     => array_filter(['turno' => $turno]),
+            'kpis'        => $kpis,
         ]);
     }
 
@@ -178,6 +202,13 @@ class AttendanceController extends Controller
             throw ValidationException::withMessages(['qr' => 'Código QR no válido.']);
         }
 
+        // lat/lng son opcionales a propósito: sin permiso o sin GPS, el
+        // fichaje igual sigue (ver decisión en pierre.md), solo quedan NULL.
+        $request->validate([
+            'lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'numeric', 'between:-180,180'],
+        ]);
+
         // Sin filtro de sede a propósito: el QR define la sucursal, la sesión no.
         $qr = GymQrCode::query()
             ->where('token', $token)
@@ -199,6 +230,8 @@ class AttendanceController extends Controller
                 $request->input('turno', 'manana'),
                 $qr->gym_id,
                 true,
+                $request->filled('lat') ? (float) $request->input('lat') : null,
+                $request->filled('lng') ? (float) $request->input('lng') : null,
             );
         } catch (ValidationException $e) {
             throw ValidationException::withMessages([
@@ -209,22 +242,33 @@ class AttendanceController extends Controller
         $marcacion = $resultado['marcacion'];
 
         return response()->json([
-            'ok'    => true,
-            'tipo'  => $resultado['tipo'],
-            'hora'  => $marcacion->clocked_out_at?->format('H:i') ?? $marcacion->clocked_in_at->format('H:i'),
-            'sede'  => $qr->gym->name,
-            'turno' => $marcacion->turno,
+            'ok'     => true,
+            'tipo'   => $resultado['tipo'],
+            'hora'   => $marcacion->clocked_out_at?->format('H:i') ?? $marcacion->clocked_in_at->format('H:i'),
+            'sede'   => $qr->gym->name,
+            'turno'  => $marcacion->turno,
+            'nombre' => $request->user()->name,
+            'dni'    => $request->user()->dni,
         ]);
     }
 
-    /** Elimina una marcación propia — sin pedir permiso porque es reversible. */
+    /**
+     * Eliminar una marcación propia ya no se aplica directo: queda pendiente
+     * de aprobación del admin, igual que editar (antes se borraba al toque
+     * porque "es obvio que pasó, el registro ya no está" — se decidió que
+     * igual conviene avisarle al admin).
+     */
     public function borrar(Request $request, StaffAttendance $marcacion): RedirectResponse
     {
         abort_unless($marcacion->user_id === $request->user()->id, 403);
 
-        $marcacion->delete();
+        try {
+            $this->asistencias->solicitarEliminacion($marcacion, $request->user());
+        } catch (ValidationException $e) {
+            return back()->with('error', $e->errors()['asistencia'][0] ?? 'No se pudo enviar la solicitud.');
+        }
 
-        return back()->with('exito', 'Marcación eliminada.');
+        return back()->with('exito', 'Solicitud de eliminación enviada. Queda pendiente de aprobación.');
     }
 
     /** Editar una marcación propia: queda pendiente de aprobación. */

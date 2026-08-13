@@ -166,8 +166,20 @@ document.addEventListener('alpine:init', () => {
             this.bucle = requestAnimationFrame(() => this.leer());
         },
 
+        /**
+         * Tras leer el QR, antes de mandar el POST, se pide la ubicación en
+         * tiempo real — el mismo gesto (la lectura) sirve de disparador para
+         * el diálogo de permiso del navegador. Si el empleado la niega o no
+         * está disponible, la marcación igual sigue: las coordenadas quedan
+         * NULL en el registro, no bloquean el fichaje (ver AsistenciaService
+         * y decisión en pierre.md sobre no depender de la precisión del GPS).
+         */
         async enviar(token) {
             this.detener();
+            this.estado = 'ubicando';
+
+            const coords = await this.obtenerUbicacion();
+
             this.estado = 'procesando';
 
             try {
@@ -178,7 +190,7 @@ document.addEventListener('alpine:init', () => {
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
                     },
-                    body: JSON.stringify({ token, turno: this.turno }),
+                    body: JSON.stringify({ token, turno: this.turno, lat: coords?.lat ?? null, lng: coords?.lng ?? null }),
                 });
 
                 if (!res.ok) {
@@ -202,6 +214,21 @@ document.addEventListener('alpine:init', () => {
                 this.estado = 'error';
                 this.mensaje = 'No se pudo conectar con el servidor. Revisá tu conexión.';
             }
+        },
+
+        /** Promesa que nunca rechaza: sin permiso/GPS, resuelve null y sigue. */
+        obtenerUbicacion() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    resolve(null);
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    (posicion) => resolve({ lat: posicion.coords.latitude, lng: posicion.coords.longitude }),
+                    () => resolve(null),
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
+                );
+            });
         },
 
         recargar() {
