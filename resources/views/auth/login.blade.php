@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0A0A0B">
-    <title>Acceder · Sparta Gym</title>
+    <title>Login · Sparta Gym</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     @vite(['resources/css/app.css', 'resources/js/app-public.js'])
@@ -21,7 +21,7 @@
             </div>
 
             <header class="auth__cabecera">
-                <h1>Acceder</h1>
+                <h1>Login</h1>
                 <p>Entra a tu panel para ver tu rutina, tus pagos y tu progreso.</p>
             </header>
 
@@ -42,7 +42,11 @@
                 <label class="campo">
                     <span class="campo__etiqueta">Contraseña</span>
                     <input class="campo__control" type="password" name="password" required
+                           id="login-password"
                            autocomplete="current-password" placeholder="••••••••">
+                    <span class="ojo" onclick="togglePassword('login-password')">
+                        <x-icono nombre="ojo" />
+                    </span>
                 </label>
 
                 <label class="auth__recordar">
@@ -50,7 +54,7 @@
                     Mantener la sesión abierta
                 </label>
 
-                <button class="btn btn--fuego btn--bloque btn--grande" type="submit">Entrar</button>
+                <button class="btn btn--fuego btn--bloque btn--grande" type="submit">Login</button>
             </form>
 
             <footer class="auth__pie">
@@ -65,6 +69,17 @@
                 </a>
             </footer>
         </div>
+
+        <script>
+            function togglePassword(fieldId) {
+                const input = document.getElementById(fieldId);
+                if (input.type === 'password') {
+                    input.type = 'text';
+                } else {
+                    input.type = 'password';
+                }
+            }
+        </script>
     </main>
 </body>
 </html>

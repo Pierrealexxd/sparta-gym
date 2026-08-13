@@ -33,8 +33,8 @@ Route::post('/contacto', [LandingController::class, 'contactar'])
 */
 
 Route::middleware('guest')->group(function () {
-    Route::get('/acceso', [LoginController::class, 'mostrar'])->name('login');
-    Route::post('/acceso', [LoginController::class, 'entrar'])->middleware('throttle:10,1');
+    Route::get('/login', [LoginController::class, 'mostrar'])->name('login');
+    Route::post('/login', [LoginController::class, 'entrar'])->middleware('throttle:10,1');
 
     // Alta pública: solo crea cuentas de cliente (rol cliente) — ver
     // RegisterController para por qué eso no se puede burlar desde aquí.

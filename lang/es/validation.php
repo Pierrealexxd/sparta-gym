@@ -202,7 +202,7 @@ return [
         'phone' => 'teléfono',
         'email' => 'correo',
         'password' => 'contraseña',
-        'access_email' => 'correo de acceso',
+        'access_email' => 'correo de login',
         'is_active' => 'estado activo',
         'role_id' => 'rol',
         'gym_id' => 'sede',
@@ -215,7 +215,7 @@ return [
         'method' => 'método de pago',
         'reference' => 'referencia',
         'registrar_pago' => 'registrar pago',
-        'crear_acceso' => 'crear acceso',
+        'crear_acceso' => 'crear login',
 
         // Asistencia
         'checked_in_at' => 'hora de entrada',

@@ -62,7 +62,7 @@
                     </label>
                 </div>
 
-                <h3 class="perfil__seccion-titulo">Datos de acceso</h3>
+                <h3 class="perfil__seccion-titulo">Credenciales</h3>
                 <div class="formulario-panel__fila">
                     @if ($usuario->member)
                         <label class="campo">

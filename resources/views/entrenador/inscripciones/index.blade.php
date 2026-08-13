@@ -155,10 +155,10 @@
                         {{-- Matricular NO da acceso a /cliente por sí solo — son dos
                              trámites distintos (ver docs). Este checkbox los junta. --}}
                         <label class="campo" style="margin-top:var(--e-4)"><span class="campo__etiqueta">
-                            <input type="checkbox" name="crear_acceso" value="1" x-model="crearAcceso"> Crear acceso a "Mi cuenta" para este cliente
+                            <input type="checkbox" name="crear_login" value="1" x-model="crearLogin"> Crear login a "Mi cuenta" para este cliente
                         </span></label>
-                        <div x-show="crearAcceso" x-cloak class="formulario-panel__fila">
-                            <label class="campo"><span class="campo__etiqueta">Correo para el acceso</span>
+                        <div x-show="crearLogin" x-cloak class="formulario-panel__fila">
+                            <label class="campo"><span class="campo__etiqueta">Correo para el login</span>
                                 <input class="campo__control" type="email" name="access_email" x-model="accessEmail" placeholder="correo@ejemplo.com"></label>
                             <p style="color:var(--ceniza);font-size:var(--t-sm);align-self:end;margin-bottom:var(--e-3)">
                                 Se genera una contraseña aleatoria que se muestra una sola vez al confirmar.

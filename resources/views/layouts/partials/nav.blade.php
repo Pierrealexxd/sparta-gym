@@ -31,7 +31,7 @@
              para entrar desde el celular. --}}
         <div class="nav__enlaces-pie">
             <a class="nav__enlace nav__enlace--cuenta" href="{{ auth()->check() ? route(auth()->user()->rutaDeInicio()) : route('login') }}">
-                {{ auth()->check() ? 'Mi panel' : 'Acceder' }}
+                {{ auth()->check() ? 'Mi panel' : 'Login' }}
             </a>
             @guest
                 <a class="btn btn--fuego nav__enlace--inscribirme" href="#planes">Inscribirme</a>
@@ -43,7 +43,7 @@
         @auth
             <a class="btn btn--fuego" href="{{ route(auth()->user()->rutaDeInicio()) }}">Mi panel</a>
         @else
-            <a class="btn btn--vidrio" href="{{ route('login') }}">Acceder</a>
+            <a class="btn btn--vidrio" href="{{ route('login') }}">Login</a>
             <a class="btn btn--fuego" href="#planes">Inscribirme</a>
         @endauth
 

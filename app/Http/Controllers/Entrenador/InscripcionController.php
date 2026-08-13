@@ -125,13 +125,13 @@ class InscripcionController extends Controller
         $socio = $resultado['member'];
 
         $credenciales = null;
-        if ($request->boolean('crear_acceso')) {
-            $credenciales = $this->matricula->crearAcceso($socio, $datos['access_email']);
+        if ($request->boolean('crear_login')) {
+            $credenciales = $this->matricula->crearLogin($socio, $datos['access_email']);
         }
 
         $mensaje = "Inscripción registrada. Código {$socio->code}.";
         if ($credenciales) {
-            $mensaje .= " Acceso creado — correo: <b>{$credenciales['email']}</b>, contraseña inicial: <b>{$credenciales['password']}</b> (entrégala y que la cambie en su primer ingreso).";
+            $mensaje .= " Login creado — correo: <b>{$credenciales['email']}</b>, contraseña inicial: <b>{$credenciales['password']}</b> (entrégala y que la cambie en su primer ingreso).";
         }
 
         return redirect()

@@ -76,11 +76,17 @@
                         <span class="campo__etiqueta">Contraseña</span>
                         <input class="campo__control" type="password" name="password" required
                                minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres">
+                        <span class="ojo" onclick="togglePassword('registro-password')">
+                            <x-icono nombre="ojo" />
+                        </span>
                     </label>
                     <label class="campo">
                         <span class="campo__etiqueta">Repetir contraseña</span>
                         <input class="campo__control" type="password" name="password_confirmation" required
                                minlength="8" autocomplete="new-password">
+                        <span class="ojo" onclick="togglePassword('registro-password-confirm')">
+                            <x-icono nombre="ojo" />
+                        </span>
                     </label>
                 </div>
 
@@ -90,10 +96,21 @@
             <footer class="auth__pie auth__pie--centro">
                 ¿Ya tienes cuenta?
                 <a href="{{ route('login') }}" class="btn btn--desnudo" style="font-size:var(--t-sm)">
-                    Entrar
+                    Login
                 </a>
             </footer>
-        </div>
+</div>
+
+        <script>
+            function togglePassword(fieldId) {
+                const input = document.getElementById(fieldId);
+                if (input.type === 'password') {
+                    input.type = 'text';
+                } else {
+                    input.type = 'password';
+                }
+            }
+        </script>
     </main>
 </body>
 </html>

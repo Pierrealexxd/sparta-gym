@@ -76,11 +76,11 @@ class MatriculaService
     }
 
     /**
-     * Crea el acceso a /cliente para un socio que aún no tiene cuenta.
+     * Crea las credenciales de login para un socio que aún no tiene cuenta.
      * Es un trámite aparte de matricular/renovar a propósito — si el socio
      * ya tiene cuenta, no hace nada y devuelve null.
      */
-    public function crearAcceso(Member $socio, string $email): ?array
+    public function crearLogin(Member $socio, string $email): ?array
     {
         if ($socio->user_id) {
             return null;
