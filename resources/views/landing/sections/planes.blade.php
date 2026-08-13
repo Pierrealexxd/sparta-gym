@@ -8,10 +8,15 @@
 
         {{-- data-carrusel: en móvil esta rejilla se vuelve un carrusel que
              avanza solo cada 3,2 s, en bucle y sin botones (ver
-             carrusel.js). En escritorio el atributo no hace nada. --}}
-        <div class="planes" data-carrusel="3200" data-revelar data-revelar-grupo>
+             carrusel.js). En escritorio el atributo no hace nada.
+             data-carrusel-3d: coverflow + atenuación (P1+P2 del plan de
+             carruseles 3D) — antes planes se quedaba sin esto a propósito
+             ("comparar precios pide quietud"), decisión revertida a
+             pedido explícito. --}}
+        <div class="planes" data-carrusel="3200" data-carrusel-3d data-revelar data-revelar-grupo>
             @foreach ($planes as $plan)
-                <article @class(['tarjeta', 'tarjeta--interactiva', 'plan', 'plan--destacado' => $plan->is_featured])>
+                <article @class(['tarjeta', 'tarjeta--interactiva', 'plan', 'plan--destacado' => $plan->is_featured])
+                         @style(["--acento-plan: {$plan->accent_color}" => $plan->accent_color])>
                     <span class="tarjeta__filo"></span>
 
                     <header>

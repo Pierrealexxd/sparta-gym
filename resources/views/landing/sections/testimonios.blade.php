@@ -5,8 +5,11 @@
             <h2>Lo dicen ellos</h2>
         </div>
 
-        {{-- Ver planes.blade.php: mismo carrusel automático en móvil. --}}
-        <div class="testimonios" data-carrusel="3600" data-revelar data-revelar-grupo>
+        {{-- Ver planes.blade.php: mismo carrusel automático en móvil.
+             data-carrusel-3d: acá sí lleva coverflow + atenuación (P1+P2
+             del plan de carruseles 3D) — la voz que se lee queda al
+             frente, el resto en penumbra. --}}
+        <div class="testimonios" data-carrusel="3600" data-carrusel-3d data-revelar data-revelar-grupo>
             @foreach ($testimonios as $testimonio)
                 <blockquote class="tarjeta tarjeta--interactiva testimonio">
                     <span class="tarjeta__filo"></span>

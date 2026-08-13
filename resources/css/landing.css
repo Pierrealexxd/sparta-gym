@@ -622,7 +622,7 @@
     max-height: 80vh;
     overflow-y: auto;
     display: grid;
-    gap: var(--e-4);
+    gap: var(--e-5);
     padding: var(--e-6) var(--e-5) var(--e-5);
     background: var(--grafito);
     border: 1px solid var(--acero-claro);
@@ -646,9 +646,52 @@
     transition: color var(--v-rapido) var(--curva), border-color var(--v-rapido) var(--curva);
 }
 .modal-info__cerrar:hover { color: var(--hueso); border-color: var(--acero-claro); }
-.modal-info__cuerpo h3 { font-family: var(--f-display); font-size: var(--t-xl); text-transform: uppercase; padding-right: 2rem; }
-.modal-info__cuerpo p { color: var(--ceniza); line-height: 1.55; }
-.modal-info__cuerpo .beneficio__icono { margin-bottom: var(--e-2); }
+.modal-info__cuerpo {
+    display: grid;
+    gap: var(--e-5);
+}
+.modal-info__cuerpo h3 {
+    font-family: var(--f-display);
+    font-size: var(--t-2xl);
+    text-transform: uppercase;
+    padding-right: var(--e-7);
+    line-height: 1.05;
+}
+.modal-info__cuerpo p {
+    color: var(--ceniza);
+    font-size: var(--t-base);
+    line-height: 1.65;
+    max-width: 44ch;
+}
+.modal-info__cuerpo .beneficio__icono { margin-bottom: 0; }
+.modal-info__cuerpo .guia__lista { gap: var(--e-4); }
+.modal-info__cuerpo .guia__lista li {
+    font-size: var(--t-base);
+    line-height: 1.6;
+}
+
+/* Bottom sheet: este modal solo abre en móvil (innerWidth <= 740), así que
+   por debajo de ese ancho pasa de tarjeta centrada a hoja que sale desde
+   abajo — ancho completo, esquinas superiores redondeadas y respiro para el
+   home indicator de iOS. En > 740px el fallback centrado queda intacto. */
+@media (max-width: 740px) {
+    .modal-info {
+        padding: 0;
+        align-items: end;
+        justify-items: stretch;
+    }
+    .modal-info__caja {
+        width: 100%;
+        max-width: none;
+        max-height: 88dvh;
+        border-radius: var(--r-lg) var(--r-lg) 0 0;
+        border-bottom: 0;
+        padding: var(--e-6) var(--e-5) var(--e-7);
+        padding-bottom: calc(var(--e-7) + env(safe-area-inset-bottom));
+    }
+    .modal-info__entra-desde { transform: translateY(100%); }
+    .modal-info__entra-hasta { transform: translateY(0); }
+}
 
 /* ============================================================
    PLANES
@@ -665,6 +708,20 @@
     display: grid;
     grid-template-rows: auto auto auto 1fr auto;
     gap: var(--e-4);
+    /* Acento propio del plan (admin → Contenido web → Planes): si no eligió
+       uno, cae al degradado de fuego de siempre — mismo filo de .tarjeta,
+       solo que acá el color puede venir de la base de datos. */
+    --acento-plan: var(--fuego);
+}
+.plan .tarjeta__filo { background: var(--acento-plan); }
+
+/* Las tarjetas de los tres carruseles, más redondeadas que el resto del
+   sitio (.tarjeta usa --r-lg, 18px) — a pedido explícito. Escrito acá,
+   scopeado por clase (no tocando .tarjeta en components.css), para que
+   el resto del sitio —el panel de administración incluido, que comparte
+   ese mismo componente— no cambie. */
+.plan, .testimonio, .ejercicio {
+    border-radius: var(--r-xl);
 }
 
 /* El destacado no crece de tamaño: se enciende. Escalar tarjetas
@@ -710,7 +767,11 @@
         scrollbar-width: none;
         gap: var(--e-4);
         margin: 0 calc(-1 * var(--e-4));
-        padding: 0 var(--e-4) var(--e-2);
+        /* padding-top ya no es 0: ver el comentario junto al bloque
+           "P1 + P2" más abajo — sin este aire, la tarjeta activa del
+           coverflow crece más de lo que la pista permite y el recorte le
+           come la esquina redondeada. */
+        padding: var(--e-5) var(--e-4) var(--e-2);
     }
     .planes::-webkit-scrollbar { display: none; }
     .plan { flex: 0 0 84%; scroll-snap-align: center; }
@@ -833,7 +894,11 @@
         scrollbar-width: none;
         gap: var(--e-4);
         margin: 0 calc(-1 * var(--e-4));
-        padding: 0 var(--e-4) var(--e-2);
+        /* padding-top ya no es 0: ver el comentario junto al bloque
+           "P1 + P2" más abajo — sin este aire, la tarjeta activa del
+           coverflow crece más de lo que la pista permite y el recorte le
+           come la esquina redondeada. */
+        padding: var(--e-5) var(--e-4) var(--e-2);
     }
     .testimonios::-webkit-scrollbar { display: none; }
     .testimonio { flex: 0 0 88%; scroll-snap-align: center; }
@@ -1098,7 +1163,11 @@
         scrollbar-width: none;
         gap: var(--e-4);
         margin: 0 calc(-1 * var(--e-4));
-        padding: 0 var(--e-4) var(--e-2);
+        /* padding-top ya no es 0: ver el comentario junto al bloque
+           "P1 + P2" más abajo — sin este aire, la tarjeta activa del
+           coverflow crece más de lo que la pista permite y el recorte le
+           come la esquina redondeada. */
+        padding: var(--e-5) var(--e-4) var(--e-2);
     }
     .biblioteca::-webkit-scrollbar { display: none; }
     .ejercicio { flex: 0 0 88%; scroll-snap-align: center; }
@@ -1348,4 +1417,72 @@ ul.guia__lista li::before {
     opacity: 0;
     transform: translateY(28px);
     will-change: transform, opacity;
+}
+
+/* ============================================================
+   CARRUSELES CON PROFUNDIDAD (planes, testimonios y biblioteca)
+   Ver PLAN_CARRUSELES_3D_LANDING.md. La línea de avance (P3) que este
+   bloque tenía se quitó por pedido explícito — no gustaba. Planes se
+   sumó al coverflow después, también a pedido explícito (el plan
+   original lo dejaba quieto por "comparar precios pide quietud" — se
+   revirtió). Todo bajo el mismo breakpoint que ya convierte cada rejilla
+   en pista de scroll-snap (740px): en escritorio la rejilla se ve entera
+   y nada de este bloque aplica.
+   ============================================================ */
+
+/* ---------- P1 + P2: coverflow y atenuación ----------
+   El transform/opacity de cada tarjeta los escribe carrusel-3d.js
+   DIRECTO por elemento (inline), no por variable CSS consumida acá: el
+   revelado GSAP (data-revelar) dice opacity/transform inline al terminar
+   su animación (ver el bloque de arriba, [data-revelar] parte en
+   opacity:0 y GSAP lo anima con estilos inline), y un inline de hoja de
+   estilos nunca le gana a otro inline — solo puede ganarle otro inline
+   escrito después, que es justo lo que hace ese módulo la primera vez
+   que la pista scrollea. El filtro sí es seguro por variable + regla
+   CSS: GSAP nunca toca `filter`.
+
+   Sobre el padding-top de ".planes"/".testimonios"/".biblioteca" (arriba
+   de este bloque): la pista tiene overflow-x:auto para el scroll
+   horizontal, y por una regla del propio CSS ("si un eje no es visible,
+   el otro pasa a auto") el eje vertical queda recortando también, aunque
+   nunca se pidió. La tarjeta activa del coverflow crece (scale +
+   translateZ) más allá de su tamaño normal — sin aire extra, ese
+   recorte vertical le comía la esquina redondeada de arriba, dejándola
+   cuadrada. El padding-top le da a la tarjeta dónde crecer sin tocar
+   el borde de la caja que recorta. */
+@media (max-width: 740px) {
+    .planes .tarjeta--interactiva,
+    .testimonios .tarjeta--interactiva,
+    .biblioteca .tarjeta--interactiva {
+        transition: transform var(--v-medio) var(--curva),
+                    opacity var(--v-medio) var(--curva),
+                    filter var(--v-medio) var(--curva);
+        will-change: transform;
+        filter: grayscale(var(--atenuar-3d, 0));
+    }
+}
+
+/* ---------- P5: profundidad en el tilt existente (testimonios y biblioteca) ----------
+   Refina el tilt de .tarjeta--interactiva (interacciones.js) con capas en
+   Z propias — solo con mouse real, mismo gate que ya usa ese módulo
+   (interacciones.js:15). Nada de esto toca la tarjeta entera ni el filo
+   (borde a borde: bajo overflow:hidden, empujarlo en Z lo recortaría
+   justo en el canto, que es donde más se nota); se aplica a una pieza
+   pequeña y con aire alrededor (el avatar, las migas) para que el
+   "flotar hacia adelante" se note sin arriesgar un recorte. */
+@media (hover: hover) and (pointer: fine) {
+    .testimonio.tarjeta--interactiva,
+    .ejercicio.tarjeta--interactiva {
+        perspective: 900px;
+        transform-style: preserve-3d;
+    }
+    .testimonio.tarjeta--interactiva .testimonio__avatar,
+    .ejercicio.tarjeta--interactiva .ejercicio__migas {
+        transition: transform var(--v-medio) var(--curva);
+        transform: translateZ(0px);
+    }
+    .testimonio.tarjeta--interactiva:hover .testimonio__avatar,
+    .ejercicio.tarjeta--interactiva:hover .ejercicio__migas {
+        transform: translateZ(8px);
+    }
 }

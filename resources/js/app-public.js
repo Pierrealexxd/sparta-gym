@@ -17,6 +17,7 @@ import { iniciarAnimaciones } from './animations';
 import { iniciarParticulas } from './particulas';
 import { iniciarInteracciones } from './interacciones';
 import { iniciarCarruseles } from './carrusel';
+import { iniciarCarruseles3d } from './carrusel-3d';
 
 window.Alpine = Alpine;
 Alpine.start();
@@ -36,3 +37,7 @@ iniciar('animaciones', iniciarAnimaciones);
 iniciar('particulas', () => iniciarParticulas(document.querySelector('[data-particulas]')));
 iniciar('interacciones', iniciarInteracciones);
 iniciar('carruseles', iniciarCarruseles);
+// Después de 'carruseles': depende de que la pista y sus clones ya
+// existan (carrusel.js los arma en construirCarrusel()→reconstruir(),
+// síncrono dentro de iniciarCarruseles()).
+iniciar('carrusel-3d', iniciarCarruseles3d);

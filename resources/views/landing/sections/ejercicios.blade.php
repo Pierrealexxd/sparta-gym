@@ -24,10 +24,17 @@
 
         {{-- Ver planes.blade.php. Aquí el bucle no clona tarjetas (Alpine
              gobierna el filtro y el modal de video de cada una), así que al
-             final vuelve al principio de una sola vez — ver carrusel.js. --}}
-        <div class="biblioteca" data-carrusel="4000" data-revelar data-revelar-grupo>
+             final vuelve al principio de una sola vez — ver carrusel.js.
+             data-carrusel-3d: coverflow suave + atenuación (P1+P2), para
+             que los filtros de Alpine sigan mandando en vez de competir
+             con un efecto muy marcado. --}}
+        <div class="biblioteca" data-carrusel="4000" data-carrusel-3d data-revelar data-revelar-grupo>
             @foreach ($ejercicios as $ejercicio)
-                <article class="tarjeta ejercicio"
+                {{-- tarjeta--interactiva: antes no la tenía (solo .tarjeta);
+                     se agrega para que el tilt/brillo existente (y su
+                     refinamiento de profundidad, P5) también viva acá,
+                     igual que en planes y testimonios. --}}
+                <article class="tarjeta tarjeta--interactiva ejercicio"
                          x-show="activa === 'todas' || activa === '{{ $ejercicio->category }}'">
                     <span class="tarjeta__filo"></span>
 
