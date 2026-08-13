@@ -3,6 +3,10 @@
 Objetivo: dejar la app viva en internet a **coste $0/mes** para que el dueño la vea
 (landing + login + panel de administrador con datos demo).
 
+> Si el deploy falla, revisar primero [DEPLOY_INCIDENTS.md](DEPLOY_INCIDENTS.md) —
+> bitácora de problemas ya diagnosticados en producción (p. ej. Aiven apagándose
+> por inactividad) antes de investigar desde cero.
+
 ## Por qué esta combinación
 
 - **Render** (free web service, Docker): hosting PHP/Laravel gratis. La app y el
