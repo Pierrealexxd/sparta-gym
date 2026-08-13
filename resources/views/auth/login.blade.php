@@ -10,66 +10,86 @@
     @vite(['resources/css/app.css', 'resources/js/app-public.js'])
 </head>
 <body>
-    <main class="auth">
+    <main class="auth auth--paneles">
         <div class="hero__brasa" style="top:50%" aria-hidden="true"></div>
 
-        <div class="vidrio auth__vidrio">
-            <div class="auth__marca">
-                <a class="nav__marca" href="{{ route('landing') }}">
-                    <span>Sparta</span><em>Gym</em>
-                </a>
-            </div>
+        <div class="auth__paneles">
+            {{-- Panel visual: sin arte propio del gimnasio, así que se arma
+                 con lo que el sitio ya tiene — el mismo sistema de
+                 partículas del hero (particulas.js, vía data-particulas) y
+                 el logotipo como marca de agua. --}}
+            <section class="auth__panel-visual" aria-hidden="true">
+                <canvas data-particulas></canvas>
 
-            <header class="auth__cabecera">
-                <h1>Login</h1>
-                <p>Entra a tu panel para ver tu rutina, tus pagos y tu progreso.</p>
-            </header>
-
-            <form method="POST" action="{{ route('login') }}" class="auth__formulario">
-                @csrf
-
-                @if ($errors->any())
-                    <div class="aviso aviso--error" role="alert">{{ $errors->first() }}</div>
+                @if ($logoUrl)
+                    <div class="auth__panel-agua">
+                        <img src="{{ $logoUrl }}" alt="">
+                    </div>
                 @endif
 
-                <label class="campo">
-                    <span class="campo__etiqueta">Correo</span>
-                    <input class="campo__control" type="email" name="email" required autofocus
-                           value="{{ old('email') }}" autocomplete="username"
-                           placeholder="tucorreo@ejemplo.com">
-                </label>
+                <p class="auth__panel-pie">© {{ date('Y') }} Sparta Gym</p>
+            </section>
 
-                <label class="campo">
-                    <span class="campo__etiqueta">Contraseña</span>
-                    <div class="campo__control-envoltorio">
-                        <input class="campo__control" type="password" name="password" required
-                               id="login-password"
-                               autocomplete="current-password" placeholder="••••••••">
-                        <span class="ojo" onclick="togglePassword('login-password')">
-                            <x-icono nombre="ojo" />
-                        </span>
+            <section class="auth__panel-formulario">
+                <div class="vidrio auth__vidrio">
+                    <div class="auth__marca">
+                        <a href="{{ route('landing') }}" aria-label="Sparta Gym">
+                            @if ($logoUrl)
+                                <img class="auth__logo" src="{{ $logoUrl }}" alt="">
+                            @endif
+                            <span class="nav__marca"><span>Sparta</span><em>Gym</em></span>
+                        </a>
                     </div>
-                </label>
 
-                <label class="auth__recordar">
-                    <input type="checkbox" name="remember" value="1">
-                    Mantener la sesión abierta
-                </label>
+                    <header class="auth__cabecera">
+                        <h1>Login</h1>
+                        <p>Entra a tu panel para ver tu rutina, tus pagos y tu progreso.</p>
+                    </header>
 
-                <button class="btn btn--fuego btn--bloque btn--grande" type="submit">Login</button>
-            </form>
+                    <form method="POST" action="{{ route('login') }}" class="auth__formulario">
+                        @csrf
 
-            <footer class="auth__pie">
-                <span>
-                    ¿Todavía no eres socio?
-                    <a href="{{ route('registro') }}" class="btn btn--desnudo" style="font-size:var(--t-sm)">
-                        Regístrate
-                    </a>
-                </span>
-                <a href="{{ route('landing') }}#planes" class="btn btn--desnudo" style="font-size:var(--t-sm)">
-                    Ver planes
-                </a>
-            </footer>
+                        @if ($errors->any())
+                            <div class="aviso aviso--error" role="alert">{{ $errors->first() }}</div>
+                        @endif
+
+                        <label class="campo">
+                            <span class="campo__etiqueta">Correo</span>
+                            <input class="campo__control" type="email" name="email" required autofocus
+                                   value="{{ old('email') }}" autocomplete="username"
+                                   placeholder="tucorreo@ejemplo.com">
+                        </label>
+
+                        <label class="campo">
+                            <span class="campo__etiqueta">Contraseña</span>
+                            <div class="campo__control-envoltorio">
+                                <input class="campo__control" type="password" name="password" required
+                                       id="login-password"
+                                       autocomplete="current-password" placeholder="••••••••">
+                                <span class="ojo" onclick="togglePassword('login-password')">
+                                    <x-icono nombre="ojo" />
+                                </span>
+                            </div>
+                        </label>
+
+                        <label class="auth__recordar">
+                            <input type="checkbox" name="remember" value="1">
+                            Mantener la sesión abierta
+                        </label>
+
+                        <button class="btn btn--fuego btn--bloque btn--grande" type="submit">Login</button>
+                    </form>
+
+                    <footer class="auth__pie auth__pie--centro">
+                        <span>
+                            ¿Todavía no eres socio?
+                            <a href="{{ route('registro') }}" class="btn btn--desnudo" style="font-size:var(--t-sm)">
+                                Regístrate
+                            </a>
+                        </span>
+                    </footer>
+                </div>
+            </section>
         </div>
 
         <script>

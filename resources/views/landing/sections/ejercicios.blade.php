@@ -1,7 +1,19 @@
 {{-- La biblioteca: cada ejercicio de la sala con su técnica, su error más
      común y, si existe, su video. El filtro es Alpine puro: sin peticiones. --}}
+@php
+    // Puede haber hasta 18 ejercicios: mostrar la grilla completa de una
+    // producía un scroll vertical enorme solo para esta sección (cada
+    // tarjeta trae nombre, equipo, músculos y las dos claves). Se revela
+    // en tandas de 6 con "Cargar más", y este mapa le dice a Alpine cuántos
+    // hay por filtro sin tocar la base de datos otra vez en el click.
+    $conteos = ['todas' => $ejercicios->count()];
+    foreach ($categorias as $categoria) {
+        $conteos[$categoria] = $ejercicios->where('category', $categoria)->count();
+    }
+    $porCategoria = [];
+@endphp
 <section class="seccion" id="ejercicios"
-         x-data="{ activa: 'todas', video: null, abrir(titulo, url) { this.video = { titulo, url } } }">
+         x-data="{ activa: 'todas', video: null, visibles: 6, conteos: {{ Illuminate\Support\Js::from($conteos) }}, abrir(titulo, url) { this.video = { titulo, url } } }">
     <div class="contenedor">
         <div class="seccion__cabecera" data-revelar>
             <span class="eyebrow">La biblioteca</span>
@@ -11,12 +23,12 @@
 
         <div class="filtros" data-revelar>
             <button type="button" class="filtro"
-                    :class="{ 'is-activo': activa === 'todas' }" @click="activa = 'todas'">
+                    :class="{ 'is-activo': activa === 'todas' }" @click="activa = 'todas'; visibles = 6">
                 Todas <b>{{ $ejercicios->count() }}</b>
             </button>
             @foreach ($categorias as $categoria)
                 <button type="button" class="filtro"
-                        :class="{ 'is-activo': activa === '{{ $categoria }}' }" @click="activa = '{{ $categoria }}'">
+                        :class="{ 'is-activo': activa === '{{ $categoria }}' }" @click="activa = '{{ $categoria }}'; visibles = 6">
                     {{ ucfirst($categoria) }} <b>{{ $ejercicios->where('category', $categoria)->count() }}</b>
                 </button>
             @endforeach
@@ -30,12 +42,13 @@
              con un efecto muy marcado. --}}
         <div class="biblioteca" data-carrusel="4000" data-carrusel-3d data-revelar data-revelar-grupo>
             @foreach ($ejercicios as $ejercicio)
+                @php $posCategoria = $porCategoria[$ejercicio->category] = ($porCategoria[$ejercicio->category] ?? -1) + 1; @endphp
                 {{-- tarjeta--interactiva: antes no la tenía (solo .tarjeta);
                      se agrega para que el tilt/brillo existente (y su
                      refinamiento de profundidad, P5) también viva acá,
                      igual que en planes y testimonios. --}}
                 <article class="tarjeta tarjeta--interactiva ejercicio"
-                         x-show="activa === 'todas' || activa === '{{ $ejercicio->category }}'">
+                         x-show="(activa === 'todas' && {{ $loop->index }} < visibles) || (activa === '{{ $ejercicio->category }}' && {{ $posCategoria }} < visibles)">
                     <span class="tarjeta__filo"></span>
 
                     <div class="ejercicio__migas">
@@ -76,6 +89,12 @@
                     @endif
                 </article>
             @endforeach
+        </div>
+
+        <div class="biblioteca__mas-envoltorio" x-show="visibles < (conteos[activa] ?? 0)">
+            <button type="button" class="btn btn--vidrio biblioteca__mas" @click="visibles += 6">
+                Cargar más ejercicios
+            </button>
         </div>
 
         <p class="biblioteca__nota" data-revelar>

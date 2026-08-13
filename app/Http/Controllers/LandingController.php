@@ -10,6 +10,7 @@ use App\Models\Plan;
 use App\Models\Testimonial;
 use App\Models\Trainer;
 use App\Support\GymContext;
+use App\Support\Marca;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,7 +25,7 @@ class LandingController extends Controller
         abort_if($gym === null, 503, 'No hay ningún gimnasio configurado.');
 
         return view('landing.index', [
-            'logoUrl' => $this->logoPublico(),
+            'logoUrl' => Marca::logoPublico(),
             'gym'           => $gym,
             'planes'        => Plan::publicos()->get(),
             'testimonios'   => Testimonial::publicados()->get(),
@@ -35,28 +36,6 @@ class LandingController extends Controller
             'ejercicios'    => Exercise::disponibles()->orderBy('name')->get(),
             'categorias'    => Exercise::disponibles()->select('category')->distinct()->orderBy('category')->pluck('category'),
         ]);
-    }
-
-    /**
-     * URL pública del logotipo, si existe. Se acepta en dos ubicaciones para
-     * no depender de que quien lo suba recuerde la convención de Laravel:
-     * si aparece en resources/images (más natural para un archivo de marca
-     * que no pasa por Vite) se copia una sola vez a public/images, que es
-     * donde el navegador puede pedirlo.
-     */
-    private function logoPublico(): ?string
-    {
-        $destino = public_path('images/logo.png');
-
-        if (! is_file($destino)) {
-            $origen = resource_path('images/logo.png');
-            if (is_file($origen)) {
-                @mkdir(dirname($destino), 0777, true);
-                copy($origen, $destino);
-            }
-        }
-
-        return is_file($destino) ? asset('images/logo.png') . '?v=' . filemtime($destino) : null;
     }
 
     /**

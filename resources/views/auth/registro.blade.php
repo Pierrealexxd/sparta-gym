@@ -10,102 +10,124 @@
     @vite(['resources/css/app.css', 'resources/js/app-public.js'])
 </head>
 <body>
-    <main class="auth">
+    <main class="auth auth--paneles">
         <div class="hero__brasa" style="top:50%" aria-hidden="true"></div>
 
-        <div class="vidrio auth__vidrio auth__vidrio--ancho">
-            <div class="auth__marca">
-                <a class="nav__marca" href="{{ route('landing') }}">
-                    <span>Sparta</span><em>Gym</em>
-                </a>
-            </div>
+        <div class="auth__paneles">
+            {{-- Ver login.blade.php: mismo panel visual, sin arte propio del
+                 gimnasio — partículas del hero + el logotipo como marca de
+                 agua, ambos ya existentes en el sitio. --}}
+            <section class="auth__panel-visual" aria-hidden="true">
+                <canvas data-particulas></canvas>
 
-            <header class="auth__cabecera">
-                <h1>Crear cuenta</h1>
-                <p>Regístrate para ver tu progreso, tu rutina y tus pagos. La matrícula de tu plan la haces en el gimnasio.</p>
-            </header>
-
-            <form method="POST" action="{{ route('registro.store') }}" class="auth__formulario">
-                @csrf
-
-                @if ($errors->any())
-                    <div class="aviso aviso--error" role="alert">{{ $errors->first() }}</div>
+                @if ($logoUrl)
+                    <div class="auth__panel-agua">
+                        <img src="{{ $logoUrl }}" alt="">
+                    </div>
                 @endif
 
-                <div class="formulario-panel__fila">
-                    <label class="campo">
-                        <span class="campo__etiqueta">Nombres</span>
-                        <input class="campo__control" type="text" name="first_name" required
-                               value="{{ old('first_name') }}" autofocus>
-                    </label>
-                    <label class="campo">
-                        <span class="campo__etiqueta">Apellidos</span>
-                        <input class="campo__control" type="text" name="last_name" required
-                               value="{{ old('last_name') }}">
-                    </label>
-                </div>
+                <p class="auth__panel-pie">© {{ date('Y') }} Sparta Gym</p>
+            </section>
 
-                <label class="campo">
-                    <span class="campo__etiqueta">Correo</span>
-                    <input class="campo__control" type="email" name="email" required
-                           value="{{ old('email') }}" autocomplete="username"
-                           placeholder="tucorreo@ejemplo.com">
-                </label>
+            <section class="auth__panel-formulario">
+                <div class="vidrio auth__vidrio auth__vidrio--ancho">
+                    <div class="auth__marca">
+                        <a href="{{ route('landing') }}" aria-label="Sparta Gym">
+                            @if ($logoUrl)
+                                <img class="auth__logo" src="{{ $logoUrl }}" alt="">
+                            @endif
+                            <span class="nav__marca"><span>Sparta</span><em>Gym</em></span>
+                        </a>
+                    </div>
 
-                <label class="campo">
-                    <span class="campo__etiqueta">Teléfono (opcional)</span>
-                    <input class="campo__control" type="text" name="phone" value="{{ old('phone') }}">
-                </label>
+                    <header class="auth__cabecera">
+                        <h1>Crear cuenta</h1>
+                        <p>Regístrate para ver tu progreso, tu rutina y tus pagos. La matrícula de tu plan la haces en el gimnasio.</p>
+                    </header>
 
-                @if ($gyms->count() > 1)
-                    {{-- Solo aparece si hay más de una sede — con una sola,
-                         asignarla es automático y preguntar sería ruido. --}}
-                    <label class="campo">
-                        <span class="campo__etiqueta">¿De qué sede eres?</span>
-                        <select class="campo__control" name="gym_id" required>
-                            <option value="">— Elige tu sede —</option>
-                            @foreach ($gyms as $gimnasio)
-                                <option value="{{ $gimnasio->id }}" @selected((int) old('gym_id') === $gimnasio->id)>{{ $gimnasio->name }}</option>
-                            @endforeach
-                        </select>
-                    </label>
-                @endif
+                    <form method="POST" action="{{ route('registro.store') }}" class="auth__formulario">
+                        @csrf
 
-                <div class="formulario-panel__fila">
-                    <label class="campo">
-                        <span class="campo__etiqueta">Contraseña</span>
-                        <div class="campo__control-envoltorio">
-                            <input class="campo__control" type="password" name="password" required
-                                   id="registro-password"
-                                   minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres">
-                            <span class="ojo" onclick="togglePassword('registro-password')">
-                                <x-icono nombre="ojo" />
-                            </span>
+                        @if ($errors->any())
+                            <div class="aviso aviso--error" role="alert">{{ $errors->first() }}</div>
+                        @endif
+
+                        <div class="formulario-panel__fila">
+                            <label class="campo">
+                                <span class="campo__etiqueta">Nombres</span>
+                                <input class="campo__control" type="text" name="first_name" required
+                                       value="{{ old('first_name') }}" autofocus>
+                            </label>
+                            <label class="campo">
+                                <span class="campo__etiqueta">Apellidos</span>
+                                <input class="campo__control" type="text" name="last_name" required
+                                       value="{{ old('last_name') }}">
+                            </label>
                         </div>
-                    </label>
-                    <label class="campo">
-                        <span class="campo__etiqueta">Repetir contraseña</span>
-                        <div class="campo__control-envoltorio">
-                            <input class="campo__control" type="password" name="password_confirmation" required
-                                   id="registro-password-confirm"
-                                   minlength="8" autocomplete="new-password">
-                            <span class="ojo" onclick="togglePassword('registro-password-confirm')">
-                                <x-icono nombre="ojo" />
-                            </span>
+
+                        <label class="campo">
+                            <span class="campo__etiqueta">Correo</span>
+                            <input class="campo__control" type="email" name="email" required
+                                   value="{{ old('email') }}" autocomplete="username"
+                                   placeholder="tucorreo@ejemplo.com">
+                        </label>
+
+                        <label class="campo">
+                            <span class="campo__etiqueta">Teléfono (opcional)</span>
+                            <input class="campo__control" type="text" name="phone" value="{{ old('phone') }}">
+                        </label>
+
+                        @if ($gyms->count() > 1)
+                            {{-- Solo aparece si hay más de una sede — con una sola,
+                                 asignarla es automático y preguntar sería ruido. --}}
+                            <label class="campo">
+                                <span class="campo__etiqueta">¿De qué sede eres?</span>
+                                <select class="campo__control" name="gym_id" required>
+                                    <option value="">— Elige tu sede —</option>
+                                    @foreach ($gyms as $gimnasio)
+                                        <option value="{{ $gimnasio->id }}" @selected((int) old('gym_id') === $gimnasio->id)>{{ $gimnasio->name }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                        @endif
+
+                        <div class="formulario-panel__fila">
+                            <label class="campo">
+                                <span class="campo__etiqueta">Contraseña</span>
+                                <div class="campo__control-envoltorio">
+                                    <input class="campo__control" type="password" name="password" required
+                                           id="registro-password"
+                                           minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres">
+                                    <span class="ojo" onclick="togglePassword('registro-password')">
+                                        <x-icono nombre="ojo" />
+                                    </span>
+                                </div>
+                            </label>
+                            <label class="campo">
+                                <span class="campo__etiqueta">Repetir contraseña</span>
+                                <div class="campo__control-envoltorio">
+                                    <input class="campo__control" type="password" name="password_confirmation" required
+                                           id="registro-password-confirm"
+                                           minlength="8" autocomplete="new-password">
+                                    <span class="ojo" onclick="togglePassword('registro-password-confirm')">
+                                        <x-icono nombre="ojo" />
+                                    </span>
+                                </div>
+                            </label>
                         </div>
-                    </label>
+
+                        <button class="btn btn--fuego btn--bloque btn--grande" type="submit">Crear mi cuenta</button>
+                    </form>
+
+                    <footer class="auth__pie auth__pie--centro">
+                        ¿Ya tienes cuenta?
+                        <a href="{{ route('login') }}" class="btn btn--desnudo" style="font-size:var(--t-sm)">
+                            Login
+                        </a>
+                    </footer>
                 </div>
-
-                <button class="btn btn--fuego btn--bloque btn--grande" type="submit">Crear mi cuenta</button>
-            </form>
-
-            <footer class="auth__pie auth__pie--centro">
-                ¿Ya tienes cuenta?
-                <a href="{{ route('login') }}" class="btn btn--desnudo" style="font-size:var(--t-sm)">
-                    Login
-                </a>
-            </footer>
-</div>
+            </section>
+        </div>
 
         <script>
             function togglePassword(fieldId) {

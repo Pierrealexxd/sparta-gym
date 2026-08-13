@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Support\Marca;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ class LoginController extends Controller
 {
     public function mostrar(): View
     {
-        return view('auth.login');
+        return view('auth.login', ['logoUrl' => Marca::logoPublico()]);
     }
 
     public function entrar(Request $request): RedirectResponse

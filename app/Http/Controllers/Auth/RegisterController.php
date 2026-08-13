@@ -8,6 +8,7 @@ use App\Models\Member;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\GymContext;
+use App\Support\Marca;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,7 +33,8 @@ class RegisterController extends Controller
         return view('auth.registro', [
             // Solo se pide si hay más de una: con una sola sede, elegir es
             // ruido — se sigue asignando sola como antes.
-            'gyms' => Gym::orderBy('name')->get(),
+            'gyms'    => Gym::orderBy('name')->get(),
+            'logoUrl' => Marca::logoPublico(),
         ]);
     }
 

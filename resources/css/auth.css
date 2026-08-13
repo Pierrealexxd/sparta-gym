@@ -26,12 +26,22 @@
 /* El registro trae filas de dos campos; un poco más de ancho. */
 .auth__vidrio--ancho { width: min(34rem, 100%); }
 
-/* Marca centrada: la cabecera del panel de acceso */
+/* Marca centrada: la cabecera del panel de acceso. El logotipo real de la
+   marca (no el de la sede, ver App\Support\Marca) reemplaza al wordmark de
+   texto que usa el resto del sitio — pedido puntual para login/registro,
+   con el texto como respaldo si todavía no se subió el archivo. */
 .auth__marca {
     display: flex;
     justify-content: center;
     margin-bottom: var(--e-6);
 }
+.auth__marca a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--e-3);
+}
+.auth__marca .nav__marca { font-size: var(--t-lg); }
+.auth__logo { width: var(--e-8); height: var(--e-8); object-fit: contain; }
 
 .auth__cabecera {
     text-align: center;
@@ -93,4 +103,170 @@
     }
 
     .auth__pie .btn--desnudo { justify-content: center; }
+
+    /* El membrete es la única marca visible en móvil (el panel visual con
+       el logo grande de fondo se cae por completo en este ancho) — que se
+       note: logo más grande y wordmark a la par, no un ícono suelto. */
+    .auth__marca { margin-bottom: var(--e-5); }
+    .auth__logo { width: 4.5rem; height: 4.5rem; }
+    .auth__marca .nav__marca { font-size: var(--t-xl); }
+}
+
+/* ============================================================
+   ACCESO · dos paneles (visual + formulario)
+   Estructura pedida a partir de una referencia: un panel con textura de
+   marca a un lado y el formulario al otro, separados por un borde
+   orgánico — sin copiar ningún arte ajeno; el panel visual usa lo que
+   el sitio ya tiene (particulas.js, el mismo sistema de ascuas del hero
+   de la landing, y el logotipo como marca de agua). Por debajo de
+   900px se cae a la tarjeta centrada de siempre: una curva orgánica no
+   lee bien en una columna angosta, y ahí ya funciona bien tal cual.
+   ============================================================ */
+.auth--paneles { padding: var(--e-6); overflow: visible; }
+
+.auth__paneles {
+    position: relative;
+    z-index: 1;
+    width: min(72rem, 100%);
+    min-height: min(42rem, 82vh);
+    display: flex;
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    border: 1px solid var(--acero);
+    background: var(--grafito);
+}
+
+.auth__panel-visual {
+    position: relative;
+    flex: 0 0 44%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: var(--e-6);
+    /* Predominantemente negro (obsidiana) a propósito: con el degradado
+       anterior (grafito-alto → obsidiana) el logo de fondo perdía
+       contraste justo en la zona más clara. Un toque de grafito solo en
+       una esquina, para que no quede plano, sin aclarar el centro donde
+       cae el logo. */
+    background: radial-gradient(120% 90% at 15% 10%, var(--grafito) 0%, var(--obsidiana) 55%);
+    /* La curva orgánica: dos pares de radio distintos en el borde derecho
+       (arriba/abajo no simétricos) para que lea como un borde con panza,
+       no como una esquina redondeada común. Son valores para ajustar a
+       ojo — no hay una fórmula "correcta" para esta forma. */
+    border-radius: 0 42% 58% 0 / 0 38% 62% 0;
+}
+
+.auth__panel-visual canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* El logotipo grande, centrado, de fondo. El archivo ya tiene el fondo
+   transparente (comprobado a nivel de píxel) — el "gris" no era falta de
+   transparencia, era el filter: grayscale(1) de acá, que le sacaba el
+   color propio (el rojo del filo, etc.) y lo dejaba plano. Sin ese
+   filtro, más grande y un poco más de opacidad para que se note bien. */
+.auth__panel-agua {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+}
+.auth__panel-agua img {
+    width: min(80%, 430px);
+    opacity: .6;
+    /* Un poco más arriba del centro geométrico y con un realce de brillo:
+       centrado a secas quedaba "hundido" bajo el resto del panel. */
+    transform: translateY(-6%);
+    filter: brightness(1.7) contrast(1.15);
+}
+
+.auth__panel-pie {
+    position: relative;
+    z-index: 1;
+    /* Único hijo en flujo del panel visual ahora que se quitó la marca de
+       arriba: sin esto, el space-between del contenedor lo pega arriba en
+       vez de dejarlo abajo. */
+    margin-top: auto;
+    font-size: var(--t-xs);
+    color: var(--humo);
+}
+
+.auth__panel-formulario {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--e-7) var(--e-6);
+    overflow: hidden;
+}
+/* La marca ya vive arriba a la izquierda del panel visual (desktop): un
+   segundo logo acá se vería redundante. Vuelve en móvil, donde el panel
+   visual se oculta y este es el único lugar donde queda la marca. */
+.auth__panel-formulario .auth__marca { display: none; }
+.auth__panel-formulario .auth__cabecera { text-align: left; justify-content: flex-start; margin-bottom: var(--e-5); }
+.auth__panel-formulario .auth__cabecera p { margin-inline: 0; }
+
+/* El mismo .auth__vidrio (la tarjeta de cristal de siempre) sigue
+   envolviendo el formulario, para que en móvil (más abajo) vuelva a ser
+   exactamente la tarjeta centrada de antes sin duplicar markup. Acá, en
+   el panel de escritorio, se aplana: el panel ya tiene su propio borde y
+   fondo, una segunda tarjeta de cristal adentro se vería como caja
+   dentro de caja. */
+.auth__panel-formulario .auth__vidrio,
+.auth__panel-formulario .auth__vidrio--ancho {
+    width: 100%;
+    max-width: 26rem;
+    padding: 0;
+    background: none;
+    border: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+.auth__panel-formulario .auth__vidrio::before { display: none; }
+
+/* Registro trae filas de dos campos (Nombres/Apellidos, las contraseñas):
+   necesita más ancho que el login para que esas filas no se aprieten. */
+.auth__panel-formulario .auth__vidrio--ancho { max-width: 32rem; }
+
+@media (max-width: 900px) {
+    .auth--paneles { padding: var(--e-5) var(--e-4); }
+    .auth__paneles {
+        min-height: 0;
+        border-radius: 0;
+        border: none;
+        background: none;
+    }
+    .auth__panel-visual { display: none; }
+    .auth__panel-formulario {
+        padding: 0;
+        display: block;
+    }
+
+    /* Vuelve a ser la tarjeta de cristal centrada de siempre */
+    .auth__panel-formulario .auth__vidrio,
+    .auth__panel-formulario .auth__vidrio--ancho {
+        max-width: none;
+        padding: var(--e-7);
+        background: var(--vidrio);
+        border: 1px solid var(--vidrio-borde);
+        backdrop-filter: blur(20px) saturate(140%);
+        -webkit-backdrop-filter: blur(20px) saturate(140%);
+    }
+    .auth__panel-formulario .auth__vidrio::before { display: block; }
+
+    .auth__panel-formulario .auth__marca { display: flex; }
+    .auth__panel-formulario .auth__marca,
+    .auth__panel-formulario .auth__cabecera { text-align: center; justify-content: center; }
+    .auth__panel-formulario .auth__cabecera p { margin-inline: auto; }
+}
+
+@media (max-width: 560px) {
+    .auth__panel-formulario .auth__vidrio,
+    .auth__panel-formulario .auth__vidrio--ancho { padding: var(--e-6) var(--e-5); }
 }

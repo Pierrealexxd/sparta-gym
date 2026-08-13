@@ -260,6 +260,7 @@
         gap: var(--e-3);
     }
     .nav__enlace--cuenta { color: var(--bronce); font-size: var(--t-sm); }
+    .nav__enlace--cuenta svg { color: var(--bronce); }
     /* El CTA principal se ve como botón también adentro del cajón — no
        como un enlace de texto más, para que siga siendo lo más fácil de
        tocar de la lista. Padding lateral propio, más corto que el de .btn
@@ -1241,6 +1242,8 @@
 .ejercicio__clave p { font-size: var(--t-sm); color: var(--ceniza); line-height: 1.55; }
 
 .ejercicio__video { justify-self: start; margin-top: var(--e-2); }
+
+.biblioteca__mas-envoltorio { display: flex; justify-content: center; margin-top: var(--e-6); }
 
 .biblioteca__nota { margin-top: var(--e-7); font-size: var(--t-sm); color: var(--humo); max-width: 46ch; }
 

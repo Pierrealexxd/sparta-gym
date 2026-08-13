@@ -31,6 +31,7 @@
              para entrar desde el celular. --}}
         <div class="nav__enlaces-pie">
             <a class="nav__enlace nav__enlace--cuenta" href="{{ auth()->check() ? route(auth()->user()->rutaDeInicio()) : route('login') }}">
+                <x-icono nombre="perfil" />
                 {{ auth()->check() ? 'Mi panel' : 'Login' }}
             </a>
             @guest

@@ -391,7 +391,7 @@
 
 .ojo:hover { color: var(--hueso); }
 
-.ojo svg { width: 1.15rem; height: 1.15rem; }
+.ojo svg { width: 1.35rem; height: 1.35rem; }
 
 .campo__error {
     font-size: var(--t-sm);
