@@ -322,7 +322,7 @@
             Los platos que guardaste desde "Hoy comiste". Un tap los registra como tu comida de hoy.
         </p>
 
-        @forelse ($platosHabituales as $plato)
+        @forelse ($platosPag as $plato)
             @php
                 $resumenPlato = collect($plato->conteo)->filter()->map(fn ($n, $k) => "{$n} {$formasCortas[$k]}" . ($n === 1 ? '' : 's'))->implode(' · ');
             @endphp
@@ -345,6 +345,8 @@
         @empty
             <p style="color:var(--humo);font-size:var(--t-sm)">Todavía no guardaste ningún plato. Arriba, en "Hoy comiste", puedes guardar los números de una comida como plato.</p>
         @endforelse
+
+        <div class="paginacion">{{ $platosPag->links() }}</div>
     </article>
 
     <div class="g-1-1">
@@ -366,7 +368,7 @@
         <table class="tabla tabla--tarjetas">
             <thead><tr><th>Fecha</th><th>Peso</th><th>% Grasa</th><th>IMC</th><th>Nota</th></tr></thead>
             <tbody>
-                @forelse ($socio->measurements->sortByDesc('measured_at') as $m)
+                @forelse ($medidasPag as $m)
                     <tr>
                         <td data-etiqueta="Fecha">{{ $m->measured_at->translatedFormat('d M Y') }}</td>
                         <td class="es-fuerte" data-etiqueta="Peso">{{ $m->weight_kg }} kg</td>
@@ -380,4 +382,6 @@
             </tbody>
         </table>
     </div>
+
+    <div class="paginacion">{{ $medidasPag->links() }}</div>
 @endsection

@@ -22,13 +22,16 @@ class ProgressController extends Controller
             'measurements' => fn ($q) => $q->orderBy('measured_at'),
             'goals' => fn ($q) => $q->activos(),
             'mealLogs' => fn ($q) => $q->delDia()->with('items'),
-            // Fase 4 del plan de nutrición: "Mis platos habituales".
-            'savedMeals' => fn ($q) => $q->with('items')->latest(),
         ])->firstOrFail();
 
         // Por tipo de comida, para precargar el formulario de "Hoy" con lo
         // que ya se registró (y no partir de cero si vuelve a entrar).
         $comidasHoy = $socio->mealLogs->keyBy('meal_type');
+
+        // Historial y platos se paganinan aparte: la colección measurements
+        // completa sigue alimentando KPIs, gráficos y metas.
+        $medidasPag = $socio->measurements()->latest('measured_at')->paginate(10);
+        $platosPag  = $socio->savedMeals()->with('items')->latest()->paginate(10);
 
         // Suma del día, para comparar contra la referencia de la Fase 1
         // (Member::porcionesDiarias) — mismo cálculo que <x-discos> ya usa
@@ -45,8 +48,9 @@ class ProgressController extends Controller
             'totalHoy'        => $totalHoy,
             'objetivoDiario'  => $socio->porcionesDiarias(),
             'tiposComida'     => self::TIPOS_COMIDA,
-            'platosHabituales'=> $socio->savedMeals,
-            'socio'   => $socio,
+            'medidasPag'      => $medidasPag,
+            'platosPag'       => $platosPag,
+            'socio'           => $socio,
             'ultima'  => $socio->measurements->last(),
             'primera' => $socio->measurements->first(),
             'hoy'     => $socio->measurements->first(fn (MemberMeasurement $m) => $m->measured_at->isToday()),

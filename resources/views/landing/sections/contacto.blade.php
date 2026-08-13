@@ -1,9 +1,10 @@
 <section class="seccion" id="contacto">
     <div class="contenedor">
         <div class="seccion__cabecera" data-revelar>
-            <span class="eyebrow">Contacto</span>
-            <h2>Ven a verlo</h2>
-            <p class="lead">Pásate cuando quieras. La primera visita incluye una vuelta por la sala.</p>
+            @php $contacto = $gym->settings['contacto'] ?? []; @endphp
+            <span class="eyebrow">{{ $contacto['eyebrow'] ?? 'Contacto' }}</span>
+            <h2>{{ $contacto['titulo'] ?? 'Ven a verlo' }}</h2>
+            <p class="lead">{{ $contacto['lead'] ?? 'Pásate cuando quieras. La primera visita incluye una vuelta por la sala.' }}</p>
         </div>
 
         <div class="contacto">
@@ -22,6 +23,16 @@
                         <div>
                             <b>Teléfono</b>
                             <a href="tel:{{ preg_replace('/\s+/', '', $gym->phone) }}">{{ $gym->phone }}</a>
+                        </div>
+                    </div>
+                @endif
+
+                @if ($gym->whatsapp)
+                    <div class="dato">
+                        <span class="dato__icono"><x-icono nombre="whatsapp" /></span>
+                        <div>
+                            <b>WhatsApp</b>
+                            <a href="https://wa.me/{{ preg_replace('/\D+/', '', $gym->whatsapp) }}" target="_blank" rel="noopener">{{ $gym->whatsapp }}</a>
                         </div>
                     </div>
                 @endif
