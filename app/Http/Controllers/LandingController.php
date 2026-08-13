@@ -31,6 +31,7 @@ class LandingController extends Controller
             'faqs'          => Faq::publicados()->get(),
             'cifras'        => $this->cifras(),
             'heroVideo'     => $this->heroVideo(),
+            'heroPoster'    => $this->heroPoster(),
             'ejercicios'    => Exercise::disponibles()->orderBy('name')->get(),
             'categorias'    => Exercise::disponibles()->select('category')->distinct()->orderBy('category')->pluck('category'),
         ]);
@@ -77,6 +78,20 @@ class LandingController extends Controller
         $archivo = storage_path('app/media/hero.mp4');
 
         return is_file($archivo) ? route('landing.hero-video') . '?v=' . filemtime($archivo) : null;
+    }
+
+    /**
+     * Primer fotograma del video, como poster: mientras el navegador todavía
+     * está pidiendo el video (sobre todo en una red lenta o el servidor de un
+     * solo worker de Render), la pantalla no queda en blanco — se ve esto de
+     * entrada. Sí vive en public/ (a diferencia del video): es una imagen
+     * estática de siempre, no necesita pasar por Laravel para nada.
+     */
+    private function heroPoster(): ?string
+    {
+        $archivo = public_path('images/hero-poster.jpg');
+
+        return is_file($archivo) ? asset('images/hero-poster.jpg') . '?v=' . filemtime($archivo) : null;
     }
 
     /** Sirve el video del hero con soporte real de "Range requests" (ver heroVideo). */

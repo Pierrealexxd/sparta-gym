@@ -6,7 +6,12 @@
 
     <div class="hero__video-capa" aria-hidden="true">
         @if ($heroVideo)
-            <video class="hero__video" autoplay muted loop playsinline preload="auto">
+            {{-- poster: mientras el video todavía se está pidiendo (red lenta,
+                 o el único worker de Render ocupado con otra petición), se ve
+                 el primer fotograma en vez de blanco — el "corte" al arrancar
+                 se siente menos brusco. --}}
+            <video class="hero__video" autoplay muted loop playsinline preload="auto"
+                   @if ($heroPoster) poster="{{ $heroPoster }}" @endif>
                 <source src="{{ $heroVideo }}" type="video/mp4">
             </video>
         @endif
