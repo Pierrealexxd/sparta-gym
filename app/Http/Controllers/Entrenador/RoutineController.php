@@ -64,7 +64,7 @@ class RoutineController extends Controller
 
         $rutina = Routine::create($datos + ['trainer_id' => $entrenador->id, 'status' => 'activa']);
 
-        return redirect()->route('entrenador.rutinas.show', $rutina)->with('exito', 'Rutina creada. Agrega los días de entrenamiento.');
+        return redirect()->route('entrenador.entrenamientos.show', $rutina)->with('exito', 'Rutina creada. Agrega los días de entrenamiento.');
     }
 
     public function show(Request $request, Routine $routine): View
@@ -104,7 +104,7 @@ class RoutineController extends Controller
 
         $routine->update($datos);
 
-        return redirect()->route('entrenador.rutinas.show', $routine)->with('exito', 'Rutina actualizada.');
+        return redirect()->route('entrenador.entrenamientos.show', $routine)->with('exito', 'Rutina actualizada.');
     }
 
     public function destroy(Request $request, Routine $routine): RedirectResponse
@@ -112,7 +112,7 @@ class RoutineController extends Controller
         $this->autorizar($request, $routine);
         $routine->delete();
 
-        return redirect()->route('entrenador.rutinas.index')->with('exito', 'Rutina eliminada.');
+        return redirect()->route('entrenador.entrenamientos.index')->with('exito', 'Rutina eliminada.');
     }
 
     /* ---------------------------------------------------------- */

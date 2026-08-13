@@ -28,6 +28,29 @@
         <button class="btn btn--vidrio" type="submit">Filtrar</button>
     </form>
 
+    {{-- Indicadores del rango filtrado (antes vivían en el "Resumen" aparte,
+         que se dio de baja) — cambian según la pestaña activa. --}}
+    <div class="kpis" data-revelar data-revelar-grupo>
+        @if ($tipo === 'producto')
+            <article class="tarjeta kpi tarjeta--interactiva">
+                <span class="kpi__icono"><x-icono nombre="caja" /></span>
+                <b class="kpi__valor">S/ <span data-contador="{{ $kpis['total'] }}">0</span></b>
+                <span class="kpi__etiqueta">Vendido en el rango</span>
+            </article>
+            <article class="tarjeta kpi tarjeta--interactiva">
+                <span class="kpi__icono"><x-icono nombre="lista" /></span>
+                <b class="kpi__valor"><span data-contador="{{ $kpis['cantidad'] }}">0</span></b>
+                <span class="kpi__etiqueta">Ventas registradas</span>
+            </article>
+        @else
+            <article class="tarjeta kpi tarjeta--interactiva">
+                <span class="kpi__icono"><x-icono nombre="agregar" /></span>
+                <b class="kpi__valor"><span data-contador="{{ $kpis['cantidad'] }}">0</span></b>
+                <span class="kpi__etiqueta">Registros en el rango</span>
+            </article>
+        @endif
+    </div>
+
     {{-- ---------- Productos ---------- --}}
     @if ($tipo === 'producto')
         <div class="tabla-envoltorio" data-revelar>
@@ -48,6 +71,8 @@
                 </tbody>
             </table>
         </div>
+
+        <div class="paginacion">{{ $ventas->links() }}</div>
     @endif
 
     {{-- ---------- Inscripciones ---------- --}}
@@ -70,6 +95,8 @@
                 </tbody>
             </table>
         </div>
+
+        <div class="paginacion">{{ $inscripciones->links() }}</div>
     @endif
 
     <div class="modal__fondo"

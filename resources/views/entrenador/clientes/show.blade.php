@@ -83,11 +83,11 @@
             <h3 style="font-size:var(--t-lg);margin-bottom:var(--e-4)">Rutinas activas</h3>
             @forelse ($cliente->routines as $rutina)
                 <div class="ficha__dato">
-                    <span><a href="{{ route('entrenador.rutinas.show', $rutina) }}">{{ $rutina->name }}</a></span>
+                    <span><a href="{{ route('entrenador.entrenamientos.show', $rutina) }}">{{ $rutina->name }}</a></span>
                     <span>{{ $rutina->days->count() }} días</span>
                 </div>
             @empty
-                <p style="color:var(--humo);font-size:var(--t-sm)">Sin rutina activa. <a class="btn btn--desnudo" href="{{ route('entrenador.rutinas.create') }}">Crear una</a></p>
+                <p style="color:var(--humo);font-size:var(--t-sm)">Sin rutina activa. <a class="btn btn--desnudo" href="{{ route('entrenador.entrenamientos.create') }}">Crear una</a></p>
             @endforelse
         </article>
     </div>

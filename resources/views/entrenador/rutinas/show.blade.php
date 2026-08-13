@@ -4,7 +4,7 @@
 @section('subtitulo', $rutina->member?->full_name . ' · ' . ($rutina->objective ?? 'Sin objetivo definido'))
 
 @section('acciones')
-    <a class="btn btn--vidrio" href="{{ route('entrenador.rutinas.edit', $rutina) }}"><x-icono nombre="lapiz" /> Editar</a>
+    <a class="btn btn--vidrio" href="{{ route('entrenador.entrenamientos.edit', $rutina) }}"><x-icono nombre="lapiz" /> Editar</a>
 @endsection
 
 @section('contenido')
@@ -36,7 +36,7 @@
                                     <td class="es-fuerte" data-etiqueta="Ejercicio">{{ $re->exercise->name }}</td>
                                     <td data-etiqueta="Prescripción">{{ $re->prescripcion }}</td>
                                     <td data-etiqueta="nada">
-                                        <form method="POST" action="{{ route('entrenador.ejercicios.destroy', $re) }}">
+                                        <form method="POST" action="{{ route('entrenador.entrenamientos.ejercicios.destroy', $re) }}">
                                             @csrf @method('DELETE')
                                             <button class="btn btn--desnudo" type="submit"><x-icono nombre="cerrar" /></button>
                                         </form>
@@ -75,7 +75,7 @@
 
         <details class="tarjeta" style="padding:var(--e-5)">
             <summary class="btn btn--desnudo" style="cursor:pointer">+ Agregar día de entrenamiento</summary>
-            <form method="POST" action="{{ route('entrenador.rutinas.dias.store', $rutina) }}" class="formulario-panel" style="margin-top:var(--e-4)">
+            <form method="POST" action="{{ route('entrenador.entrenamientos.dias.store', $rutina) }}" class="formulario-panel" style="margin-top:var(--e-4)">
                 @csrf
                 <div class="formulario-panel__fila">
                     <label class="campo"><span class="campo__etiqueta">Nombre</span>

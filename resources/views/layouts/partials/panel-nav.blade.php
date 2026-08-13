@@ -69,39 +69,52 @@
             </a>
         @endif
 
-        @if (auth()->user()->tienePermiso('entrenadores.gestionar') || auth()->user()->tienePermiso('planes.gestionar') || auth()->user()->tienePermiso('sedes.gestionar') || auth()->user()->tienePermiso('usuarios.gestionar') || auth()->user()->tienePermiso('web.editar') || auth()->user()->tienePermiso('ejercicios.gestionar'))
+        @if (auth()->user()->tienePermiso('entrenadores.gestionar') || auth()->user()->tienePermiso('sedes.gestionar') || auth()->user()->tienePermiso('usuarios.gestionar') || auth()->user()->tienePermiso('web.editar') || auth()->user()->tienePermiso('planes.gestionar') || auth()->user()->tienePermiso('ejercicios.gestionar') || auth()->user()->tienePermiso('recetas.gestionar'))
             <span class="panel__grupo-titulo">Configuraciones</span>
         @endif
-        {{-- Entrenadores + Planes + Sedes + Usuarios comparten un solo
-             enlace: adentro se navegan como pestañas (ver
+        {{-- Entrenadores + Sedes + Usuarios comparten un solo enlace:
+             adentro se navegan como pestañas (ver
              admin/configuracion/_pestanas.blade.php), igual que ya
              hacíamos con Contenido web. Aterriza en la primera pestaña a
-             la que el usuario tenga permiso. --}}
-        @if (auth()->user()->tienePermiso('entrenadores.gestionar') || auth()->user()->tienePermiso('planes.gestionar') || auth()->user()->tienePermiso('sedes.gestionar') || auth()->user()->tienePermiso('usuarios.gestionar'))
+             la que el usuario tenga permiso. "Planes" vivía acá — se
+             movió a Contenido web (13-08-2026): son planes que se
+             muestran en la web pública, tiene más sentido editarlos junto
+             al resto de lo que se ve afuera. --}}
+        @if (auth()->user()->tienePermiso('entrenadores.gestionar') || auth()->user()->tienePermiso('sedes.gestionar') || auth()->user()->tienePermiso('usuarios.gestionar'))
             @php
                 $configuracionRuta = match (true) {
                     auth()->user()->tienePermiso('entrenadores.gestionar') => route('admin.entrenadores.index'),
-                    auth()->user()->tienePermiso('planes.gestionar')       => route('admin.planes.index'),
                     auth()->user()->tienePermiso('sedes.gestionar')        => route('admin.sedes.index'),
                     default                                                => route('admin.usuarios.index'),
                 };
             @endphp
             <a class="panel__enlace" href="{{ $configuracionRuta }}" data-title="Configuraciones"
-               aria-current="{{ request()->routeIs('admin.entrenadores.*', 'admin.planes.*', 'admin.sedes.*', 'admin.usuarios.*') ? 'true' : 'false' }}">
+               aria-current="{{ request()->routeIs('admin.entrenadores.*', 'admin.sedes.*', 'admin.usuarios.*') ? 'true' : 'false' }}">
                 <x-icono nombre="entrenador" /> <span class="panel__texto">Configuraciones</span>
             </a>
         @endif
-        @if (auth()->user()->tienePermiso('web.editar') || auth()->user()->tienePermiso('ejercicios.gestionar') || auth()->user()->tienePermiso('recetas.gestionar'))
-            <a class="panel__enlace" href="{{ route('admin.faqs.index') }}" data-title="Contenido web" aria-current="{{ request()->routeIs('admin.faqs.*', 'admin.testimonios.*', 'admin.ejercicios.*', 'admin.recetas.*') ? 'true' : 'false' }}">
+        @if (auth()->user()->tienePermiso('web.editar') || auth()->user()->tienePermiso('planes.gestionar') || auth()->user()->tienePermiso('ejercicios.gestionar') || auth()->user()->tienePermiso('recetas.gestionar'))
+            {{-- Igual que el combo de arriba: aterriza en la primera pestaña
+                 a la que el usuario tenga permiso, no siempre FAQs — si no,
+                 alguien con solo "planes.gestionar" (sin web.editar) caía
+                 en admin.faqs.index y se topaba con un 403. --}}
+            @php
+                $contenidoRuta = match (true) {
+                    auth()->user()->tienePermiso('web.editar')       => route('admin.faqs.index'),
+                    auth()->user()->tienePermiso('planes.gestionar') => route('admin.planes.index'),
+                    auth()->user()->tienePermiso('ejercicios.gestionar') => route('admin.ejercicios.index'),
+                    default                                           => route('admin.recetas.index'),
+                };
+            @endphp
+            <a class="panel__enlace" href="{{ $contenidoRuta }}" data-title="Contenido web" aria-current="{{ request()->routeIs('admin.faqs.*', 'admin.testimonios.*', 'admin.ejercicios.*', 'admin.recetas.*', 'admin.contenido.contacto', 'admin.planes.*') ? 'true' : 'false' }}">
                 <x-icono nombre="campana" /> <span class="panel__texto">Contenido web</span>
             </a>
         @endif
     @endif
 
     @if (auth()->user()->esEntrenador())
-        <a class="panel__enlace" href="{{ route('entrenador.dashboard') }}" data-title="Resumen" aria-current="{{ request()->routeIs('entrenador.dashboard') ? 'true' : 'false' }}">
-            <x-icono nombre="panel" /> <span class="panel__texto">Resumen</span>
-        </a>
+        {{-- El "Resumen" con KPIs generales se dio de baja: los indicadores
+             ahora viven dentro de cada módulo (Rutinas, Ventas, Asistencia). --}}
         <a class="panel__enlace" href="{{ route('perfil') }}" data-title="Mi perfil" aria-current="{{ request()->routeIs('perfil') ? 'true' : 'false' }}">
             <x-icono nombre="perfil" /> <span class="panel__texto">Mi perfil</span>
         </a>
@@ -109,8 +122,10 @@
         @if (auth()->user()->tienePermiso('clientes.crear'))
             {{-- "Rutinas" es Inscripciones (matricular clientes) y vive en
                  /entrenador/rutinas. El constructor de rutinas de ejercicio
-                 se movió a /entrenador/entrenamientos (entrenador.rutinas.*,
-                 intacto) y se llega a él desde la ficha del cliente. --}}
+                 vive en /entrenador/entrenamientos (nombres de ruta
+                 entrenador.entrenamientos.*, ya sin el choque de nombres que
+                 tenían antes con entrenador.inscripciones.* — ver /investigate
+                 del 14-08-2026) y se llega a él desde la ficha del cliente. --}}
             <a class="panel__enlace" href="{{ route('entrenador.inscripciones.index') }}" data-title="Rutinas" aria-current="{{ request()->routeIs('entrenador.inscripciones.*') ? 'true' : 'false' }}">
                 <x-icono nombre="lista" /> <span class="panel__texto">Rutinas</span>
             </a>

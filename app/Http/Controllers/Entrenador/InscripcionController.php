@@ -36,7 +36,7 @@ class InscripcionController extends Controller
     public function index(Request $request): View
     {
         // "Sus" inscripciones: membresías nuevas (no renovaciones) que él
-        // mismo registró — el mismo dato que usa el KPI del dashboard.
+        // mismo registró — el mismo dato que usa el KPI de este módulo.
         $inscripciones = Membership::with('member')
             ->where('created_by', $request->user()->id)
             ->whereNull('renewed_from')
@@ -44,19 +44,30 @@ class InscripcionController extends Controller
             ->paginate(10)
             ->onEachSide(1);
 
+        $entrenador = Trainer::where('user_id', $request->user()->id)->first();
+
         // Solo se muestra el botón "Ver" (ficha del cliente) para los que
         // realmente están a su cargo: la ficha exige un TrainerAssignment
         // activo, e inscribir a alguien NO lo asigna automáticamente.
-        $aCargo = Trainer::where('user_id', $request->user()->id)
-            ->first()
-            ?->activeMembers()
-            ->pluck('members.id')
-            ?? collect();
+        $aCargo = $entrenador?->activeMembers()->pluck('members.id') ?? collect();
+
+        // Indicadores del módulo (antes vivían en el "Resumen" aparte, que
+        // se dio de baja — ver decisión del 13-08-2026): lo justo para este
+        // apartado, sin repetir el detalle de la tabla de abajo.
+        $kpis = [
+            'clientesACargo'   => $aCargo->count(),
+            'inscripcionesMes' => Membership::where('created_by', $request->user()->id)
+                ->whereNull('renewed_from')
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+        ];
 
         return view('entrenador.inscripciones.index', [
             'inscripciones' => $inscripciones,
             'planes'        => Plan::activos()->orderBy('price')->get(),
             'aCargo'        => $aCargo,
+            'kpis'          => $kpis,
         ]);
     }
 

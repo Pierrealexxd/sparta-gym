@@ -4,7 +4,7 @@
 
 @section('contenido')
     <form class="tarjeta formulario-panel" method="POST"
-          action="{{ $rutina->exists ? route('entrenador.rutinas.update', $rutina) : route('entrenador.rutinas.store') }}">
+          action="{{ $rutina->exists ? route('entrenador.entrenamientos.update', $rutina) : route('entrenador.entrenamientos.store') }}">
         @csrf
         @if ($rutina->exists) @method('PUT') @endif
 
@@ -45,7 +45,7 @@
             <textarea class="campo__control" name="notes">{{ old('notes', $rutina->notes) }}</textarea></label>
 
         <div class="formulario-panel__acciones">
-            <a class="btn btn--vidrio" href="{{ route('entrenador.rutinas.index') }}">Cancelar</a>
+            <a class="btn btn--vidrio" href="{{ route('entrenador.entrenamientos.index') }}">Cancelar</a>
             <button class="btn btn--fuego" type="submit">Guardar</button>
         </div>
     </form>

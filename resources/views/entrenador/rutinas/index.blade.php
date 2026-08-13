@@ -3,7 +3,7 @@
 @section('titulo', 'Rutinas')
 
 @section('acciones')
-    <a class="btn btn--fuego" href="{{ route('entrenador.rutinas.create') }}"><x-icono nombre="agregar" /> Nueva rutina</a>
+    <a class="btn btn--fuego" href="{{ route('entrenador.entrenamientos.create') }}"><x-icono nombre="agregar" /> Nueva rutina</a>
 @endsection
 
 @section('contenido')
@@ -17,7 +17,7 @@
                         <td data-etiqueta="Rutina">{{ $r->name }}</td>
                         <td class="tabla__oculta-movil" data-etiqueta="Objetivo">{{ $r->objective ?? '—' }}</td>
                         <td data-etiqueta="Estado"><span class="estado estado--{{ $r->status === 'activa' ? 'activo' : 'inactivo' }}">{{ ucfirst($r->status) }}</span></td>
-                        <td data-etiqueta="nada"><a class="btn btn--desnudo" href="{{ route('entrenador.rutinas.show', $r) }}">Abrir</a></td>
+                        <td data-etiqueta="nada"><a class="btn btn--desnudo" href="{{ route('entrenador.entrenamientos.show', $r) }}">Abrir</a></td>
                     </tr>
                 @empty
                     <tr><td colspan="5" class="tabla__vacio" data-etiqueta="">Sin rutinas todavía.</td></tr>

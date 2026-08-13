@@ -45,7 +45,7 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/salir', [LoginController::class, 'salir'])
     ->middleware('auth')
-    ->name('logout');
+    ->name('salir');
 
 /*
 |--------------------------------------------------------------------------
@@ -57,7 +57,7 @@ Route::post('/salir', [LoginController::class, 'salir'])
 */
 
 Route::middleware(['auth', 'sede.activa'])->group(function () {
-    Route::post('/sede-activa', [SedeActivaController::class, 'store'])->name('sede.activar');
+    Route::post('/sede/activar', [SedeActivaController::class, 'store'])->name('sede.activar');
 
     /*
     |--------------------------------------------------------------------------

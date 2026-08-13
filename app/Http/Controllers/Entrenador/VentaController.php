@@ -49,18 +49,37 @@ class VentaController extends Controller
         ];
 
         if ($tipo === 'inscripcion') {
-            $datos['inscripciones'] = Membership::with('member')
+            $inscripciones = Membership::with('member')
                 ->where('created_by', $request->user()->id)
                 ->whereBetween('created_at', $rango)
                 ->latest('created_at')
-                ->get();
+                ->paginate(10)->onEachSide(1)->withQueryString();
+
+            $datos['inscripciones'] = $inscripciones;
+
+            // Indicador del módulo (antes vivía en el "Resumen" aparte, que
+            // se dio de baja): del rango filtrado, no fijo al mes — es el
+            // mismo filtro que ya usa esta pantalla. Se agrega aparte: el
+            // paginador ya no trae la colección completa.
+            $datos['kpis'] = [
+                'cantidad' => $inscripciones->total(),
+            ];
         } else {
-            $datos['ventas'] = Sale::with('items')
+            $ventas = Sale::with('items')
                 ->where('sold_by', $request->user()->id)
                 ->completadas()
                 ->whereBetween('sold_at', $rango)
                 ->latest('sold_at')
-                ->get();
+                ->paginate(10)->onEachSide(1)->withQueryString();
+
+            $datos['ventas'] = $ventas;
+            $datos['kpis'] = [
+                'cantidad' => $ventas->total(),
+                'total'    => (float) Sale::where('sold_by', $request->user()->id)
+                    ->completadas()
+                    ->whereBetween('sold_at', $rango)
+                    ->sum('total'),
+            ];
         }
 
         return view('entrenador.ventas.index', $datos);
