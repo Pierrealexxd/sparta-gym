@@ -9,4 +9,12 @@
     @if (auth()->user()->tienePermiso('recetas.gestionar'))
         <a class="pestanas__enlace" href="{{ route('admin.recetas.index') }}" aria-current="{{ request()->routeIs('admin.recetas.*') ? 'true' : 'false' }}">Recetas</a>
     @endif
+    {{-- Movido acá desde "Configuración" (13-08-2026): los planes son
+         contenido que se muestra en la web pública (planes.blade.php de
+         landing), tiene más sentido editarlos junto al resto de lo que se
+         ve afuera que junto a Entrenadores/Sedes/Usuarios. --}}
+    @if (auth()->user()->tienePermiso('planes.gestionar'))
+        <a class="pestanas__enlace" href="{{ route('admin.planes.index') }}" aria-current="{{ request()->routeIs('admin.planes.*') ? 'true' : 'false' }}">Planes</a>
+    @endif
+    <a class="pestanas__enlace" href="{{ route('admin.contenido.contacto') }}" aria-current="{{ request()->routeIs('admin.contenido.contacto') ? 'true' : 'false' }}">Contacto</a>
 </nav>

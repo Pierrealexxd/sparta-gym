@@ -21,7 +21,11 @@
 @endsection
 
 @section('contenido')
-    <div class="ficha" x-data="{ tab: 'resumen' }">
+    {{-- $tabActiva viene del controlador ya validado contra una lista blanca
+         de pestañas reales — nunca se interpola request('tab') crudo acá:
+         x-data es una cadena que Alpine evalúa como JS, así que un valor
+         con comillas sin sanear sería inyección. --}}
+    <div class="ficha" x-data="{ tab: '{{ $tabActiva }}' }">
         <div class="ficha__resumen">
             <div class="tarjeta" style="padding:var(--e-5)">
                 <div class="ficha__foto" style="margin-bottom:var(--e-4)">
@@ -100,7 +104,7 @@
                     <table class="tabla tabla--tarjetas">
                         <thead><tr><th>Fecha</th><th>Peso</th><th>% Grasa</th><th>IMC</th></tr></thead>
                         <tbody>
-                            @forelse ($cliente->measurements->sortByDesc('measured_at') as $m)
+                            @forelse ($medidasPag as $m)
                                 <tr>
                                     <td data-etiqueta="Fecha">{{ $m->measured_at->translatedFormat('d M Y') }}</td>
                                     <td class="es-fuerte" data-etiqueta="Peso">{{ $m->weight_kg }} kg</td>
@@ -113,10 +117,16 @@
                         </tbody>
                     </table>
                 </div>
+
+                {{-- appends(['tab'=>'medidas']) ya viaja en cada link (ver
+                     controlador): al cambiar de página, el ?tab=medidas de
+                     la URL es lo que hace que $tabActiva vuelva a abrir esta
+                     pestaña en vez de resetear a "Resumen". --}}
+                <div class="paginacion">{{ $medidasPag->links() }}</div>
             </div>
 
             <div x-show="tab==='membresias'" x-cloak style="display:grid;gap:var(--e-5)">
-                <form class="tarjeta formulario-panel" method="POST" action="{{ route('admin.membresias.store', $cliente) }}">
+                <form class="tarjeta formulario-panel" method="POST" action="{{ route('admin.clientes.membresias.store', $cliente) }}">
                     @csrf
                     <div class="formulario-panel__fila">
                         <label class="campo"><span class="campo__etiqueta">Plan</span>

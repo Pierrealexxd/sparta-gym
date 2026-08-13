@@ -87,11 +87,14 @@ class MemberController extends Controller
         return redirect()->route('admin.clientes.show', $socio)->with('exito', 'Cliente registrado.');
     }
 
-    public function show(Member $member): View
+    public function show(Request $request, Member $member): View
     {
         $member->load([
             'currentMembership.plan',
             'currentAssignment.trainer.user',
+            // Sin límite a propósito: graficoPeso() necesita el historial
+            // completo para la curva de peso, no solo la página visible de
+            // la tabla de abajo (esa usa $medidasPag, aparte).
             'measurements' => fn ($q) => $q->orderBy('measured_at'),
             'goals' => fn ($q) => $q->activos(),
             'memberships' => fn ($q) => $q->latest('starts_at'),
@@ -99,9 +102,24 @@ class MemberController extends Controller
             'attendances' => fn ($q) => $q->latest('checked_in_at')->take(10),
         ]);
 
+        // Nunca se interpola request('tab') crudo en la vista (viaja dentro
+        // de un x-data de Alpine, que Alpine evalúa como JS — un valor con
+        // comillas ahí sería inyección). Se resuelve acá contra una lista
+        // blanca de las 5 pestañas reales; cualquier otra cosa cae a 'resumen'.
+        $tabActiva = in_array($request->get('tab'), ['resumen', 'medidas', 'membresias', 'pagos', 'asistencia'], true)
+            ? $request->get('tab')
+            : 'resumen';
+
         return view('admin.clientes.show', [
-            'cliente'  => $member,
-            'grafico'  => $this->graficoPeso($member),
+            'cliente'    => $member,
+            'grafico'    => $this->graficoPeso($member),
+            // paginate(), no simplePaginate(): la vista de paginación propia
+            // del panel (resources/views/vendor/pagination/panel.blade.php)
+            // llama a $paginator->total() y usa $elements — eso solo lo
+            // provee LengthAwarePaginator, con simplePaginate() habría
+            // roto la pestaña con un error en cuanto alguien la abriera.
+            'medidasPag' => $member->measurements()->latest('measured_at')->paginate(10)->appends(['tab' => 'medidas']),
+            'tabActiva'  => $tabActiva,
         ]);
     }
 

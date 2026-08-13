@@ -68,6 +68,11 @@ class PlanController extends Controller
             'price'         => ['required', 'numeric', 'min:0'],
             'duration_days' => ['required', 'integer', 'min:1'],
             'features'      => ['nullable', 'string'],
+            // Formato exacto que siempre manda <input type="color">. Server-side
+            // a propósito y estricto: accent_color se imprime en planes.blade.php
+            // con @style(), que (como @class) no escapa HTML — un valor suelto
+            // ahí podría romper el atributo. El regex es la única barrera real.
+            'accent_color'  => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'is_featured'   => ['nullable', 'boolean'],
             'is_public'     => ['nullable', 'boolean'],
         ]);

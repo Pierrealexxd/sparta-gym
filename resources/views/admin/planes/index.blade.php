@@ -14,11 +14,11 @@
         $errorEditor = $errors->any() && old('_origen') === 'plan';
         $vacios = [
             'name' => '', 'tagline' => '', 'price' => '', 'duration_days' => '',
-            'features' => '', 'is_featured' => false, 'is_public' => true,
+            'features' => '', 'accent_color' => '', 'is_featured' => false, 'is_public' => true,
         ];
     @endphp
 
-    @include('admin.configuracion._pestanas')
+    @include('admin.contenido._pestanas')
 
     <form class="panel__toolbar" method="GET">
         <div class="panel__busqueda">
@@ -48,6 +48,7 @@
                                         'price' => $plan->price,
                                         'duration_days' => $plan->duration_days,
                                         'features' => is_array($plan->features) ? implode("\n", $plan->features) : '',
+                                        'accent_color' => $plan->accent_color ?? '',
                                         'is_featured' => (bool) $plan->is_featured,
                                         'is_public' => (bool) $plan->is_public,
                                     ]) }))">
@@ -127,6 +128,24 @@
 
                 <label class="campo"><span class="campo__etiqueta">Beneficios (uno por línea)</span>
                     <textarea class="campo__control" name="features" style="min-height:7rem" x-model="fila.features"></textarea></label>
+
+                <div class="campo">
+                    <span class="campo__etiqueta">Color de acento (opcional)</span>
+                    <div style="display:flex;align-items:center;gap:var(--e-3)">
+                        {{-- Sin name: es solo el control visual. El input
+                             type="color" no soporta quedar "vacío" (siempre
+                             manda algún hex), así que lo que en verdad se
+                             envía es el oculto de abajo, que sí puede ir
+                             vacío cuando no se eligió color propio. --}}
+                        <input class="campo__color" type="color"
+                               :value="fila.accent_color || '#ff6a1f'" @input="fila.accent_color = $el.value">
+                        <span style="color:var(--ceniza);font-size:var(--t-sm)" x-text="fila.accent_color || 'Usa el degradado de fuego por defecto'"></span>
+                        <button class="btn btn--desnudo" type="button" x-show="fila.accent_color" @click="fila.accent_color = ''">
+                            Quitar
+                        </button>
+                    </div>
+                    <input type="hidden" name="accent_color" :value="fila.accent_color">
+                </div>
 
                 <div style="display:flex;gap:var(--e-6)">
                     <input type="hidden" name="is_featured" :value="fila.is_featured ? 1 : 0">

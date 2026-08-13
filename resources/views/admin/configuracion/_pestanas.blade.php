@@ -9,9 +9,8 @@
     @if (auth()->user()->tienePermiso('entrenadores.gestionar'))
         <a class="pestanas__enlace" href="{{ route('admin.entrenadores.index') }}" aria-current="{{ request()->routeIs('admin.entrenadores.*') ? 'true' : 'false' }}">Entrenadores</a>
     @endif
-    @if (auth()->user()->tienePermiso('planes.gestionar'))
-        <a class="pestanas__enlace" href="{{ route('admin.planes.index') }}" aria-current="{{ request()->routeIs('admin.planes.*') ? 'true' : 'false' }}">Planes</a>
-    @endif
+    {{-- "Planes" se movió a Contenido web (ver admin/contenido/_pestanas.blade.php)
+         — la ruta admin.planes.* no cambió, solo dónde vive el enlace. --}}
     @if (auth()->user()->tienePermiso('sedes.gestionar'))
         <a class="pestanas__enlace" href="{{ route('admin.sedes.index') }}" aria-current="{{ request()->routeIs('admin.sedes.*') ? 'true' : 'false' }}">Sedes</a>
     @endif
