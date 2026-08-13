@@ -17,7 +17,7 @@ const RUTA = (clave, id) => (window.spartaMensajes?.[clave] ?? '').replace('__ID
 document.addEventListener('alpine:init', () => {
     Alpine.data('chat', (conversaciones) => ({
         conversaciones: conversaciones ?? [],
-        pestaña: 'chats',
+        nuevoAbierto: false,
         filtroRol: '',
         busqueda: '',
         directorio: [],
@@ -121,7 +121,7 @@ document.addEventListener('alpine:init', () => {
             if (!usuarioId) return; // sin id no hay a quién escribirle — nada que intentar
             try {
                 const { data } = await axios.post(window.spartaMensajes.conversar, { user_id: usuarioId });
-                this.pestaña = 'chats';
+                this.nuevoAbierto = false;
                 await this.refrescarLista();
                 await this.abrir(data.id);
             } catch (e) {

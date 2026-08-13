@@ -239,7 +239,7 @@
 
     /* Selector de sede: mismo tratamiento que un enlace — solo el icono,
        texto oculto, el nombre real de la sede sale por el mismo tooltip. */
-    .panel__lateral.is-comprimida .panel__sede { padding: 0 var(--e-1) var(--e-4); }
+    .panel__lateral.is-comprimida .panel__sede { padding: var(--e-4) var(--e-1); }
     .panel__lateral.is-comprimida .panel__sede-boton { justify-content: center; gap: 0; padding: .7rem 0; }
     .panel__lateral.is-comprimida .panel__sede-texto { display: none; }
     /* El desplegable de multi-sede no puede quedar apretado a 76px: sale
@@ -674,6 +674,22 @@
 /* ---------- Formularios en dos columnas ---------- */
 
 .formulario-panel { display: grid; gap: var(--e-4); }
+/* Título de bloque dentro de un formulario de ficha (p. ej. la pestaña
+   "Contacto" de Contenido web: separa cabecera/datos/horario/mapa). */
+.contacto-admin__titulo {
+    font-family: var(--f-display);
+    font-size: var(--t-lg);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding-top: var(--e-4);
+    border-top: 1px solid var(--acero);
+}
+.contacto-admin__titulo:first-of-type { padding-top: 0; border-top: 0; }
+.contacto-admin__nota {
+    font-size: var(--t-xs);
+    color: var(--ceniza);
+    margin-top: calc(var(--e-2) * -1);
+}
 /* minmax(min(220px, 100%), 1fr) en vez de minmax(220px, 1fr): el mínimo fijo
    de 220px desbordaba (y ".tarjeta" con overflow:hidden lo recortaba, sin
    scroll) en contenedores más angostos de 220px, como el modal de venta o
@@ -1003,7 +1019,10 @@
 }
 
 /* ---------- Selector de sede activa (multi-sede) ---------- */
-.panel__sede { padding: 0 var(--e-4) var(--e-4); position: relative; }
+/* padding-top: antes 0 — quedaba pegado a la línea divisoria de
+   .panel__cabecera-lateral (border-bottom), como cortado por ella en vez de
+   leerse como su propio contenedor con aire alrededor. */
+.panel__sede { padding: var(--e-4) var(--e-4) var(--e-4); position: relative; }
 .panel__sede-boton {
     width: 100%; display: flex; align-items: center; gap: var(--e-2);
     padding: var(--e-3); border-radius: var(--r-md);
@@ -1275,31 +1294,43 @@
     overflow: hidden;
 }
 
-.chat__pestanas {
+.chat__cabecera-lista {
     display: flex;
-    gap: var(--e-1);
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--e-3);
     padding: var(--e-3);
     border-bottom: 1px solid var(--acero);
 }
-.chat__pestanas button {
-    flex: 1;
-    padding: .6rem var(--e-3);
-    border-radius: var(--r-md);
-    font-family: var(--f-mono);
-    font-size: var(--t-xs);
-    letter-spacing: .1em;
+.chat__titulo-lista {
+    font-family: var(--f-display);
+    font-size: var(--t-base);
     text-transform: uppercase;
-    color: var(--humo);
-    text-align: center;
-    transition: color var(--v-rapido), background var(--v-rapido);
+    letter-spacing: .04em;
+    color: var(--hueso);
 }
-.chat__pestanas button.is-activo { background: var(--relleno-fuerte); color: var(--hueso); }
+.chat__nuevo {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: var(--r-md);
+}
+.chat__nuevo svg { width: 1.1em; height: 1.1em; }
 
 .chat__cuerpo-lista { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 
 .chat__lista {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden; /* red de seguridad: con overflow-y:auto y esto en
+                            'visible' (default), el navegador resuelve el eje
+                            X también a 'auto' — cualquier fila que algún día
+                            vuelva a desbordar scrollearía de lado en vez de
+                            truncarse. El fix real es min-width:0 en las filas
+                            (.chat__conversacion / .chat__contacto). */
     padding: var(--e-3);
     display: grid;
     gap: var(--e-1);
@@ -1311,6 +1342,10 @@
     align-items: center;
     gap: var(--e-3);
     width: 100%;
+    min-width: 0; /* como grid item de .chat__lista, sin esto no se achica y
+                     empuja la hora/no-leídos fuera de la vista con un nombre
+                     largo — el min-width:0 de .chat__conversacion-info de
+                     abajo no alcanza si el propio grid item no se lo permite */
     text-align: left;
     padding: var(--e-3);
     border-radius: var(--r-md);
@@ -1397,10 +1432,26 @@
 }
 .chat__busqueda { max-width: none; }
 
+/* Directorio dentro del modal "Nuevo mensaje": .chat__filtros/.chat__lista
+   traen su propio padding+borde pensados para el carril angosto de la
+   lista; dentro de .modal__caja (que ya trae su propio padding) sobraba
+   doble aire y un borde que no llegaba de punta a punta. Se reinicia acá,
+   scopeado, para no tocar la vista de la lista de conversaciones. La lista
+   de contactos queda con techo propio de alto para que los filtros y el
+   buscador se mantengan fijos mientras solo ella scrollea. */
+.chat-directorio .chat__filtros { padding: 0 0 var(--e-4); border-bottom: none; }
+.chat-directorio .chat__lista { padding: 0; max-height: 50vh; overflow-y: auto; }
+
 .chat__contacto {
     display: flex;
     align-items: center;
     gap: var(--e-3);
+    min-width: 0; /* mismo motivo que .chat__conversacion: sin esto, un
+                     nombre largo empuja el WhatsApp/"Hablar" fuera del
+                     modal en vez de truncarse — el min-width:0 de
+                     .chat__contacto-info no alcanza si este grid item
+                     (hijo directo de .chat__lista, display:grid) no se
+                     achica primero. */
     padding: var(--e-3);
     border-radius: var(--r-md);
 }

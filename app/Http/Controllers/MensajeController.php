@@ -94,6 +94,12 @@ class MensajeController extends Controller
 
         abort_if($otro->id === $request->user()->id, 422, 'No puedes chatear contigo mismo.');
 
+        // Regla de la mensajería: un cliente no puede escribirle a otro
+        // cliente (solo a staff — admin/recepción/entrenador). El resto de
+        // roles no tiene restricción entre sí. Se valida acá (no solo en el
+        // directorio) para que no se pueda forzar por fuera de la UI.
+        abort_if($request->user()->esCliente() && $otro->esCliente(), 403, 'Los clientes no pueden escribirse entre sí.');
+
         $conversacion = Conversation::query()
             ->whereHas('participants', fn ($q) => $q->where('user_id', $request->user()->id))
             ->whereHas('participants', fn ($q) => $q->where('user_id', $otro->id))
@@ -125,6 +131,9 @@ class MensajeController extends Controller
             ->where('is_active', true)
             ->where('id', '!=', $request->user()->id)
             ->with('role')
+            // Un cliente no ve a otros clientes en el directorio (solo puede
+            // escribirle a staff) — mismo criterio que valida conversar().
+            ->when($request->user()->esCliente(), fn ($q) => $q->whereHas('role', fn ($rq) => $rq->where('slug', '!=', 'cliente')))
             ->when($rol !== '', function ($q) use ($rol) {
                 $slugs = match ($rol) {
                     'admin' => ['admin', 'recepcion'],
