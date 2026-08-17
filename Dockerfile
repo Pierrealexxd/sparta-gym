@@ -5,7 +5,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM composer:2 AS deps
+FROM composer:2-php8.3 AS deps
 WORKDIR /app
 RUN apk add --no-cache freetype-dev libpng-dev libjpeg-turbo-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
