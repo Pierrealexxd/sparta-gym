@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Cliente;
 use App\Http\Controllers\Controller;
 use App\Models\MemberGoal;
 use App\Models\MemberMeasurement;
+use App\Services\NotificationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -118,10 +119,14 @@ class ProgressController extends Controller
 
         $socio = $request->user()->member()->firstOrFail();
 
-        $socio->measurements()->updateOrCreate(
+        $medida = $socio->measurements()->updateOrCreate(
             ['member_id' => $socio->id, 'measured_at' => $datos['measured_at']],
             $datos + ['recorded_by' => $request->user()->id],
         );
+
+        // Su entrenador se entera (si lo tiene) — el propio socio ya tiene su
+        // toast flash de confirmación.
+        app(NotificationService::class)->notificarMedidaCliente($medida);
 
         return back()->with('exito', 'Medida registrada.');
     }

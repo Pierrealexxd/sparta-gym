@@ -5,9 +5,10 @@
 
 @section('acciones')
     <div style="display:flex;gap:var(--e-3)">
-        <a class="btn btn--vidrio" href="{{ route('landing') }}#contacto" target="_blank" rel="noopener">
+        <button class="btn btn--vidrio" type="button"
+                @click="window.dispatchEvent(new CustomEvent('abrir-preview', { detail: { seccion: 'contacto' } }))">
             <x-icono nombre="ojo" /> Previsualizar
-        </a>
+        </button>
     </div>
 @endsection
 

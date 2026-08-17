@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\ProgramController;
 use App\Http\Controllers\Admin\ProgramRoutineController;
 use App\Http\Controllers\Admin\RecipeController;
 use App\Http\Controllers\Admin\SaleController;
+use App\Http\Controllers\Admin\StockAlertController;
 use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\Admin\TrainerController;
 use App\Http\Controllers\Admin\UserController;
@@ -76,6 +77,16 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
     // la misma pantalla — ver admin/asistencia/_pestanas.blade.php.
     Route::get('asistencia/calendario', [AttendanceController::class, 'calendario'])
         ->name('asistencia.calendario')->middleware('permiso:asistencia.ver');
+
+    // Vista Lista, alterna a Calendario con <x-alterna-vista>. Mismo
+    // permiso que el calendario — no es un recurso nuevo, es otra forma
+    // de ver los mismos datos.
+    Route::get('asistencia/lista', [AttendanceController::class, 'lista'])
+        ->name('asistencia.lista')->middleware('permiso:asistencia.ver');
+
+    Route::get('asistencia/{marcacion}/detalle', [AttendanceController::class, 'detalle'])
+        ->name('asistencia.detalle')->middleware('permiso:asistencia.ver')
+        ->whereNumber('marcacion');
 
     Route::middleware('permiso:asistencia.aprobar')->prefix('asistencia/solicitudes')->name('asistencia.solicitudes.')->group(function () {
         Route::get('/', [AttendanceEditRequestController::class, 'index'])->name('index');
@@ -138,6 +149,12 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
     });
 
     Route::middleware('permiso:web.editar')->group(function () {
+        // Previsualización inline: cada sección de la landing se renderiza
+        // en un iframe dentro del panel, usando las mismas Blade views y
+        // CSS que la página pública (ver PreviewController).
+        Route::get('preview/{section}', [\App\Http\Controllers\Admin\PreviewController::class, 'show'])
+            ->name('preview');
+
         Route::resource('faqs', FaqController::class)->except(['show']);
         Route::post('faqs/{faq}/publicar', [FaqController::class, 'publicar'])
             ->name('faqs.publicar');
@@ -192,8 +209,15 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
         Route::get('inventario', [ProductController::class, 'index'])->name('inventario.index');
         Route::get('inventario/create', [ProductController::class, 'create'])->name('inventario.create')->middleware('permiso:inventario.gestionar');
         Route::post('inventario', [ProductController::class, 'store'])->name('inventario.store')->middleware('permiso:inventario.gestionar');
+        // Alertas para la campanita: literal y ANTES de "inventario/{producto}"
+        // (show), para que "alertas" no lo capture como si fuera un id.
+        Route::get('inventario/alertas', [StockAlertController::class, 'pendientesJson'])->name('inventario.alertas');
+        Route::get('inventario/{producto}', [ProductController::class, 'show'])->name('inventario.show');
         Route::get('inventario/{producto}/edit', [ProductController::class, 'edit'])->name('inventario.edit')->middleware('permiso:inventario.gestionar');
         Route::put('inventario/{producto}', [ProductController::class, 'update'])->name('inventario.update')->middleware('permiso:inventario.gestionar');
+        // "inventario/masivo" va antes de "inventario/{producto}": DELETE con
+        // segmento literal debe ganarle al wildcard (mismo patrón que clientes).
+        Route::delete('inventario/masivo', [ProductController::class, 'destroyMasivo'])->name('inventario.masivo')->middleware('permiso:inventario.gestionar');
         Route::delete('inventario/{producto}', [ProductController::class, 'destroy'])->name('inventario.destroy')->middleware('permiso:inventario.gestionar');
         Route::post('inventario/{producto}/movimiento', [ProductController::class, 'registrarMovimiento'])->name('inventario.movimiento')->middleware('permiso:inventario.gestionar');
     });

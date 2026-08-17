@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Testimonial;
+use App\Services\NotificationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -95,6 +96,22 @@ class TestimonialController extends Controller
     public function publicar(Testimonial $testimonio): RedirectResponse
     {
         $testimonio->update(['is_published' => true]);
+
+        // El autor (si es un socio con cuenta) se entera de que su reseña
+        // ya salió en la web pública.
+        $autor = $testimonio->member?->user;
+        if ($autor && $autor->is_active) {
+            app(NotificationService::class)->disparar(
+                $autor,
+                'resena.aprobada',
+                'Tu reseña fue publicada',
+                'Ya puedes verla en la página pública del gimnasio.',
+                'estrella',
+                'baja',
+                $testimonio->id,
+                route('landing') . '#testimonios',
+            );
+        }
 
         return back()->with('exito', 'Testimonio publicado.');
     }

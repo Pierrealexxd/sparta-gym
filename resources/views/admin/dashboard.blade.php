@@ -4,84 +4,102 @@
 @section('subtitulo', now()->translatedFormat('l, d \d\e F'))
 
 @section('contenido')
-    <div class="kpis" data-revelar data-revelar-grupo>
-        <article class="tarjeta kpi tarjeta--interactiva">
-            <div class="kpi__cabecera">
-                <span class="kpi__icono"><x-icono nombre="billetera" /></span>
-            </div>
-            <b class="kpi__valor">S/ <span data-contador="{{ $kpis['ingresosHoy'] }}">0</span></b>
-            <span class="kpi__etiqueta">Ingresos de hoy</span>
-        </article>
+    {{-- Indicadores agrupados por tema (Dinero / Clientes / Operación):
+         cada grupo es su propia rejilla con columnas fijas (kpis--3, kpis--2)
+         para que en tablet y móvil no queden filas cojas — antes eran 8
+         tarjetas en un solo auto-fit que en tablet rompía 3+3+2 y mezclaba
+         dinero con personas. Los números no cambian, solo el orden y la
+         agrupación. --}}
+    <div>
+        <h3 class="kpis__titulo">Dinero</h3>
+        <div class="kpis kpis--3" data-revelar data-revelar-grupo>
+            <article class="tarjeta kpi tarjeta--interactiva">
+                <div class="kpi__cabecera">
+                    <span class="kpi__icono"><x-icono nombre="billetera" /></span>
+                </div>
+                <b class="kpi__valor">S/ <span data-contador="{{ $kpis['ingresosHoy'] }}">0</span></b>
+                <span class="kpi__etiqueta">Ingresos de hoy</span>
+            </article>
 
-        <article class="tarjeta kpi tarjeta--interactiva">
-            <div class="kpi__cabecera">
-                <span class="kpi__icono" style="background:rgba(255,106,31,.12);border-color:rgba(255,106,31,.3);color:var(--brasa)">
-                    <x-icono nombre="balanza" />
+            <article class="tarjeta kpi tarjeta--interactiva">
+                <div class="kpi__cabecera">
+                    <span class="kpi__icono kpi__icono--brasa">
+                        <x-icono nombre="balanza" />
+                    </span>
+                </div>
+                <b class="kpi__valor" style="color:var(--{{ $kpis['variacionHoy'] < 0 ? 'sangre' : 'brasa' }})">
+                    {{ $kpis['variacionHoy'] >= 0 ? '+' : '−' }}<span data-contador="{{ abs($kpis['variacionHoy']) }}">0</span>%
+                </b>
+                <span class="kpi__etiqueta">Cierre de hoy vs. hace una semana</span>
+                <span class="kpi__variacion" style="color:var(--humo)">
+                    Hoy S/ {{ number_format($kpis['ingresosHoy'], 2) }} · Hace una semana S/ {{ number_format($kpis['ingresosSemanaPasada'], 2) }}
                 </span>
-            </div>
-            <b class="kpi__valor" style="color:var(--{{ $kpis['variacionHoy'] < 0 ? 'sangre' : 'brasa' }})">
-                {{ $kpis['variacionHoy'] >= 0 ? '+' : '−' }}<span data-contador="{{ abs($kpis['variacionHoy']) }}">0</span>%
-            </b>
-            <span class="kpi__etiqueta">Cierre de hoy vs. hace una semana</span>
-            <span class="kpi__variacion" style="color:var(--humo)">
-                Hoy S/ {{ number_format($kpis['ingresosHoy'], 2) }} · Hace una semana S/ {{ number_format($kpis['ingresosSemanaPasada'], 2) }}
-            </span>
-        </article>
+            </article>
 
-        <article class="tarjeta kpi tarjeta--interactiva">
-            <div class="kpi__cabecera">
-                <span class="kpi__icono"><x-icono nombre="grafico" /></span>
-            </div>
-            <b class="kpi__valor">S/ <span data-contador="{{ $kpis['ingresosMes'] }}">0</span></b>
-            <span class="kpi__etiqueta">Ingresos del mes</span>
-        </article>
+            <article class="tarjeta kpi tarjeta--interactiva">
+                <div class="kpi__cabecera">
+                    <span class="kpi__icono"><x-icono nombre="grafico" /></span>
+                </div>
+                <b class="kpi__valor">S/ <span data-contador="{{ $kpis['ingresosMes'] }}">0</span></b>
+                <span class="kpi__etiqueta">Ingresos del mes</span>
+            </article>
+        </div>
+    </div>
 
-        <article class="tarjeta kpi tarjeta--interactiva">
-            <div class="kpi__cabecera">
-                <span class="kpi__icono"><x-icono nombre="usuarios" /></span>
-            </div>
-            <b class="kpi__valor"><span data-contador="{{ $kpis['clientesActivos'] }}">0</span></b>
-            <span class="kpi__etiqueta">Clientes activos</span>
-            <span class="kpi__variacion" style="color:var(--humo)">{{ $kpis['clientesInactivos'] }} inactivos</span>
-        </article>
+    <div>
+        <h3 class="kpis__titulo">Clientes</h3>
+        <div class="kpis kpis--3" data-revelar data-revelar-grupo>
+            <article class="tarjeta kpi tarjeta--interactiva">
+                <div class="kpi__cabecera">
+                    <span class="kpi__icono"><x-icono nombre="usuarios" /></span>
+                </div>
+                <b class="kpi__valor"><span data-contador="{{ $kpis['clientesActivos'] }}">0</span></b>
+                <span class="kpi__etiqueta">Clientes activos</span>
+                <span class="kpi__variacion" style="color:var(--humo)">{{ $kpis['clientesInactivos'] }} inactivos</span>
+            </article>
 
-        <article class="tarjeta kpi tarjeta--interactiva">
-            <div class="kpi__cabecera">
-                <span class="kpi__icono"><x-icono nombre="entrada" /></span>
-            </div>
-            <b class="kpi__valor"><span data-contador="{{ $kpis['asistenciaHoy'] }}">0</span></b>
-            <span class="kpi__etiqueta">Asistencias hoy</span>
-        </article>
+            <article class="tarjeta kpi tarjeta--interactiva">
+                <div class="kpi__cabecera">
+                    <span class="kpi__icono"><x-icono nombre="agregar" /></span>
+                </div>
+                <b class="kpi__valor"><span data-contador="{{ $kpis['matriculasMes'] }}">0</span></b>
+                <span class="kpi__etiqueta">Matrículas este mes</span>
+            </article>
 
-        <article class="tarjeta kpi tarjeta--interactiva">
-            <div class="kpi__cabecera">
-                <span class="kpi__icono" style="background:rgba(255,106,31,.12);border-color:rgba(255,106,31,.3);color:var(--brasa)">
-                    <x-icono nombre="campana" />
+            <article class="tarjeta kpi tarjeta--interactiva">
+                <div class="kpi__cabecera">
+                    <span class="kpi__icono"><x-icono nombre="escudo" /></span>
+                </div>
+                <b class="kpi__valor"><span data-contador="{{ $kpis['retencion30dias'] }}">0</span>%</b>
+                <span class="kpi__etiqueta">Retención · últimos 30 días</span>
+                <span class="kpi__variacion" style="color:var(--{{ $kpis['retencionVariacion'] < 0 ? 'sangre' : 'brasa' }})">
+                    {{ $kpis['retencionVariacion'] >= 0 ? '+' : '−' }}{{ abs($kpis['retencionVariacion']) }} pts vs. tramo anterior
                 </span>
-            </div>
-            <b class="kpi__valor"><span data-contador="{{ $kpis['membresiasVencidas'] }}">0</span></b>
-            <span class="kpi__etiqueta">Membresías vencidas</span>
-        </article>
+            </article>
+        </div>
+    </div>
 
-        <article class="tarjeta kpi tarjeta--interactiva">
-            <div class="kpi__cabecera">
-                <span class="kpi__icono"><x-icono nombre="agregar" /></span>
-            </div>
-            <b class="kpi__valor"><span data-contador="{{ $kpis['matriculasMes'] }}">0</span></b>
-            <span class="kpi__etiqueta">Matrículas este mes</span>
-        </article>
+    <div>
+        <h3 class="kpis__titulo">Operación</h3>
+        <div class="kpis kpis--2" data-revelar data-revelar-grupo>
+            <article class="tarjeta kpi tarjeta--interactiva">
+                <div class="kpi__cabecera">
+                    <span class="kpi__icono"><x-icono nombre="entrada" /></span>
+                </div>
+                <b class="kpi__valor"><span data-contador="{{ $kpis['asistenciaHoy'] }}">0</span></b>
+                <span class="kpi__etiqueta">Asistencias hoy</span>
+            </article>
 
-        <article class="tarjeta kpi tarjeta--interactiva">
-            <div class="kpi__cabecera">
-                <span class="kpi__icono"><x-icono nombre="escudo" /></span>
-            </div>
-            <b class="kpi__valor"><span data-contador="{{ $kpis['retencion30dias'] }}">0</span>%</b>
-            <span class="kpi__etiqueta">Retención · últimos 30 días</span>
-            <span class="kpi__variacion" style="color:var(--{{ $kpis['retencionVariacion'] < 0 ? 'sangre' : 'brasa' }})">
-                {{ $kpis['retencionVariacion'] >= 0 ? '+' : '−' }}{{ abs($kpis['retencionVariacion']) }} pts vs. tramo anterior
-            </span>
-        </article>
-
+            <article class="tarjeta kpi tarjeta--interactiva">
+                <div class="kpi__cabecera">
+                    <span class="kpi__icono kpi__icono--brasa">
+                        <x-icono nombre="campana" />
+                    </span>
+                </div>
+                <b class="kpi__valor"><span data-contador="{{ $kpis['membresiasVencidas'] }}">0</span></b>
+                <span class="kpi__etiqueta">Membresías vencidas</span>
+            </article>
+        </div>
     </div>
 
     @if (\App\Support\GymContext::id() === null)

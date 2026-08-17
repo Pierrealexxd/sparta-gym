@@ -1,0 +1,13 @@
+/* ============================================================
+   Sparta Gym · CSS del panel (admin/entrenador/cliente)
+
+   Solo lo que el panel necesita: tokens, base, componentes y panel.
+   Landing y auth se cargan por separado en sus propios entry points.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800&family=Sora:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@import './tokens.css';
+@import './base.css';
+@import './components.css';
+@import './panel.css';

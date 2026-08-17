@@ -14,7 +14,10 @@
  * luz de la cámara no puede quedar encendida en segundo plano.
  */
 import Alpine from 'alpinejs';
-import jsQR from 'jsqr';
+
+// jsQR se carga bajo demanda: solo cuando el entrenador abre el escáner.
+// Pesa ~10 KB y no tiene sentido en páginas que nunca usan la cámara.
+let jsQRCargado = null;
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('escaneoQr', (config) => ({
@@ -122,9 +125,22 @@ document.addEventListener('alpine:init', () => {
             return 'No se pudo iniciar la cámara. Vuelve a intentarlo.';
         },
 
-        empezarLectura() {
+        async empezarLectura() {
             const video = this.$refs.video;
             if (!video) return;
+
+            // Precargar jsQR una sola vez: se resuelve rápido (~10 KB) pero
+            // si la red falla, el escáner lo detecta en leer() y muestra error.
+            if (!jsQRCargado) {
+                try {
+                    jsQRCargado = (await import('jsqr')).default;
+                } catch {
+                    this.detener();
+                    this.estado = 'error';
+                    this.mensaje = 'No se pudo cargar el lector QR. Revisá tu conexión.';
+                    return;
+                }
+            }
 
             video.srcObject = this.stream;
             video.setAttribute('playsinline', '');
@@ -156,7 +172,7 @@ document.addEventListener('alpine:init', () => {
             ctx.drawImage(video, 0, 0, ancho, alto);
 
             const imagen = ctx.getImageData(0, 0, ancho, alto);
-            const code = jsQR(imagen.data, ancho, alto, { inversionAttempts: 'dontInvert' });
+            const code = jsQRCargado(imagen.data, ancho, alto, { inversionAttempts: 'dontInvert' });
 
             if (code?.data) {
                 this.enviar(code.data);

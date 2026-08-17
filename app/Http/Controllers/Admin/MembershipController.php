@@ -52,6 +52,7 @@ class MembershipController extends Controller
         $datos = $request->validate([
             'plan_id'    => ['required', 'exists:plans,id'],
             'starts_at'  => ['required', 'date'],
+            'ends_at'    => ['nullable', 'date', 'after_or_equal:starts_at'],
             'discount'   => ['nullable', 'numeric', 'min:0'],
             'method'     => ['required', 'in:efectivo,transferencia,yape,plin,tarjeta,otro'],
             'reference'  => ['nullable', 'string', 'max:120'],

@@ -4,9 +4,15 @@
 @section('subtitulo', 'Recetas · ' . $recetas->total() . ' recetas')
 
 @section('acciones')
-    <button class="btn btn--fuego" type="button" @click="window.dispatchEvent(new CustomEvent('abrir-receta'))">
-        <x-icono nombre="agregar" /> Nueva receta
-    </button>
+    <div style="display:flex;gap:var(--e-3)">
+        <button class="btn btn--vidrio" type="button"
+                @click="window.dispatchEvent(new CustomEvent('abrir-preview', { detail: { seccion: 'recetas' } }))">
+            <x-icono nombre="ojo" /> Previsualizar
+        </button>
+        <button class="btn btn--fuego" type="button" @click="window.dispatchEvent(new CustomEvent('abrir-receta'))">
+            <x-icono nombre="agregar" /> Nueva receta
+        </button>
+    </div>
 @endsection
 
 @section('contenido')

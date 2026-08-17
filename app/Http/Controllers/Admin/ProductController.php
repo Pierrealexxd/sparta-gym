@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\StockAlert;
 use App\Models\StockMovement;
 use App\Support\GymContext;
 use Illuminate\Contracts\View\View;
@@ -31,8 +32,17 @@ class ProductController extends Controller
     public function index(Request $request): View
     {
         $termino = $request->get('q');
+        $estado  = $request->get('estado');
+        if ($estado && ! in_array($estado, ['normal', 'bajo', 'critico', 'agotado'], true)) {
+            $estado = null;
+        }
 
         return view('admin.inventario.index', [
+            // KPIs de estado de stock, siempre sobre el catálogo completo de
+            // activos (independientes del término de búsqueda) — mismo patrón
+            // que los indicadores de ventas.
+            'conteos'   => $this->conteosPorEstado(),
+            'estado'    => $estado,
             'productos' => Product::activos()
                 ->when($termino, fn ($q) => $q->where(function ($sub) use ($termino) {
                     $t = '%' . trim($termino) . '%';
@@ -40,9 +50,38 @@ class ProductController extends Controller
                         ->orWhere('sku', 'like', $t)
                         ->orWhere('category', 'like', $t);
                 }))
+                ->when($estado, fn ($q) => $q->enEstado($estado))
                 ->orderBy('name')
-                ->paginate(12)
+                ->paginate(10)
                 ->onEachSide(1)
+                ->withQueryString(),
+        ]);
+    }
+
+    /** Conteo de activos por cada estado de stock, para las tarjetas KPI. */
+    private function conteosPorEstado(): array
+    {
+        $conteos = [];
+        foreach (['normal', 'bajo', 'critico', 'agotado'] as $estado) {
+            $conteos[$estado] = Product::activos()->enEstado($estado)->count();
+        }
+
+        return $conteos;
+    }
+
+    /**
+     * Ficha del producto con su historial de movimientos (el libro mayor):
+     * cada entrada/salida/ajuste registrado, porque `stock` es un saldo y
+     * la verdad vive en `stock_movements` (ver AGENTS.md).
+     */
+    public function show(Product $producto): View
+    {
+        return view('admin.inventario.show', [
+            'producto'   => $producto,
+            'movimientos' => $producto->movements()
+                ->with('user')
+                ->latest('created_at')
+                ->paginate(10)
                 ->withQueryString(),
         ]);
     }
@@ -54,8 +93,15 @@ class ProductController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Si el admin marcó "Generar SKU automáticamente", inyectamos el SKU
+        // generado antes devalidar, de modo que la validación de unicidad pase
+        // (el SKU es SP-XXXX con número máximo+1, garantizado único).
+        if ($request->boolean('generar_sku_automatico')) {
+            $request->merge(['sku' => Product::generarSku(GymContext::id())]);
+        }
+
         $datos = $this->validarDatos($request);
-        $stockInicial = $datos['stock_inicial'] ?? 0;
+        $stockInicial = (int) ($datos['stock_inicial'] ?? 0);
         unset($datos['stock_inicial']);
 
         if ($ruta = $this->guardarImagen($request)) {
@@ -78,6 +124,13 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $producto): RedirectResponse
     {
+        // Si el admin marcó "Generar SKU automáticamente", inyectamos el SKU
+        // generado antes de validar, de modo que la validación de unicidad pase
+        // (el SKU es SP-XXXX con número máximo+1, garantizado único para el gym).
+        if ($request->boolean('generar_sku_automatico')) {
+            $request->merge(['sku' => Product::generarSku(GymContext::id())]);
+        }
+
         $datos = $this->validarDatos($request, $producto);
         unset($datos['stock_inicial']);
 
@@ -98,6 +151,26 @@ class ProductController extends Controller
         $producto->update(['is_active' => false]);
 
         return back()->with('exito', 'Producto desactivado.');
+    }
+
+    /** Desactiva en lote los productos seleccionados — misma lógica que destroy(). */
+    public function destroyMasivo(Request $request): RedirectResponse
+    {
+        $ids = array_values(array_filter(array_map('intval', (array) $request->input('ids', []))));
+
+        if ($ids === []) {
+            return back()->with('error', 'Selecciona al menos un producto.');
+        }
+
+        $desactivados = Product::whereIn('id', $ids)->update(['is_active' => false]);
+
+        // El update masivo no dispara eventos de modelo (ver observer en
+        // AppServiceProvider): sin esta limpieza, las alertas de esos
+        // productos quedarían huérfanas pidiendo reposición de un artículo
+        // que ya no se vende.
+        StockAlert::whereIn('product_id', $ids)->delete();
+
+        return redirect()->route('admin.inventario.index')->with('exito', "{$desactivados} productos desactivados.");
     }
 
     /** Entrada de mercancía o ajuste manual — nunca se toca `stock` directo. */
@@ -156,8 +229,13 @@ class ProductController extends Controller
     {
         $datos = $request->validate([
             'name'          => ['required', 'string', 'max:120'],
-            'sku'           => [
+'sku' => [
                 'nullable', 'string', 'max:40',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($value && ! preg_match('/^SP-\d{3,}$/', $value)) {
+                        $fail('El SKU debe tener el formato SP-XXX (ej. SP-001).');
+                    }
+                },
                 Rule::unique('products', 'sku')
                     ->where('gym_id', GymContext::id())
                     ->ignore($producto?->id),
@@ -173,8 +251,11 @@ class ProductController extends Controller
 
         unset($datos['imagen']);
 
-        $datos['min_stock'] = $datos['min_stock'] ?? 0;
-        $datos['is_active'] = $request->boolean('is_active', true);
+        $datos['min_stock'] = (int) ($datos['min_stock'] ?? 0);
+        // boolean() sin default: si el checkbox va desmarcado no llega la
+        // clave y el producto debe quedar inactivo — un default `true` hacía
+        // imposible desactivarlo desde el formulario.
+        $datos['is_active'] = $request->boolean('is_active');
 
         return $datos;
     }

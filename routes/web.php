@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\MensajeController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PerfilController;
 use App\Http\Controllers\SedeActivaController;
 use Illuminate\Support\Facades\Route;
@@ -70,6 +71,17 @@ Route::middleware(['auth', 'sede.activa'])->group(function () {
     Route::get('/mi-perfil', [PerfilController::class, 'mostrar'])->name('perfil');
     Route::post('/mi-perfil', [PerfilController::class, 'actualizar'])->name('perfil.actualizar');
     Route::post('/mi-perfil/password', [PerfilController::class, 'cambiarPassword'])->name('perfil.password');
+
+    // Campanita unificada: un solo origen de notificaciones para los tres
+    // paneles (ver plan-notificaciones-toast.md). Sin middleware de rol —
+    // cada usuario recibe únicamente las suyas (NotificationService).
+    Route::get('/notificaciones/total', [NotificationController::class, 'total'])->name('notificaciones.total');
+    Route::get('/notificaciones', [NotificationController::class, 'index'])->name('notificaciones.index');
+    Route::get('/notificaciones/nuevas', [NotificationController::class, 'nuevas'])->name('notificaciones.nuevas');
+    // Literal "leidas" ANTES del wildcard {id}: el POST a /notificaciones/leidas
+    // no debe caer en el binding numérico de abajo (que además exige entero).
+    Route::post('/notificaciones/leidas', [NotificationController::class, 'marcarTodas'])->name('notificaciones.leidas');
+    Route::post('/notificaciones/{id}/leida', [NotificationController::class, 'marcarLeida'])->whereNumber('id')->name('notificaciones.leida');
 
     // Las rutas de texto (no-leidas, directorio) van antes de la de
     // {conversacion} para que el binding de modelo no las capture.

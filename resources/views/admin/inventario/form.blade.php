@@ -11,11 +11,43 @@
         <div class="formulario-panel__fila">
             <label class="campo"><span class="campo__etiqueta">Nombre</span>
                 <input class="campo__control" type="text" name="name" required value="{{ old('name', $producto->name) }}"></label>
-            <label class="campo"><span class="campo__etiqueta">SKU (opcional)</span>
-                <input class="campo__control" type="text" name="sku" value="{{ old('sku', $producto->sku) }}">
-                @error('sku')<span class="campo__error">{{ $message }}</span>@enderror
+<label class="campo"><span class="campo__etiqueta">SKU (opcional)</span>
+                <input class="campo__control" type="text" name="sku" id="sku"
+                    value="{{ old('sku', $producto->sku) }}"
+                    {{ old('generar_sku_automatico') ? 'readonly' : '' }}
+                    @error('sku')<span class="campo__error">{{ $message }}</span>@enderror>
+            </label>
+</div>
+
+        <div class="formulario-panel__fila">
+            <label class="campo">
+                <input type="checkbox" name="generar_sku_automatico" id="generar_sku_automatico"
+                    value="1" checked>
+                Generar SKU automáticamente
             </label>
         </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const chk = document.getElementById('generar_sku_automatico');
+                const skuInput = document.getElementById('sku');
+                if (!chk) return;
+                if (chk.checked) {
+                    skuInput.readOnly = true;
+                    skuInput.value = '';
+                } else {
+                    skuInput.readOnly = false;
+                }
+                chk.addEventListener('change', function() {
+                    if (this.checked) {
+                        skuInput.readOnly = true;
+                        skuInput.value = '';
+                    } else {
+                        skuInput.readOnly = false;
+                    }
+                });
+            });
+        </script>
 
         <div class="formulario-panel__fila">
             <label class="campo"><span class="campo__etiqueta">Categoría</span>
@@ -53,7 +85,7 @@
         @endif
 
         <label style="display:flex;align-items:center;gap:var(--e-3);font-size:var(--t-sm);color:var(--ceniza)">
-            <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $producto->is_active ?? true))>
+            <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $producto->is_active ?? true))]
             Producto activo
         </label>
 

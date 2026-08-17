@@ -5,7 +5,9 @@ export default defineConfig({
     plugins: [
         laravel({
             input: [
-                'resources/css/app.css',
+                'resources/css/panel-entry.css',
+                'resources/css/public-entry.css',
+                'resources/css/auth-entry.css',
                 'resources/js/app-public.js',
                 'resources/js/app-panel.js',
                 'resources/js/carnet.js',

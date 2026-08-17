@@ -417,15 +417,53 @@
 
 .kpis { display: grid; gap: var(--e-4); grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 
+/* Columnas fijas por grupo (ver dashboard admin): cuando el número de KPIs
+   no divide parejo con auto-fit —8 en tablet (3+3+2), 4 en tablet (3+1),
+   5 en escritorio (4+1)— el grupo se cierra con columnas explícitas para
+   que cada fila quede completa. Los títulos de grupo (kpis__titulo)
+   separan los indicadores por tema; la regla de móvil de abajo los vuelve
+   a apilar de dos en dos. */
+.kpis--2 { grid-template-columns: repeat(2, 1fr); }
+.kpis--3 { grid-template-columns: repeat(3, 1fr); }
+.kpis--4 { grid-template-columns: repeat(4, 1fr); }
+/* Un solo indicador (ventas → Registros): ni estirado a todo el ancho ni
+   a media columna en móvil — tamaño de tarjeta KPI estándar. */
+.kpis--1 { grid-template-columns: minmax(0, 340px); }
+@media (max-width: 1024px) {
+    /* 4 KPIs en tablet no caben con números enteros (4×~175px cortarían
+       "S/ 1,234.56"): a 2×2 en vez de dejar la fila coja de 3+1 que
+       auto-fit produce en ese ancho. */
+    .kpis--4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+    /* Mismo punto donde auto-fit ya cae a 2 columnas: entre 561-640px, un
+       grupo fijo de 3 dejaría tarjetas de ~180px con la cifra al límite. */
+    .kpis--3 { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* A partir de 2 KPIs quepan 180px reales (auto-fit ya los apila a 1
    columna sola bastante antes), se fuerzan 2 columnas parejas en vez de
    dejar que un tercero rompa a una columna descompensada: en el celular es
    donde más se agradece ver los indicadores "de dos en dos" en vez de
    apilados uno debajo del otro. */
 @media (max-width: 560px) {
-    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .kpis, .kpis--2, .kpis--3, .kpis--4 { grid-template-columns: repeat(2, 1fr); }
     .kpi { padding: var(--e-4); }
     .kpi__valor { font-size: var(--t-xl); }
+    /* Un indicador solo: ancho completo, nunca media columna con la otra
+       mitad vacía (la regla de arriba no lo lista a propósito). */
+    .kpis--1 { grid-template-columns: 1fr; }
+}
+
+/* Etiqueta de sección sobre un grupo de KPIs: mismo registro que los
+   títulos de grupo del sidebar (.panel__grupo-titulo). */
+.kpis__titulo {
+    margin-bottom: var(--e-3);
+    font-family: var(--f-mono);
+    font-size: .64rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--humo);
 }
 
 .kpi { display: grid; gap: var(--e-2); padding: var(--e-5); }
@@ -438,9 +476,31 @@
     border: 1px solid rgba(214,32,43,.28);
     color: var(--sangre-viva);
 }
+/* Variante brasa del icono KPI (variación del día y alertas): el mismo
+   tinte que el rojo pero sobre el token, para que ambos temas (claro y
+   oscuro) lo hereden sin literales en la vista. */
+.kpi__icono--brasa {
+    background: color-mix(in srgb, var(--brasa) 12%, transparent);
+    border-color: color-mix(in srgb, var(--brasa) 30%, transparent);
+    color: var(--brasa);
+}
 .kpi__valor { font-family: var(--f-mono); font-size: var(--t-2xl); font-weight: 600; }
 .kpi__etiqueta { font-size: var(--t-sm); color: var(--ceniza); }
 .kpi__variacion { font-family: var(--f-mono); font-size: var(--t-xs); }
+
+/* Chip de filtro activo (p. ej. estado de stock en inventario): una etiqueta
+   con su cruz de quitar, ancha en vez de truncada en móvil. */
+.filtros-activos { display: flex; flex-wrap: wrap; gap: var(--e-2); margin-bottom: var(--e-4); }
+.filtros-activos .etiqueta { gap: var(--e-2); }
+.filtros-activos__quitar {
+    display: inline-grid; place-items: center;
+    margin-left: var(--e-1); padding: 2px;
+    border-radius: var(--r-full);
+    color: inherit;
+    transition: color var(--v-rapido) var(--curva-seca);
+}
+.filtros-activos__quitar:hover { color: var(--hueso); }
+.filtros-activos__quitar svg { width: .8em; height: .8em; }
 .kpi__variacion--pos { color: var(--ok); }
 .kpi__variacion--neg { color: var(--alerta); }
 
@@ -702,16 +762,21 @@
 .estado--activo, .estado--activa, .estado--pagado   { color: var(--ok); }
 .estado--inactivo, .estado--vencida, .estado--pendiente { color: var(--alerta); }
 .estado--suspendido, .estado--cancelada, .estado--anulado { color: var(--humo); }
+.estado--por-vencer { color: var(--brasa); }
 
 /* ---------- Notificaciones (toast) ----------
    Antes: .aviso quedaba fijo arriba del contenido, empujaba el layout y
    no se cerraba solo. Ahora flota sobre la esquina, se retira solo y
-   reusa las variantes de color que ya existía en .aviso. */
+   reusa las variantes de color que ya existía en .aviso. El contenedor
+   vive SIEMPRE: los toasts en tiempo real (notificaciones.js) entran por
+   el mismo sitio que el flash de confirmación de sesión.
+   Capa propia (--z-toast, entre modal y aviso) a propósito: un toast nunca
+   tapa los botones de un modal abierto, que suelen vivir abajo-derecha. */
 .toasts {
     position: fixed;
     right: var(--e-5);
     bottom: var(--e-5);
-    z-index: var(--z-aviso);
+    z-index: var(--z-toast);
     display: grid;
     gap: var(--e-3);
     width: min(24rem, calc(100vw - var(--e-5) * 2));
@@ -733,8 +798,39 @@
 .toast span { flex: 1; }
 .toast--exito { border-color: color-mix(in srgb, var(--ok) 40%, transparent); color: var(--ok); }
 .toast--error { border-color: color-mix(in srgb, var(--sangre) 45%, transparent); color: var(--alerta); }
+
+/* Prioridades de los toasts realtime: el borde y el icono llevan el color,
+   el texto siempre legible (hueso/ceniza) sobre el grafito del toast. */
+.toast--alta  { border-color: color-mix(in srgb, var(--sangre-viva) 45%, transparent); }
+.toast--media { border-color: color-mix(in srgb, var(--brasa) 40%, transparent); }
+.toast--baja  { border-color: color-mix(in srgb, var(--acero-claro) 45%, transparent); }
+.toast--alta .toast__icono  { color: var(--sangre-viva); }
+.toast--media .toast__icono { color: var(--brasa); }
+.toast--baja  .toast__icono { color: var(--humo); }
+.toast__icono { flex: none; margin-top: .1rem; display: inline-flex; }
+.toast__texto { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.toast__texto b { font-weight: 600; color: var(--hueso); font-size: var(--t-sm); }
+.toast__texto small {
+    color: var(--ceniza);
+    font-size: var(--t-xs);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .toast__cerrar { flex: none; color: inherit; opacity: .6; transition: opacity var(--v-rapido); }
 .toast__cerrar:hover { opacity: 1; }
+
+/* Móvil: el toast ocupa casi todo el ancho, pegado abajo, sin tapaar la
+   campanita (arriba-derecha) ni el menú (izquierda). El safe-area lo
+   separa de la barra de gestos del iPhone. */
+@media (max-width: 560px) {
+    .toasts {
+        right: var(--e-4);
+        left: var(--e-4);
+        bottom: calc(var(--e-4) + env(safe-area-inset-bottom, 0px));
+        width: auto;
+    }
+}
 
 /* ---------- Barra de herramientas de listado ---------- */
 
@@ -801,6 +897,16 @@
     white-space: nowrap;
 }
 .pestanas__enlace[aria-current="true"] { color: var(--hueso); border-color: var(--sangre); }
+
+/* Contenido de una pestaña con Alpine (x-show): el gap NO puede ir en el
+   mismo atributo style="display:grid;gap:..." que x-show toca. Alpine
+   reescribe style.display al alternar visible/oculto y al hacerlo se come
+   cualquier otra declaración que compartiera el atributo — el elemento
+   queda con gap:var(--e-5) pero display:block (el gap por defecto de un
+   div), así que el espacio entre tarjetas colapsa a 0 en cuanto se cambia
+   de pestaña una vez. Con el display en una clase, x-show solo pone/quita
+   su propio inline-override de display y la clase nunca se toca. */
+.pestana-panel { display: grid; gap: var(--e-5); }
 
 /* ---------- Formularios en dos columnas ---------- */
 
@@ -931,6 +1037,21 @@
     background: var(--relleno-suave);
 }
 .notificaciones__cabecera b { font-family: var(--f-display); font-size: var(--t-base); letter-spacing: .02em; }
+.notificaciones__cabecera-acciones { display: flex; align-items: center; gap: var(--e-2); }
+/* "Marcar todas como leídas": sutil a propósito — misma familia y registro
+   que las etiquetas mono del panel, sin convertirse en botón llamativo. */
+.notificaciones__marcar-todas {
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--humo);
+    padding: var(--e-1) var(--e-2);
+    border-radius: var(--r-sm);
+    white-space: nowrap;
+    transition: color var(--v-rapido), background var(--v-rapido);
+}
+.notificaciones__marcar-todas:hover { color: var(--hueso); background: var(--relleno-hover); }
 .notificaciones__lista { flex: 1; min-height: 0; overflow-y: auto; padding: var(--e-2); display: flex; flex-direction: column; gap: var(--e-1); }
 .notificaciones__lista::-webkit-scrollbar { width: 6px; }
 .notificaciones__lista::-webkit-scrollbar-thumb { background: var(--acero); border-radius: 3px; }
@@ -943,6 +1064,17 @@
     transition: background var(--v-rapido), transform var(--v-rapido) var(--curva-seca);
 }
 .notificaciones__item:hover { background: var(--relleno-hover); transform: translateX(2px); }
+/* Chip del icono del evento (caja, chat, entrada…) en vez del avatar de
+   iniciales que usaba la lista de mensajes. */
+.notificaciones__item-icono {
+    flex: none;
+    width: 34px; height: 34px;
+    display: grid; place-items: center;
+    border-radius: var(--r-md);
+    background: var(--relleno-suave);
+    color: var(--humo);
+}
+.notificaciones__item-icono svg { width: 1.1em; height: 1.1em; }
 .notificaciones__item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .notificaciones__item-info b { font-size: var(--t-sm); }
 .notificaciones__item-info small { color: var(--ceniza); font-size: var(--t-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -952,6 +1084,23 @@
     letter-spacing: .08em;
     text-transform: uppercase;
     color: var(--brasa);
+}
+.notificaciones__item-hora {
+    flex: none;
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    color: var(--humo);
+}
+/* Sin leer: punto de sangre al final de la fila (no rompe el layout) y
+   título con más peso. Al leerlo o hacer clic, desaparece. */
+.notificaciones__item.is-no-leida b { font-weight: 600; color: var(--hueso); }
+.notificaciones__item.is-no-leida::after {
+    content: '';
+    flex: none;
+    width: 6px; height: 6px;
+    border-radius: var(--r-full);
+    background: var(--sangre-viva);
+    align-self: center;
 }
 /* Estado vacío compacto: centrado en el alto del cajón, sin padding enorme. */
 .notificaciones__vacio {
@@ -1511,6 +1660,104 @@
     .recordatorio .btn { margin-left: 0; width: 100%; justify-content: center; }
 }
 
+/* ---------- Tarjetas de membresía (detalle de cliente › Membresías) ----------
+   Lista de una columna, más reciente primero (igual orden que la tabla que
+   reemplaza). La cuenta regresiva y el riel de tiempo se muestran aparte,
+   en Resumen (.membresia-resumen más abajo) — acá solo queda el dato. */
+.membresias {
+    display: grid;
+    gap: var(--e-3);
+    grid-template-columns: 1fr;
+}
+
+.membresia { display: grid; gap: var(--e-2); }
+
+.membresia__cabecera {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--e-2);
+}
+.membresia__plan {
+    font-size: var(--t-base);
+    font-weight: 600;
+    color: var(--hueso);
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.membresia__fila {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--e-2);
+    font-family: var(--f-mono);
+    font-size: var(--t-sm);
+}
+.membresia__periodo { color: var(--ceniza); }
+.membresia__total-inline { color: var(--hueso); font-weight: 600; }
+
+/* ---------- Membresía vigente (detalle de cliente › Resumen) ----------
+   Cuenta regresiva + riel de periodo de la membresía activa, con el mismo
+   círculo que usa el dashboard del cliente (--progreso = % transcurrido). */
+.membresia-resumen__cuerpo {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: var(--e-5);
+    margin-top: var(--e-4);
+}
+.membresia-resumen__datos { display: grid; gap: var(--e-3); min-width: 0; }
+@media (max-width: 480px) {
+    .membresia-resumen__cuerpo { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+    .membresia-resumen__datos { width: 100%; }
+}
+
+/* Riel de tiempo: relleno según lo transcurrido (--progreso, 0-100),
+   coloreado por estado con color-mix, como ya hace .aviso--whatsapp. */
+.membresia-rail {
+    position: relative;
+    height: 6px;
+    border-radius: var(--r-full);
+    background: var(--acero);
+    overflow: visible;
+}
+.membresia-rail__relleno {
+    position: absolute;
+    inset: 0;
+    width: var(--progreso, 0%);
+    border-radius: var(--r-full);
+    background: linear-gradient(90deg, var(--acero-claro), var(--brasa));
+    transition: width var(--v-lento) var(--curva);
+}
+.membresia-rail[data-estado="vencida"] .membresia-rail__relleno { background: var(--alerta); }
+.membresia-rail[data-estado="por-vencer"] .membresia-rail__relleno { background: linear-gradient(90deg, var(--bronce), var(--brasa)); }
+.membresia-rail[data-estado="activa"] .membresia-rail__relleno { background: linear-gradient(90deg, var(--acero-claro), var(--ok)); }
+.membresia-rail[data-estado="cancelada"] .membresia-rail__relleno,
+.membresia-rail[data-estado="congelada"] .membresia-rail__relleno { background: var(--humo); }
+.membresia-rail__hoy {
+    position: absolute;
+    top: 50%;
+    left: var(--progreso, 0%);
+    width: 9px; height: 9px;
+    border-radius: var(--r-full);
+    background: var(--hueso);
+    border: 2px solid var(--grafito);
+    transform: translate(-50%, -50%);
+}
+@media (prefers-reduced-motion: reduce) {
+    .membresia-rail__relleno { transition: none; }
+}
+
+.membresia__fechas {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    color: var(--ceniza);
+}
+
 /* ============================================================
    MENSAJERÍA · chat interno entre usuarios de la sede
    ============================================================ */
@@ -1849,3 +2096,99 @@
 .chat__escribir input { flex: 1; }
 .chat__escribir .btn { padding: 0 1.2rem; flex: none; }
 .chat__escribir .btn svg { width: 1.2em; height: 1.2em; }
+
+/* ============================================================
+   PREVISUALIZACIÓN DE SECCIONES DE LA LANDING
+   Modal con iframe que carga la misma Blade view + CSS que la
+   página pública, garantizando fidelidad visual pixel-perfecta.
+   ============================================================ */
+
+/* Override del padding del .modal__fondo genérico: para previsualización
+   queremos que el modal ocupe casi toda la pantalla, no 1.5rem de aire
+   en cada lado. */
+.preview-modal {
+    padding: var(--e-2);
+}
+
+.preview-modal__caja {
+    width: min(80rem, calc(100vw - var(--e-4)));
+    height: min(88dvh, calc(100dvh - var(--e-4)));
+    display: flex;
+    flex-direction: column;
+    background: var(--grafito-alto);
+    border: 1px solid var(--acero);
+    border-radius: var(--r-xl);
+    box-shadow: var(--s-xl);
+    overflow: hidden;
+}
+
+.preview-modal__cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--e-3);
+    padding: var(--e-3) var(--e-4);
+    border-bottom: 1px solid var(--acero);
+    background: var(--relleno-suave);
+    flex: none;
+}
+
+.preview-modal__titulo {
+    font-family: var(--f-display);
+    font-size: var(--t-base);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin: 0;
+}
+
+.preview-modal__cuerpo {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    background: var(--obsidiana);
+}
+
+.preview-modal__iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+}
+
+.preview-modal__cargando {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    gap: var(--e-3);
+    background: var(--obsidiana);
+    color: var(--humo);
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.preview-modal__spinner {
+    width: 28px;
+    height: 28px;
+    border: 2.5px solid var(--acero);
+    border-top-color: var(--brasa);
+    border-radius: 50%;
+    animation: preview-girar .7s linear infinite;
+}
+
+@keyframes preview-girar {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 720px) {
+    .preview-modal {
+        padding: 0;
+    }
+    .preview-modal__caja {
+        width: 100vw;
+        height: 100dvh;
+        border-radius: 0;
+    }
+}

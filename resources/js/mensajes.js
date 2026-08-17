@@ -136,100 +136,26 @@ document.addEventListener('alpine:init', () => {
     }));
 });
 
-document.addEventListener('alpine:init', () => {
-    Alpine.data('notificaciones', () => ({
-        abierto: false,
-        items: [],
-        total: 0,
-        cargando: false,
-        temporizador: null,
-
-        init() {
-            this.actualizarContador();
-            this.temporizador = setInterval(() => this.actualizarContador(), 15000);
-        },
-
-        destroy() {
-            clearInterval(this.temporizador);
-        },
-
-        async actualizarContador() {
-            try {
-                const peticiones = [axios.get(window.spartaNotificaciones.noLeidas)];
-                if (window.spartaNotificaciones.solicitudesAsistencia) {
-                    peticiones.push(axios.get(window.spartaNotificaciones.solicitudesAsistencia));
-                }
-                const respuestas = await Promise.all(peticiones);
-                this.total = respuestas.reduce((s, { data }) => s + (Number(data.total) || 0), 0);
-            } catch (e) {
-                /* se reintenta en el próximo ciclo */
-            }
-        },
-
-        async alternar() {
-            this.abierto = !this.abierto;
-            if (this.abierto) await this.cargar();
-        },
-
-        // Dos fuentes distintas (mensajes sin leer + solicitudes de
-        // asistencia pendientes) mezcladas en una sola lista, cada ítem
-        // marcado con su 'tipo' para saber a dónde llevar al hacer clic.
-        async cargar() {
-            this.cargando = true;
-            try {
-                const peticiones = [axios.get(window.spartaNotificaciones.lista)];
-                if (window.spartaNotificaciones.solicitudesAsistencia) {
-                    peticiones.push(axios.get(window.spartaNotificaciones.solicitudesAsistencia));
-                }
-                const respuestas = await Promise.all(peticiones);
-
-                const mensajes = respuestas[0].data.conversaciones
-                    .filter((c) => c.no_leidas > 0)
-                    .map((c) => ({ ...c, tipo: 'mensaje' }));
-
-                const solicitudes = respuestas[1]
-                    ? respuestas[1].data.items.map((s) => ({
-                        id: s.id, tipo: 'solicitud_asistencia',
-                        nombre: s.nombre, ultimo: s.detalle, no_leidas: 1,
-                        iniciales: '⏱', avatar: null,
-                    }))
-                    : [];
-
-                this.items = [...solicitudes, ...mensajes];
-            } finally {
-                this.cargando = false;
-            }
-        },
-
-        irA(item) {
-            if (item.tipo === 'solicitud_asistencia') {
-                window.location.href = window.spartaNotificaciones.abrirSolicitudes;
-                return;
-            }
-            window.location.href = window.spartaNotificaciones.abrirConversacion + item.id;
-        },
-    }));
-});
-
-/** Polling global del badge de la barra lateral (corre en cada página del panel). */
+/** Polling global de badges de la barra lateral (corre en cada página del
+ *  panel): el de mensajes y el de alertas de stock, cada uno con su propia
+ *  URL en data-url y esperando el mismo shape `{ total }`. */
 export function iniciarContadorMensajes() {
-    const badges = [...document.querySelectorAll('[data-mensajes-no-leidas]')];
+    const badges = [...document.querySelectorAll('[data-mensajes-no-leidas], [data-stock-alertas]')];
     if (!badges.length) return;
 
-    const url = badges[0].dataset.url;
-    if (!url) return;
-
     const actualizar = async () => {
-        try {
-            const { data } = await axios.get(url);
-            const total = Number(data.total) || 0;
-            badges.forEach((b) => {
+        await Promise.all(badges.map(async (b) => {
+            const url = b.dataset.url;
+            if (!url) return;
+            try {
+                const { data } = await axios.get(url);
+                const total = Number(data.total) || 0;
                 b.textContent = total;
                 b.hidden = total === 0;
-            });
-        } catch (e) {
-            /* el badge se queda como está si falla el polling */
-        }
+            } catch (e) {
+                /* el badge se queda como está si falla el polling */
+            }
+        }));
     };
 
     actualizar();

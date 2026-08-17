@@ -5,9 +5,10 @@
 
 @section('acciones')
     <div style="display:flex;gap:var(--e-3)">
-        <a class="btn btn--vidrio" href="{{ route('landing') }}#programas" target="_blank" rel="noopener">
+        <button class="btn btn--vidrio" type="button"
+                @click="window.dispatchEvent(new CustomEvent('abrir-preview', { detail: { seccion: 'programas' } }))">
             <x-icono nombre="ojo" /> Previsualizar
-        </a>
+        </button>
         <button class="btn btn--fuego" type="button" @click="window.dispatchEvent(new CustomEvent('abrir-programa'))">
             <x-icono nombre="agregar" /> Nuevo programa
         </button>
@@ -74,22 +75,25 @@
                                 <a class="btn btn--desnudo" title="Rutinas base" href="{{ route('admin.programas.rutinas.index', $programa) }}">
                                     <x-icono nombre="lista" />
                                 </a>
+                                @php
+                                    $editData = [
+                                        'id' => $programa->id,
+                                        'name' => $programa->name,
+                                        'tagline' => $programa->tagline,
+                                        'objective' => $programa->objective,
+                                        'description' => $programa->description,
+                                        'highlights' => implode("\n", $programa->highlights ?? []),
+                                        'icon' => $programa->icon,
+                                        'accent_color' => $programa->accent_color,
+                                        'duration_weeks' => $programa->duration_weeks,
+                                        'difficulty' => $programa->difficulty,
+                                        'sort_order' => $programa->sort_order,
+                                        'is_active' => (bool) $programa->is_active,
+                                        'is_public' => (bool) $programa->is_public,
+                                    ];
+                                @endphp
                                 <button class="btn btn--desnudo" type="button" title="Editar"
-                                        @click="window.dispatchEvent(new CustomEvent('abrir-programa', { detail: @js([
-                                            'id' => $programa->id,
-                                            'name' => $programa->name,
-                                            'tagline' => $programa->tagline,
-                                            'objective' => $programa->objective,
-                                            'description' => $programa->description,
-                                            'highlights' => implode(\"\n\", $programa->highlights ?? []),
-                                            'icon' => $programa->icon,
-                                            'accent_color' => $programa->accent_color,
-                                            'duration_weeks' => $programa->duration_weeks,
-                                            'difficulty' => $programa->difficulty,
-                                            'sort_order' => $programa->sort_order,
-                                            'is_active' => (bool) $programa->is_active,
-                                            'is_public' => (bool) $programa->is_public,
-                                        ]) }}))">
+                                        @click="window.dispatchEvent(new CustomEvent('abrir-programa', { detail: @js($editData) }))">
                                     <x-icono nombre="lapiz" />
                                 </button>
                                 <button class="btn btn--desnudo" type="button" title="Eliminar"

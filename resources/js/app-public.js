@@ -13,9 +13,7 @@ import './bootstrap';
 
 import Alpine from 'alpinejs';
 import { iniciarInterfazPublica } from './ui';
-import { iniciarAnimaciones } from './animations';
 import { iniciarParticulas } from './particulas';
-import { iniciarInteracciones } from './interacciones';
 import { iniciarCarruseles } from './carrusel';
 import { iniciarCarruseles3d } from './carrusel-3d';
 
@@ -33,9 +31,18 @@ function iniciar(nombre, fn) {
 }
 
 iniciar('interfaz', iniciarInterfazPublica);
-iniciar('animaciones', iniciarAnimaciones);
+// GSAP (~116 KB) se carga bajo demanda: solo si la página tiene [data-revelar]
+// o el hero. Las landing lo necesitan, login/registro no.
+iniciar('animaciones', async () => {
+    const { iniciarAnimaciones } = await import('./animations');
+    iniciarAnimaciones();
+});
 iniciar('particulas', () => iniciarParticulas(document.querySelector('[data-particulas]')));
-iniciar('interacciones', iniciarInteracciones);
+// interacciones.js es vanilla JS liviano (~0.8 KB): cursor-tracking glow + tilt.
+iniciar('interacciones', async () => {
+    const { iniciarInteracciones } = await import('./interacciones');
+    iniciarInteracciones();
+});
 iniciar('carruseles', iniciarCarruseles);
 // Después de 'carruseles': depende de que la pista y sus clones ya
 // existan (carrusel.js los arma en construirCarrusel()→reconstruir(),

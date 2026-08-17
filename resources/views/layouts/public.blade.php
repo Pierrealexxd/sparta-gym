@@ -22,7 +22,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    @vite(['resources/css/app.css', 'resources/js/app-public.js'])
+    @vite(['resources/css/public-entry.css', 'resources/js/app-public.js'])
 </head>
 <body>
     {{-- Splash de entrada: se retira solo (ver ui.js) apenas la página está

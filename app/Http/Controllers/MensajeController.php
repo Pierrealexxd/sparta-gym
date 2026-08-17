@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\NotificationService;
 use App\Support\GymContext;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
@@ -55,6 +56,10 @@ class MensajeController extends Controller
             ->get();
 
         $this->marcarLeidas($conversacion, $yo);
+
+        // La campanita también marca como leídas sus filas de esta conversación:
+        // abrir el hilo es leerlo (ver plan-notificaciones-toast.md).
+        app(NotificationService::class)->marcarLeidasDeTipo($yo, 'mensaje.nuevo', $conversacion->id);
 
         return response()->json([
             'ultimo_id' => $mensajes->last()?->id ?? $desde,

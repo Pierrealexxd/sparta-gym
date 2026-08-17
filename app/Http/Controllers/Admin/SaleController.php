@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Exports\SaleExport;
 use App\Http\Controllers\Controller;
 use App\Imports\SaleImport;
+use App\Imports\SaleRecordImport;
 use App\Models\Member;
 use App\Models\Product;
 use App\Models\Sale;
@@ -15,6 +16,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
@@ -48,13 +50,13 @@ class SaleController extends Controller
         $hasta = $request->get('hasta', now()->toDateString());
 
         $ventas = Sale::with(['member', 'soldBy', 'items'])
-            ->where('sale_type', $tipo)
+            ->whereIn('sale_type', $this->tiposDePestana($tipo))
             ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
             ->latest('sold_at')->paginate(10)->onEachSide(1)->withQueryString();
 
-        $totalRango = Sale::completadas()->where('sale_type', $tipo)
+        $totalRango = Sale::completadas()->whereIn('sale_type', $this->tiposDePestana($tipo))
             ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])->sum('total');
-        $conteoRango = Sale::completadas()->where('sale_type', $tipo)
+        $conteoRango = Sale::completadas()->whereIn('sale_type', $this->tiposDePestana($tipo))
             ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])->count();
 
         return view('admin.ventas.index', [
@@ -94,7 +96,7 @@ class SaleController extends Controller
      * BelongsToGym, así que el global scope ya filtra por sede igual que
      * en index().
      */
-    public function exportar(Request $request): BinaryFileResponse|StreamedResponse
+    public function exportar(Request $request): BinaryFileResponse|StreamedResponse|Response
     {
         $tipo  = $request->get('tipo') === 'membresia' ? 'membresia' : 'producto';
         $desde = $request->get('desde', now()->startOfMonth()->toDateString());
@@ -102,7 +104,7 @@ class SaleController extends Controller
         $formato = $request->get('formato') === 'pdf' ? 'pdf' : 'excel';
 
         $ventas = Sale::with(['items', 'member', 'soldBy'])
-            ->where('sale_type', $tipo)
+            ->whereIn('sale_type', $this->tiposDePestana($tipo))
             ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
             ->orderByDesc('sold_at')
             ->get();
@@ -123,16 +125,23 @@ class SaleController extends Controller
     }
 
     /**
-     * Importa ventas de mostrador desde un Excel/CSV. Solo `sale_type =
-     * producto`: una membresía siempre nace de MatriculaService (matrícula
-     * o renovación), nunca de un archivo — mezclar los dos caminos abriría
-     * la puerta a membresías sin las reglas de negocio (renewed_from,
-     * cambio de estado del socio, etc.) que ese servicio aplica.
+     * Importa desde un Excel/CSV, y el contexto decide qué se crea:
+     *
+     * - Desde la pestaña "Productos" (tipo=producto) → SaleImport: ventas
+     *   de mostrador (sale_type='producto') que descuentan stock. Solo
+     *   producto a propósito — una membresía siempre nace de
+     *   MatriculaService (matrícula o renovación), nunca de un archivo.
+     * - Desde la pestaña "Registros" (tipo=membresia) → SaleRecordImport:
+     *   registros genéricos (sale_type='servicio'/'otro') que NUNCA tocan
+     *   productos ni stock. Un archivo de registros subido aquí no puede
+     *   terminar mezclado con Productos.
      */
     public function importar(Request $request): RedirectResponse
     {
+        $tipo = $request->get('tipo') === 'membresia' ? 'membresia' : 'producto';
+
         // Se valida ANTES de leer una sola fila: tipo, tamaño y que el
-        // archivo exista. WithValidation en SaleImport valida cada fila
+        // archivo exista. WithValidation en el import valida cada fila
         // después de esto.
         $request->validate([
             'archivo' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240'],
@@ -140,7 +149,9 @@ class SaleController extends Controller
 
         try {
             Excel::import(
-                new SaleImport(GymContext::id(), $request->user()->id),
+                $tipo === 'producto'
+                    ? new SaleImport(GymContext::id(), $request->user()->id)
+                    : new SaleRecordImport(GymContext::id(), $request->user()->id),
                 $request->file('archivo')
             );
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
@@ -152,7 +163,11 @@ class SaleController extends Controller
             return back()->with('error', "No se importó nada. Revisa el archivo: {$mensajes}");
         }
 
-        return back()->with('exito', 'Ventas importadas correctamente.');
+        $exito = $tipo === 'producto'
+            ? 'Ventas importadas correctamente.'
+            : 'Registros importados correctamente.';
+
+        return back()->with('exito', $exito);
     }
 
     public function store(Request $request): RedirectResponse
@@ -281,5 +296,16 @@ class SaleController extends Controller
         });
 
         return back()->with('exito', "Venta {$venta->number} anulada.");
+    }
+
+    /**
+     * Los tipos de venta que muestra cada pestaña de /admin/ventas.
+     * "Productos" solo ventas de mostrador; "Registros" es el cajón de todo
+     * lo que no es producto (membresías, servicios, otros). Mantener la
+     * lista aquí evita que index() y exportar() se desincronicen.
+     */
+    private function tiposDePestana(string $tipo): array
+    {
+        return $tipo === 'producto' ? ['producto'] : ['membresia', 'servicio', 'otro'];
     }
 }

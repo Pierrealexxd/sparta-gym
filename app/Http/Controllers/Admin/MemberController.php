@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Member;
 use App\Models\MemberMeasurement;
 use App\Models\Plan;
+use App\Services\NotificationService;
 use App\Support\GymContext;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -177,6 +178,10 @@ class MemberController extends Controller
         $datos = $request->validate([
             'measured_at'    => ['required', 'date'],
             'weight_kg'      => ['required', 'numeric', 'min:20', 'max:400'],
+            // Opcional a propósito: en blanco, MemberMeasurement::altura cae
+            // a la del socio (ver el modelo). Mismo rango que height_cm en
+            // Member::validarDatos, para no aceptar acá lo que se rechaza allá.
+            'height_cm'      => ['nullable', 'integer', 'min:100', 'max:250'],
             'body_fat_pct'   => ['nullable', 'numeric', 'min:2', 'max:70'],
             'chest_cm'       => ['nullable', 'numeric', 'min:30', 'max:200'],
             'waist_cm'       => ['nullable', 'numeric', 'min:30', 'max:200'],
@@ -184,9 +189,9 @@ class MemberController extends Controller
             'arm_cm'         => ['nullable', 'numeric', 'min:10', 'max:80'],
             'thigh_cm'       => ['nullable', 'numeric', 'min:20', 'max:120'],
             'notes'          => ['nullable', 'string', 'max:500'],
-        ]);
+        ]);        $medida = $member->measurements()->create($datos + ['recorded_by' => $request->user()->id]);
 
-        $member->measurements()->create($datos + ['recorded_by' => $request->user()->id]);
+        app(NotificationService::class)->notificarMedidaStaff($medida);
 
         return back()->with('exito', 'Medida registrada.');
     }

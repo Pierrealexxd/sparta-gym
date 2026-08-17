@@ -61,8 +61,12 @@
 
         <span class="panel__grupo-titulo">Dinero</span>
         @if (auth()->user()->tienePermiso('inventario.ver'))
+            @php $alertasInventario = \App\Models\StockAlert::count(); @endphp
             <a class="panel__enlace" href="{{ route('admin.inventario.index') }}" data-title="Inventario" aria-current="{{ request()->routeIs('admin.inventario.*') ? 'true' : 'false' }}">
                 <x-icono nombre="caja" /> <span class="panel__texto">Inventario</span>
+                <span class="panel__contador" data-stock-alertas
+                      data-url="{{ route('admin.inventario.alertas') }}"
+                      @if ($alertasInventario === 0) hidden @endif>{{ $alertasInventario }}</span>
             </a>
             <a class="panel__enlace" href="{{ route('admin.ventas.index') }}" data-title="Ventas" aria-current="{{ request()->routeIs('admin.ventas.*') ? 'true' : 'false' }}">
                 <x-icono nombre="tarjetas" /> <span class="panel__texto">Ventas</span>

@@ -104,7 +104,7 @@
 
     /* ---------- Capas ---------- */
     --z-fondo: 0;  --z-contenido: 10;  --z-riel: 40;
-    --z-nav: 60;   --z-modal: 80;      --z-aviso: 90;      --z-splash: 100;
+    --z-nav: 60;   --z-modal: 80;      --z-toast: 85;      --z-aviso: 90;      --z-splash: 100;
 
     /* ---------- Semánticos de interfaz ----------
        Capa sobre el color de marca: lo que un componente necesita expresar

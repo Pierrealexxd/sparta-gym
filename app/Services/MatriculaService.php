@@ -8,9 +8,11 @@ use App\Models\Plan;
 use App\Models\Role;
 use App\Models\Sale;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Lógica de matrícula/renovación, antes triplicada en
@@ -49,6 +51,8 @@ class MatriculaService
                 $venta = $this->registrarVenta($socio, $membresia, $plan, $datosMembresia, $registradoPor);
             }
 
+            $this->notificarMatricula($socio, $membresia, $registradoPor, renovacion: false);
+
             return ['member' => $socio, 'membership' => $membresia, 'sale' => $venta];
         });
     }
@@ -74,6 +78,8 @@ class MatriculaService
             if ($datosMembresia['registrar_pago'] ?? true) {
                 $venta = $this->registrarVenta($socio, $membresia, $plan, $datosMembresia, $registradoPor);
             }
+
+            $this->notificarMatricula($socio, $membresia, $registradoPor, renovacion: true);
 
             return ['member' => $socio, 'membership' => $membresia, 'sale' => $venta];
         });
@@ -108,6 +114,23 @@ class MatriculaService
 
     private function crearMembresia(Member $socio, Plan $plan, array $datos, User $registradoPor, ?int $renewedFrom): Membership
     {
+        $inicio = Carbon::parse($datos['starts_at']);
+
+        // El fin manual es opt-in: en blanco, se calcula igual que siempre
+        // (inicio + duración del plan). Cubre inscripciones fuera del
+        // sistema con un periodo distinto al del plan. Defensa en
+        // profundidad además de la validación del controlador.
+        $fin = $inicio->copy()->addDays($plan->duration_days);
+        if (! empty($datos['ends_at'])) {
+            $finManual = Carbon::parse($datos['ends_at']);
+
+            throw_if($finManual->lt($inicio), ValidationException::withMessages([
+                'ends_at' => 'La fecha de fin no puede ser anterior al inicio.',
+            ]));
+
+            $fin = $finManual;
+        }
+
         return $socio->memberships()->create([
             'plan_id'      => $plan->id,
             'created_by'   => $registradoPor->id,
@@ -115,10 +138,37 @@ class MatriculaService
             'plan_name'    => $plan->name,
             'price'        => $plan->price,
             'discount'     => $datos['discount'] ?? 0,
-            'starts_at'    => $datos['starts_at'],
-            'ends_at'      => Carbon::parse($datos['starts_at'])->addDays($plan->duration_days),
+            'starts_at'    => $inicio,
+            'ends_at'      => $fin,
             'status'       => 'activa',
         ]);
+    }
+
+    /**
+     * Matrícula/renovación hecha por alguien del mostrador o un entrenador:
+     * el resto del staff de la sede se entera. Si el trámite lo hizo un
+     * admin/recepción, no sobra ningún aviso (lo vieron en pantalla).
+     */
+    private function notificarMatricula(Member $socio, Membership $membresia, User $registradoPor, bool $renovacion): void
+    {
+        if (! NotificationService::enContextoWeb()) {
+            return;
+        }
+
+        $servicio = app(NotificationService::class);
+
+        $servicio->dispararA(
+            $servicio->staffDeSede($socio->gym_id, $registradoPor->id),
+            $renovacion ? 'matricula.renovada' : 'matricula.nueva',
+            $renovacion ? 'Membresía renovada' : 'Nuevo cliente matriculado',
+            $renovacion
+                ? "{$socio->full_name} renovó {$membresia->plan_name} hasta el " . $membresia->ends_at->translatedFormat('d M')
+                : "{$socio->full_name} se matriculó en {$membresia->plan_name}",
+            'usuarios',
+            'baja',
+            $socio->id,
+            route('admin.clientes.show', $socio),
+        );
     }
 
     private function registrarVenta(Member $socio, Membership $membresia, Plan $plan, array $datos, User $registradoPor): Sale

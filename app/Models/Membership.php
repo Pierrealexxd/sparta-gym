@@ -71,6 +71,48 @@ class Membership extends Model
         return (int) now()->startOfDay()->diffInDays($this->ends_at, false);
     }
 
+    /**
+     * Estado que se pinta en la tarjeta: no siempre coincide con `status`.
+     * "Por vencer" no se guarda —es una ventana de días antes del
+     * vencimiento— y una membresía "activa" cuyo `ends_at` ya pasó (p. ej.
+     * el cron de vencimiento aún no corrió) se muestra como vencida aunque
+     * la columna diga otra cosa.
+     */
+    public function getEstadoVisualAttribute(): string
+    {
+        if (in_array($this->status, ['cancelada', 'congelada'], true)) {
+            return $this->status;
+        }
+
+        if ($this->status === 'vencida' || $this->dias_restantes < 0) {
+            return 'vencida';
+        }
+
+        if ($this->status === 'activa' && $this->dias_restantes <= config('sparta.aviso_vencimiento_dias', 7)) {
+            return 'por-vencer';
+        }
+
+        return 'activa';
+    }
+
+    /**
+     * Progreso del periodo (0-100) para el rail de tiempo de la tarjeta.
+     * Protegido contra división por cero cuando `ends_at` == `starts_at`
+     * (fin manual el mismo día que el inicio).
+     */
+    public function getPorcentajeTranscurridoAttribute(): float
+    {
+        $totalDias = $this->starts_at->diffInDays($this->ends_at, false);
+
+        if ($totalDias <= 0) {
+            return 100.0;
+        }
+
+        $transcurridos = $this->starts_at->diffInDays(now()->startOfDay(), false);
+
+        return max(0.0, min(100.0, ($transcurridos / $totalDias) * 100));
+    }
+
     /** Lo pagado hasta ahora contra esta membresía. */
     public function getPagadoAttribute(): float
     {

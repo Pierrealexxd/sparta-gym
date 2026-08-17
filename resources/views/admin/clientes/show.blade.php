@@ -25,6 +25,16 @@
          de pestañas reales — nunca se interpola request('tab') crudo acá:
          x-data es una cadena que Alpine evalúa como JS, así que un valor
          con comillas sin sanear sería inyección. --}}
+    {{-- Membresía vigente: se calcula una sola vez acá porque la usan tanto
+         Resumen (línea de tiempo) como Membresías (recordatorio WhatsApp). --}}
+    @php
+        $membresiaActual = $cliente->currentMembership;
+        $diasRestantes = $membresiaActual?->dias_restantes;
+        $umbralWhatsApp = config('sparta.aviso_vencimiento_dias', 7);
+        $mostrarWhatsApp = $membresiaActual && $diasRestantes !== null && $diasRestantes <= $umbralWhatsApp;
+        $etiquetasEstadoMem = ['activa' => 'Activa', 'por-vencer' => 'Por vencer', 'vencida' => 'Vencida', 'cancelada' => 'Cancelada', 'congelada' => 'Congelada'];
+    @endphp
+
     <div class="ficha" x-data="{ tab: '{{ $tabActiva }}' }">
         <div class="ficha__resumen">
             <div class="tarjeta" style="padding:var(--e-5)">
@@ -75,7 +85,93 @@
                 <button class="pestanas__enlace" :aria-current="tab==='asistencia'" @click="tab='asistencia'" type="button">Asistencia</button>
             </nav>
 
-            <div x-show="tab==='resumen'">
+            <div x-show="tab==='resumen'" class="pestana-panel">
+                {{-- Línea de tiempo de la membresía vigente: cuenta regresiva
+                     + riel de periodo, mismo componente que la tarjeta de
+                     Membresías (--progreso = % transcurrido). Sin membresía
+                     vigente, queda el estado vacío con su mensaje. --}}
+                <article class="tarjeta membresia-resumen">
+                    <h3 style="font-size:var(--t-lg)">Membresía vigente</h3>
+                    @if ($membresiaActual)
+                        <div class="membresia-resumen__cuerpo">
+                            <div class="progreso-kpi__circulo membresia__circulo" style="--progreso: {{ $membresiaActual->porcentaje_transcurrido }}%">
+                                <span>{{ $membresiaActual->dias_restantes }}</span>
+                            </div>
+                            <div class="membresia-resumen__datos">
+                                <div class="membresia__cabecera">
+                                    <h4 class="membresia__plan">{{ $membresiaActual->plan_name }}</h4>
+                                    <span class="estado estado--{{ $membresiaActual->estado_visual }}">{{ $etiquetasEstadoMem[$membresiaActual->estado_visual] ?? ucfirst($membresiaActual->estado_visual) }}</span>
+                                </div>
+                                <div class="membresia-rail" data-estado="{{ $membresiaActual->estado_visual }}" style="--progreso: {{ $membresiaActual->porcentaje_transcurrido }}%">
+                                    <span class="membresia-rail__relleno"></span>
+                                    <span class="membresia-rail__hoy"></span>
+                                </div>
+                                <div class="membresia__fechas">
+                                    <span>{{ $membresiaActual->starts_at->format('d/m/y') }}</span>
+                                    <span>{{ $membresiaActual->ends_at->format('d/m/y') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <x-estado-vacio icono="tarjetas" texto="Sin membresía vigente." />
+                    @endif
+                </article>
+
+                {{-- Resumen del progreso físico: mismas tarjetas que el
+                     cliente ve en Mi progreso (cliente/progreso.blade.php),
+                     para que el admin tenga el mismo vistazo rápido sin
+                     tener que interpretar el gráfico de abajo. $primera/
+                     $ultima salen de $cliente->measurements, ya cargada
+                     ordenada por fecha (ver MemberController::show). --}}
+                @php
+                    $primeraMedida = $cliente->measurements->first();
+                    $ultimaMedida  = $cliente->measurements->last();
+                @endphp
+                @if ($ultimaMedida)
+                    <div class="kpis kpis--3">
+                        <article class="tarjeta kpi">
+                            <b class="kpi__valor">{{ $ultimaMedida->weight_kg }} kg</b>
+                            <span class="kpi__etiqueta">Peso actual</span>
+                            @if ($primeraMedida && $primeraMedida->id !== $ultimaMedida->id)
+                                @php $difPeso = round($ultimaMedida->weight_kg - $primeraMedida->weight_kg, 1); @endphp
+                                <span class="kpi__variacion {{ $difPeso <= 0 ? 'kpi__variacion--pos' : 'kpi__variacion--neg' }}">
+                                    {{ $difPeso <= 0 ? '↓' : '↑' }} {{ $difPeso > 0 ? '+' : '' }}{{ $difPeso }} kg desde el inicio
+                                </span>
+                            @endif
+                        </article>
+
+                        <article class="tarjeta kpi" style="justify-items:center;text-align:center">
+                            <div class="progreso-kpi__circulo" style="--progreso: {{ $ultimaMedida->bmi ? min(100, round($ultimaMedida->bmi / 40 * 100)) : 0 }}%">
+                                <span>{{ $ultimaMedida->bmi ?? '—' }}</span>
+                            </div>
+                            <span class="kpi__etiqueta">IMC</span>
+                            @if ($ultimaMedida->bmi_category)
+                                @php
+                                    $claseImc = match ($ultimaMedida->bmi_category) {
+                                        'Normal' => 'estado--activo',
+                                        'Bajo peso', 'Sobrepeso' => 'estado--pendiente',
+                                        default => 'estado--inactivo',
+                                    };
+                                @endphp
+                                <span class="estado {{ $claseImc }}">{{ $ultimaMedida->bmi_category }}</span>
+                            @elseif (! $ultimaMedida->altura)
+                                <span style="color:var(--humo);font-size:var(--t-xs)">Sin altura registrada</span>
+                            @endif
+                        </article>
+
+                        <article class="tarjeta kpi">
+                            <b class="kpi__valor">{{ $ultimaMedida->body_fat_pct ?? '—' }}{{ $ultimaMedida->body_fat_pct ? '%' : '' }}</b>
+                            <span class="kpi__etiqueta">Grasa corporal</span>
+                            @if ($ultimaMedida->body_fat_pct && $primeraMedida?->body_fat_pct && $primeraMedida->id !== $ultimaMedida->id)
+                                @php $difGrasa = round($ultimaMedida->body_fat_pct - $primeraMedida->body_fat_pct, 1); @endphp
+                                <span class="kpi__variacion {{ $difGrasa <= 0 ? 'kpi__variacion--pos' : 'kpi__variacion--neg' }}">
+                                    {{ $difGrasa <= 0 ? '↓' : '↑' }} {{ $difGrasa > 0 ? '+' : '' }}{{ $difGrasa }} pt desde el inicio
+                                </span>
+                            @endif
+                        </article>
+                    </div>
+                @endif
+
                 <article class="tarjeta grafico">
                     <h3 style="font-size:var(--t-lg)">Evolución de peso</h3>
                     <div class="grafico__lienzo">
@@ -84,7 +180,7 @@
                 </article>
             </div>
 
-            <div x-show="tab==='medidas'" x-cloak style="display:grid;gap:var(--e-5)">
+            <div x-show="tab==='medidas'" x-cloak class="pestana-panel">
                 <form class="tarjeta formulario-panel" method="POST" action="{{ route('admin.clientes.medidas.store', $cliente) }}">
                     @csrf
                     <div class="formulario-panel__fila">
@@ -92,6 +188,30 @@
                             <input class="campo__control" type="date" name="measured_at" value="{{ now()->toDateString() }}" required></label>
                         <label class="campo"><span class="campo__etiqueta">Peso (kg)</span>
                             <input class="campo__control" type="number" step="0.1" name="weight_kg" required></label>
+                        <label class="campo">
+                            <span class="campo__etiqueta">
+                                Altura (cm)
+                                <span class="campo__ayuda" tabindex="0"
+                                      aria-label="Se usa para calcular el IMC de esta toma. En blanco: se usa la altura de la ficha del cliente ({{ $cliente->height_cm ? $cliente->height_cm . ' cm' : 'sin registrar' }})."
+                                      x-data="{ abierto: false, x: 0, y: 0 }"
+                                      @mouseenter="abierto = true; const r = $el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top"
+                                      @mouseleave="abierto = false"
+                                      @focus="abierto = true; const r = $el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top"
+                                      @blur="abierto = false">?
+                                    <template x-teleport="body">
+                                        {{-- Sin x-transition: combinado con x-teleport, Alpine
+                                             espera un transitionend que a veces no llega y el
+                                             tooltip se queda pegado abierto (visto en pantalla).
+                                             x-show solo (display:none ↔ '') es instantáneo y
+                                             no depende de ese evento. --}}
+                                        <div class="tooltip-flotante" x-show="abierto" x-cloak
+                                             :style="`left:${x}px;top:${y}px`">
+                                            Se usa para calcular el IMC de esta toma. En blanco: se usa la altura de la ficha del cliente ({{ $cliente->height_cm ? $cliente->height_cm . ' cm' : 'sin registrar' }}).
+                                        </div>
+                                    </template>
+                                </span>
+                            </span>
+                            <input class="campo__control" type="number" name="height_cm" value="{{ $cliente->height_cm }}" min="100" max="250"></label>
                         <label class="campo"><span class="campo__etiqueta">% Grasa</span>
                             <input class="campo__control" type="number" step="0.1" name="body_fat_pct"></label>
                     </div>
@@ -102,17 +222,27 @@
 
                 <div class="tabla-envoltorio">
                     <table class="tabla tabla--tarjetas">
-                        <thead><tr><th>Fecha</th><th>Peso</th><th>% Grasa</th><th>IMC</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th>Peso</th><th>Altura</th><th>% Grasa</th><th>IMC</th></tr></thead>
                         <tbody>
                             @forelse ($medidasPag as $m)
                                 <tr>
                                     <td data-etiqueta="Fecha">{{ $m->measured_at->translatedFormat('d M Y') }}</td>
                                     <td class="es-fuerte" data-etiqueta="Peso">{{ $m->weight_kg }} kg</td>
+                                    <td data-etiqueta="Altura">
+                                        @if ($m->altura)
+                                            {{ $m->altura }} cm
+                                            @unless ($m->height_cm)
+                                                <span style="color:var(--humo)" title="Heredada de la ficha del cliente">(ficha)</span>
+                                            @endunless
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
                                     <td data-etiqueta="% Grasa">{{ $m->body_fat_pct ? $m->body_fat_pct . '%' : '—' }}</td>
                                     <td data-etiqueta="IMC">{{ $m->bmi ?? '—' }} <span style="color:var(--humo)">{{ $m->bmi_category }}</span></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="tabla__vacio" data-etiqueta=""><x-estado-vacio icono="grafico" texto="Sin medidas registradas." /></td></tr>
+                                <tr><td colspan="5" class="tabla__vacio" data-etiqueta=""><x-estado-vacio icono="grafico" texto="Sin medidas registradas." /></td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -125,7 +255,7 @@
                 <div class="paginacion">{{ $medidasPag->links() }}</div>
             </div>
 
-            <div x-show="tab==='membresias'" x-cloak style="display:grid;gap:var(--e-5)">
+            <div x-show="tab==='membresias'" x-cloak class="pestana-panel">
                 <form class="tarjeta formulario-panel" method="POST" action="{{ route('admin.clientes.membresias.store', $cliente) }}">
                     @csrf
                     <div class="formulario-panel__fila">
@@ -137,6 +267,39 @@
                             </select></label>
                         <label class="campo"><span class="campo__etiqueta">Inicio</span>
                             <input class="campo__control" type="date" name="starts_at" value="{{ now()->toDateString() }}" required></label>
+                        <label class="campo">
+                            <span class="campo__etiqueta">
+                                Fin (opcional)
+                                {{-- Tooltip en vez de texto fijo: la ayuda no
+                                     empuja el layout ni desalinea la fila.
+                                     x-teleport lo saca del DOM de .tarjeta —
+                                     ver el porqué en components.css junto a
+                                     .tooltip-flotante. --}}
+                                <span class="campo__ayuda" tabindex="0"
+                                      aria-label="En blanco: inicio + duración del plan. Úsalo si el cliente pagó un periodo distinto (p. ej. inscripción fuera del sistema)."
+                                      x-data="{ abierto: false, x: 0, y: 0 }"
+                                      @mouseenter="abierto = true; const r = $el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top"
+                                      @mouseleave="abierto = false"
+                                      @focus="abierto = true; const r = $el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top"
+                                      @blur="abierto = false">?
+                                    <template x-teleport="body">
+                                        {{-- Sin x-transition: combinado con x-teleport, Alpine
+                                             espera un transitionend que a veces no llega y el
+                                             tooltip se queda pegado abierto (visto en pantalla).
+                                             x-show solo (display:none ↔ '') es instantáneo y
+                                             no depende de ese evento. --}}
+                                        <div class="tooltip-flotante" x-show="abierto" x-cloak
+                                             :style="`left:${x}px;top:${y}px`">
+                                            En blanco: inicio + duración del plan. Úsalo si el cliente pagó un periodo distinto (p. ej. inscripción fuera del sistema).
+                                        </div>
+                                    </template>
+                                </span>
+                            </span>
+                            <input class="campo__control" type="date" name="ends_at" value="{{ old('ends_at') }}">
+                            @error('ends_at')
+                                <span class="campo__error">{{ $message }}</span>
+                            @enderror
+                        </label>
                         <label class="campo"><span class="campo__etiqueta">Descuento</span>
                             <input class="campo__control" type="number" step="0.01" name="discount" value="0"></label>
                         <label class="campo"><span class="campo__etiqueta">Método de pago</span>
@@ -146,25 +309,18 @@
                                 @endforeach
                             </select></label>
                     </div>
-                    <div class="formulario-panel__acciones">
-                        <button class="btn btn--fuego" type="submit">Registrar membresía y pago</button>
-                    </div>
                 </form>
 
-                {{-- Recordatorio de WhatsApp: aparece solo cuando la
-                     membresía vigente está a punto de vencer o ya venció
-                     (mismo umbral que se usa para "socios por vencer" en
-                     el dashboard) y el cliente tiene teléfono. Es un enlace
-                     wa.me plano — no hay integración con la API de
-                     WhatsApp Business, el admin revisa y presiona Enviar
-                     desde su propio WhatsApp. --}}
-                @php
-                    $membresiaActual = $cliente->currentMembership;
-                    $diasRestantes = $membresiaActual?->dias_restantes;
-                    $umbralWhatsApp = config('sparta.aviso_vencimiento_dias', 7);
-                    $mostrarWhatsApp = $membresiaActual && $diasRestantes !== null && $diasRestantes <= $umbralWhatsApp;
-                @endphp
-
+                {{-- Recordatorio de WhatsApp: botón persistente (no se
+                     autoculta) que aparece cuando la membresía vigente está
+                     a punto de vencer o ya venció (mismo umbral que se usa
+                     para "socios por vencer" en el dashboard) y el cliente
+                     tiene teléfono. Es un enlace wa.me plano — no hay
+                     integración con la API de WhatsApp Business, el admin
+                     revisa y presiona Enviar desde su propio WhatsApp.
+                     Diseño original: PLAN-VENTAS-CLIENTES.md, Parte 3.
+                     $membresiaActual/$diasRestantes/$mostrarWhatsApp se
+                     calculan arriba, antes de las pestañas. --}}
                 @if ($mostrarWhatsApp && $cliente->phone)
                     @php
                         $nombreCliente = $cliente->first_name;
@@ -186,10 +342,11 @@
                                       . '?text=' . urlencode($mensajeWhatsApp);
                     @endphp
 
-                    <div class="aviso aviso--whatsapp"
-                         x-data="{ abierto: true }"
-                         x-show="abierto"
-                         x-init="setTimeout(() => abierto = false, 3000)">
+                    {{-- Sin x-data/x-init de autocierre: el recepcionista
+                         puede tardar en mirar la pantalla, así que el botón
+                         se queda hasta que la membresía deje de estar en
+                         ventana de aviso. --}}
+                    <div class="aviso aviso--whatsapp">
                         <x-icono nombre="whatsapp" />
                         <div class="aviso__texto">
                             @if ($diasRestantes > 0)
@@ -201,28 +358,36 @@
                             @endif
                         </div>
                         <a class="btn btn--whatsapp" href="{{ $urlWhatsApp }}" target="_blank" rel="noopener">
-                            <x-icono nombre="whatsapp" /> Enviar WhatsApp
+                            <x-icono nombre="whatsapp" /> Enviar recordatorio
                         </a>
                     </div>
                 @endif
 
-                <div class="tabla-envoltorio">
-                    <table class="tabla tabla--tarjetas">
-                        <thead><tr><th>Plan</th><th>Periodo</th><th>Precio</th><th>Estado</th></tr></thead>
-                        <tbody>
-                            @forelse ($cliente->memberships as $mem)
-                                <tr>
-                                    <td class="es-fuerte" data-etiqueta="Plan">{{ $mem->plan_name }}</td>
-                                    <td data-etiqueta="Periodo">{{ $mem->starts_at->format('d/m/y') }} – {{ $mem->ends_at->format('d/m/y') }}</td>
-                                    <td data-etiqueta="Precio">S/ {{ number_format($mem->total, 2) }}</td>
-                                    <td data-etiqueta="Estado"><span class="estado estado--{{ $mem->status }}">{{ ucfirst($mem->status) }}</span></td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="4" class="tabla__vacio" data-etiqueta=""><x-estado-vacio icono="tarjetas" texto="Sin membresías todavía." /></td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                {{-- Tarjetas de membresía, en lista (una por fila, más
+                     reciente primero — igual orden que la tabla anterior).
+                     La cuenta regresiva y el riel de tiempo viven en
+                     Resumen; acá solo queda el dato: plan, periodo, total,
+                     estado. --}}
+                @if ($cliente->memberships->isEmpty())
+                    <div class="tarjeta">
+                        <x-estado-vacio icono="tarjetas" texto="Sin membresías todavía." />
+                    </div>
+                @else
+                    <div class="membresias">
+                        @foreach ($cliente->memberships as $mem)
+                            <article class="tarjeta membresia">
+                                <div class="membresia__cabecera">
+                                    <h4 class="membresia__plan">{{ $mem->plan_name }}</h4>
+                                    <span class="estado estado--{{ $mem->estado_visual }}">{{ $etiquetasEstadoMem[$mem->estado_visual] ?? ucfirst($mem->estado_visual) }}</span>
+                                </div>
+                                <div class="membresia__fila">
+                                    <span class="membresia__periodo">{{ $mem->starts_at->format('d/m/y') }} – {{ $mem->ends_at->format('d/m/y') }}</span>
+                                    <span class="membresia__total-inline">S/ {{ number_format($mem->total, 2) }}</span>
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                @endif
             </div>
 
             <div x-show="tab==='pagos'" x-cloak class="tabla-envoltorio">

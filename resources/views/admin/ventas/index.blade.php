@@ -9,9 +9,11 @@
             <x-icono nombre="agregar" /> Registrar venta
         </button>
     @endif
-    {{-- Solo tiene sentido en la pestaña Productos: la importación crea
-         ventas de sale_type=producto (ver SaleController::importar). --}}
-    @if ($tipo === 'producto' && auth()->user()->tienePermiso('reportes.exportar'))
+    {{-- Importar en las dos pestañas, pero cada una crea lo suyo: desde
+         Productos importa ventas de mostrador (descuenta stock), desde
+         Registros importa registros genéricos sin tocar productos (ver
+         SaleController::importar). El contexto viaja en un campo oculto. --}}
+    @if (auth()->user()->tienePermiso('reportes.exportar'))
         <button class="btn btn--vidrio" type="button" x-data @click="$dispatch('abrir-modal-importar')">
             <x-icono nombre="subir" /> Importar Excel
         </button>
@@ -26,13 +28,13 @@
         <a class="pestanas__enlace" href="{{ route('admin.ventas.index', ['tipo' => 'membresia']) }}" aria-current="{{ $tipo === 'membresia' ? 'true' : 'false' }}">Registros</a>
     </nav>
 
-    <div class="kpis" data-revelar data-revelar-grupo>
+    <div class="kpis kpis--4" data-revelar data-revelar-grupo>
         <article class="tarjeta kpi tarjeta--interactiva">
             <span class="kpi__icono"><x-icono nombre="billetera" /></span>
             <b class="kpi__valor">S/ <span data-contador="{{ $totalRango }}">0</span></b>
             <span class="kpi__etiqueta">
                 @if ($tipo === 'producto') Vendido en el rango
-                @else Cobrado en membresías @endif
+                @else Cobrado en el rango @endif
             </span>
         </article>
 
@@ -47,7 +49,7 @@
             <b class="kpi__valor"><span data-contador="{{ $conteoRango }}">0</span></b>
             <span class="kpi__etiqueta">
                 @if ($tipo === 'producto') Operaciones en el rango
-                @else Membresías vendidas @endif
+                @else Registros en el rango @endif
             </span>
         </article>
 
@@ -236,8 +238,10 @@
         </div>
     @endif
 
-    @if ($tipo === 'producto' && auth()->user()->tienePermiso('reportes.exportar'))
-        {{-- Mismo patrón modal__fondo del modal de venta de arriba. --}}
+    @if (auth()->user()->tienePermiso('reportes.exportar'))
+        {{-- Mismo patrón modal__fondo del modal de venta de arriba. El tipo
+             activo viaja en un campo oculto: es el contexto que decide si la
+             importación crea ventas de producto o registros genéricos. --}}
         <div class="modal__fondo"
              x-data="{ abierto: false }"
              x-show="abierto" x-cloak
@@ -245,7 +249,7 @@
              @keydown.escape.window="abierto = false">
             <div class="tarjeta modal__caja" @click.outside="abierto = false">
                 <div class="modal__cabecera">
-                    <h3 style="font-size:var(--t-lg)">Importar ventas desde Excel</h3>
+                    <h3 style="font-size:var(--t-lg)">Importar {{ $tipo === 'producto' ? 'ventas' : 'registros' }} desde Excel</h3>
                     <button class="modal__cerrar" type="button" @click="abierto = false">
                         <x-icono nombre="cerrar" />
                     </button>
@@ -255,12 +259,25 @@
                       action="{{ route('admin.ventas.importar') }}"
                       enctype="multipart/form-data">
                     @csrf
+                    <input type="hidden" name="tipo" value="{{ $tipo }}">
 
                     <div class="aviso aviso--info">
                         <p><b>Formato esperado del archivo:</b></p>
-                        <p style="font-size:var(--t-xs);color:var(--humo);margin-top:var(--e-2)">
-                            fecha (d/m/Y H:i) · cliente_codigo (opcional) · producto_nombre · cantidad · precio_unitario · metodo_pago · descuento (opcional) · notas (opcional)
-                        </p>
+                        @if ($tipo === 'producto')
+                            <p style="font-size:var(--t-xs);color:var(--humo);margin-top:var(--e-2)">
+                                fecha (d/m/Y H:i) · cliente_codigo (opcional) · producto_nombre · cantidad · precio_unitario · metodo_pago · descuento (opcional) · notas (opcional)
+                            </p>
+                            <p style="font-size:var(--t-xs);color:var(--humo);margin-top:var(--e-2)">
+                                Crea ventas de mostrador y descuenta stock. Las filas con producto inexistente o sin stock se saltan.
+                            </p>
+                        @else
+                            <p style="font-size:var(--t-xs);color:var(--humo);margin-top:var(--e-2)">
+                                fecha (d/m/Y H:i) · cliente_codigo (opcional) · concepto · total · metodo_pago · tipo (opcional: servicio/otro) · notas (opcional)
+                            </p>
+                            <p style="font-size:var(--t-xs);color:var(--humo);margin-top:var(--e-2)">
+                                Crea solo registros genéricos: no toca productos ni stock.
+                            </p>
+                        @endif
                     </div>
 
                     <label class="campo">
@@ -271,7 +288,7 @@
 
                     <div class="formulario-panel__acciones">
                         <button class="btn btn--fuego btn--bloque" type="submit">
-                            <x-icono nombre="subir" /> Importar ventas
+                            <x-icono nombre="subir" /> Importar {{ $tipo === 'producto' ? 'ventas' : 'registros' }}
                         </button>
                     </div>
                 </form>

@@ -7,6 +7,7 @@ use App\Models\AttendanceEditRequest;
 use App\Models\Member;
 use App\Models\StaffAttendance;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
@@ -145,7 +146,7 @@ class AsistenciaService
             'reason'         => ['nullable', 'string', 'max:255'],
         ])->validate();
 
-        return AttendanceEditRequest::create([
+        $solicitud = AttendanceEditRequest::create([
             $columna         => $registro->id,
             'requested_by'   => $solicitante->id,
             'tipo'           => 'edicion',
@@ -154,6 +155,10 @@ class AsistenciaService
             'reason'         => $valido['reason'] ?? null,
             'status'         => 'pendiente',
         ]);
+
+        $this->notificarSolicitud($solicitud);
+
+        return $solicitud;
     }
 
     /**
@@ -171,13 +176,17 @@ class AsistenciaService
             throw ValidationException::withMessages(['asistencia' => 'Ya hay una solicitud pendiente para este registro.']);
         }
 
-        return AttendanceEditRequest::create([
+        $solicitud = AttendanceEditRequest::create([
             $columna       => $registro->id,
             'requested_by' => $solicitante->id,
             'tipo'         => 'eliminacion',
             'reason'       => $motivo,
             'status'       => 'pendiente',
         ]);
+
+        $this->notificarSolicitud($solicitud);
+
+        return $solicitud;
     }
 
     /**
@@ -208,6 +217,8 @@ class AsistenciaService
             'reviewed_by' => $revisor->id,
             'reviewed_at' => now(),
         ]);
+
+        $this->notificarResolucion($solicitud, $revisor, 'aprobada');
     }
 
     public function rechazar(AttendanceEditRequest $solicitud, User $revisor): void
@@ -219,5 +230,61 @@ class AsistenciaService
             'reviewed_by' => $revisor->id,
             'reviewed_at' => now(),
         ]);
+
+        $this->notificarResolucion($solicitud, $revisor, 'rechazada');
+    }
+
+    /** Solicitud pendiente → campanita del staff que la aprueba (admin). */
+    private function notificarSolicitud(AttendanceEditRequest $solicitud): void
+    {
+        if (! NotificationService::enContextoWeb()) {
+            return;
+        }
+
+        $servicio = app(NotificationService::class);
+
+        $servicio->dispararA(
+            $servicio->staffDeSede($solicitud->gym_id),
+            'asistencia.solicitud',
+            'Corrección de asistencia',
+            ($solicitud->requestedBy?->name ?? 'El staff')
+                . ' pide ' . ($solicitud->es_eliminacion ? 'eliminar' : 'corregir')
+                . ' un registro de asistencia',
+            'entrada',
+            'alta',
+            $solicitud->id,
+            route('admin.asistencia.solicitudes.index'),
+        );
+    }
+
+    /** Resultado de la revisión → el solicitante (normalmente un entrenador). */
+    private function notificarResolucion(AttendanceEditRequest $solicitud, User $revisor, string $resultado): void
+    {
+        if (! NotificationService::enContextoWeb()) {
+            return;
+        }
+
+        $solicitante = $solicitud->requestedBy;
+
+        if (! $solicitante || $solicitante->id === $revisor->id || ! $solicitante->is_active) {
+            return;
+        }
+
+        // El solicitante suele ser un entrenador; si no, se aterriza en su
+        // panel de inicio para no construir una URL a la que no tiene acceso.
+        $destino = $solicitante->esEntrenador()
+            ? route('entrenador.asistencia.mi-marcacion')
+            : route($solicitante->rutaDeInicio());
+
+        app(NotificationService::class)->disparar(
+            $solicitante,
+            'asistencia.resuelta',
+            $resultado === 'aprobada' ? 'Solicitud aprobada' : 'Solicitud rechazada',
+            'Tu solicitud de corrección de asistencia fue ' . $resultado . '.',
+            $resultado === 'aprobada' ? 'check' : 'cerrar',
+            'media',
+            $solicitud->id,
+            $destino,
+        );
     }
 }

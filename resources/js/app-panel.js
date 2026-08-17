@@ -1,17 +1,20 @@
 /**
  * Entry point del panel (admin/entrenador/cliente). Ver app-public.js para
  * el porqué de la separación.
+ *
+ * Los módulos pesados (Chart.js, GSAP, jsQR, qrcode) se importan de forma
+ * dinámica: solo se descargan y ejecutan cuando la página los necesita. Esto
+ * reduce el JS base de ~565 KB a ~250 KB en la mayoría de páginas del panel.
+ * Los módulos que registran componentes Alpine (escaneo-qr, mensajes) se
+ * mantienen como import estático porque deben estar listos antes de Alpine.start().
  */
 import './bootstrap';
 
 import Alpine from 'alpinejs';
 import { iniciarInterfazPanel } from './ui';
-import { iniciarAnimaciones } from './animations';
-import { iniciarGraficos, refrescarGraficos } from './graficos';
-import { iniciarInteracciones } from './interacciones';
-import { iniciarQr } from './qr';
 import { iniciarContadorMensajes } from './mensajes';
 import './escaneo-qr';
+import './notificaciones';
 
 window.Alpine = Alpine;
 
@@ -78,8 +81,8 @@ Alpine.start();
 
 // Cada módulo se inicia por separado y con su propio try/catch: un fallo en
 // uno (p. ej. un gráfico con datos límite) no puede dejar sin arrancar a los
-// que van después en la misma pasada síncrona — como pasaba con el QR de la
-// ficha del socio, que nunca llegaba a pintarse si iniciarGraficos() fallaba.
+// que van después — como pasaba con el QR de la ficha del socio, que nunca
+// llegaba a pintarse si iniciarGraficos() fallaba.
 function iniciar(nombre, fn) {
     try {
         fn();
@@ -88,13 +91,36 @@ function iniciar(nombre, fn) {
     }
 }
 
+// --- Módulos siempre cargados (livianos, necesarios en toda página) ---
 iniciar('interfaz', iniciarInterfazPanel);
-iniciar('animaciones', iniciarAnimaciones);
-iniciar('graficos', iniciarGraficos);
-iniciar('interacciones', iniciarInteracciones);
-iniciar('qr', iniciarQr);
 iniciar('mensajes-contador', iniciarContadorMensajes);
 
+// --- Módulos pesados cargados bajo demanda (solo si la página los necesita) ---
+iniciar('animaciones', async () => {
+    const { iniciarAnimaciones } = await import('./animations');
+    iniciarAnimaciones();
+});
+
+// Gráficos: precargados para que el evento tema:refrescar funcione sin delay.
+let _graficosModule = null;
+iniciar('graficos', async () => {
+    _graficosModule = await import('./graficos');
+    _graficosModule.iniciarGraficos();
+});
+
+iniciar('interacciones', async () => {
+    const { iniciarInteracciones } = await import('./interacciones');
+    iniciarInteracciones();
+});
+
+iniciar('qr', async () => {
+    const { iniciarQr } = await import('./qr');
+    iniciarQr();
+});
+
 // Al cambiar el tema del panel, los gráficos se reconstruyen con la paleta
-// nueva (los tokens se leen en cada construcción).
-window.addEventListener('tema:refrescar', refrescarGraficos);
+// nueva (los tokens se leen en cada construcción). El módulo se importó
+// dináricamente arriba; si la página no tiene gráficos, simplemente no-op.
+window.addEventListener('tema:refrescar', () => {
+    _graficosModule?.refrescarGraficos();
+});

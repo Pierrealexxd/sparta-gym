@@ -30,7 +30,7 @@
 
     {{-- Indicadores del rango filtrado (antes vivían en el "Resumen" aparte,
          que se dio de baja) — cambian según la pestaña activa. --}}
-    <div class="kpis" data-revelar data-revelar-grupo>
+    <div class="kpis{{ $tipo === 'inscripcion' ? ' kpis--1' : '' }}" data-revelar data-revelar-grupo>
         @if ($tipo === 'producto')
             <article class="tarjeta kpi tarjeta--interactiva">
                 <span class="kpi__icono"><x-icono nombre="caja" /></span>

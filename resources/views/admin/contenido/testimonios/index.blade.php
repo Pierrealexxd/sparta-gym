@@ -4,9 +4,15 @@
 @section('subtitulo', $testimonios->total() . ' testimonios')
 
 @section('acciones')
-    <button class="btn btn--fuego" type="button" @click="window.dispatchEvent(new CustomEvent('abrir-testimonio'))">
-        <x-icono nombre="agregar" /> Nuevo testimonio
-    </button>
+    <div style="display:flex;gap:var(--e-3)">
+        <button class="btn btn--vidrio" type="button"
+                @click="window.dispatchEvent(new CustomEvent('abrir-preview', { detail: { seccion: 'testimonios' } }))">
+            <x-icono nombre="ojo" /> Previsualizar
+        </button>
+        <button class="btn btn--fuego" type="button" @click="window.dispatchEvent(new CustomEvent('abrir-testimonio'))">
+            <x-icono nombre="agregar" /> Nuevo testimonio
+        </button>
+    </div>
 @endsection
 
 @section('contenido')

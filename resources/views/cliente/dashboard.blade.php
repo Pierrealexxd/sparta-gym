@@ -9,7 +9,7 @@
          entreno? ¿cómo va mi cuerpo? ¿cuánto he invertido?", rutina en
          cards colapsables y metas con disco de progreso — reemplaza las
          tablas de texto plano de antes. --}}
-    <div class="kpis" data-revelar data-revelar-grupo>
+    <div class="kpis kpis--4" data-revelar data-revelar-grupo>
         <article class="tarjeta kpi tarjeta--interactiva" style="justify-items:center;text-align:center">
             <div class="progreso-kpi__circulo" style="--progreso: {{ $kpis['diasRestantesPct'] }}%">
                 <span>{{ $kpis['diasRestantes'] ?? '—' }}</span>

@@ -5,12 +5,10 @@
 
 @section('acciones')
     <div style="display:flex;gap:var(--e-3)">
-        {{-- Abre la sección real de la landing (con lo ya guardado), en una
-             pestaña nueva — no es un editor visual, solo un atajo para ver
-             cómo queda antes de avisarle a nadie. --}}
-        <a class="btn btn--vidrio" href="{{ route('landing') }}#preguntas" target="_blank" rel="noopener">
+        <button class="btn btn--vidrio" type="button"
+                @click="window.dispatchEvent(new CustomEvent('abrir-preview', { detail: { seccion: 'preguntas' } }))">
             <x-icono nombre="ojo" /> Previsualizar
-        </a>
+        </button>
         <button class="btn btn--fuego" type="button" @click="window.dispatchEvent(new CustomEvent('abrir-faq'))">
             <x-icono nombre="agregar" /> Nueva pregunta
         </button>

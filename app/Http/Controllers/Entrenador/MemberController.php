@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Member;
 use App\Models\MemberMeasurement;
 use App\Models\Trainer;
+use App\Services\NotificationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,7 +51,9 @@ class MemberController extends Controller
             'notes'        => ['nullable', 'string', 'max:500'],
         ]);
 
-        $member->measurements()->create($datos + ['recorded_by' => $request->user()->id]);
+        $medida = $member->measurements()->create($datos + ['recorded_by' => $request->user()->id]);
+
+        app(NotificationService::class)->notificarMedidaStaff($medida);
 
         return back()->with('exito', 'Medida registrada.');
     }

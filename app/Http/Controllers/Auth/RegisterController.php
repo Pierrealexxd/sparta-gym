@@ -7,6 +7,7 @@ use App\Models\Gym;
 use App\Models\Member;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\NotificationService;
 use App\Support\GymContext;
 use App\Support\Marca;
 use Illuminate\Contracts\View\View;
@@ -93,6 +94,23 @@ class RegisterController extends Controller
 
         Auth::login($usuario);
         $request->session()->regenerate();
+
+        // Un alta pública es un evento de mostrador: el staff de la sede se
+        // entera por la campanita (el recién registrado ya tiene su aviso).
+        // El socio se creó en la misma transacción y quedó enlazado al
+        // usuario ($socio->update(['user_id' => ...])), así que el destino
+        // de la notificación es la ficha del socio recién creado.
+        $servicio = app(NotificationService::class);
+        $servicio->dispararA(
+            $servicio->staffDeSede($gymId),
+            'registro.nuevo',
+            'Nuevo registro en la web',
+            "{$usuario->name} se registró solo desde la web pública",
+            'usuarios',
+            'media',
+            $usuario->member?->id,
+            $usuario->member ? route('admin.clientes.show', $usuario->member) : route('admin.clientes.index'),
+        );
 
         return redirect()->route($usuario->rutaDeInicio())
             ->with('bienvenida', '¡Bienvenido a Sparta Gym! Tu cuenta ya está lista.');

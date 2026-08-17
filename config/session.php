@@ -143,7 +143,25 @@ return [
     |
     */
 
-    'path' => env('SESSION_PATH', '/'),
+    // env('SESSION_PATH') en vez de un literal '/' a propósito: en Windows,
+    // si el servidor se arranca desde Git Bash (MSYS2), el auto-conversor de
+    // rutas de MSYS2 puede reescribir un valor de entorno que empiece con
+    // '/' como si fuera un argumento de línea de comandos, convirtiendo
+    // SESSION_PATH=/ en la carpeta de instalación de Git (algo como
+    // "C:/Program Files/Git/") antes de que PHP lo vea. Symfony\Cookie
+    // rechaza esa ruta (InvalidArgumentException: "contains invalid
+    // characters") y CADA respuesta que intenta guardar la sesión revienta
+    // con 500/503 — la web entera deja de cargar. Sanear acá: cualquier
+    // valor que no sea una ruta de cookie válida (debe empezar con '/' y no
+    // traer ':' de unidad de Windows ni '\') cae al default seguro, sin
+    // importar qué terminal arrancó el servidor.
+    'path' => (function () {
+        $ruta = env('SESSION_PATH', '/');
+
+        return is_string($ruta) && str_starts_with($ruta, '/') && ! str_contains($ruta, ':') && ! str_contains($ruta, '\\')
+            ? $ruta
+            : '/';
+    })(),
 
     /*
     |--------------------------------------------------------------------------

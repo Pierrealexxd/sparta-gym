@@ -7,7 +7,7 @@
     <title>Login · Sparta Gym</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    @vite(['resources/css/app.css', 'resources/js/app-public.js'])
+    @vite(['resources/css/auth-entry.css', 'resources/js/app-public.js'])
 </head>
 <body>
     <main class="auth auth--paneles">
@@ -17,17 +17,23 @@
             {{-- Panel visual: sin arte propio del gimnasio, así que se arma
                  con lo que el sitio ya tiene — el mismo sistema de
                  partículas del hero (particulas.js, vía data-particulas) y
-                 el logotipo como marca de agua. --}}
-            <section class="auth__panel-visual" aria-hidden="true">
-                <canvas data-particulas></canvas>
+                 el logotipo como marca de agua. El logo es el camino de
+                 vuelta a la página pública (tocar la marca = volver a la
+                 landing), por eso sale del aria-hidden: es el único
+                 elemento navegable del panel, el resto sigue decorativo. --}}
+            <section class="auth__panel-visual">
+                <canvas data-particulas aria-hidden="true"></canvas>
 
                 @if ($logoUrl)
                     <div class="auth__panel-agua">
-                        <img src="{{ $logoUrl }}" alt="">
+                        <a href="{{ route('landing') }}" class="auth__panel-agua__enlace"
+                           aria-label="Volver a la página principal de Sparta Gym">
+                            <img src="{{ $logoUrl }}" alt="">
+                        </a>
                     </div>
                 @endif
 
-                <p class="auth__panel-pie">© {{ date('Y') }} Sparta Gym</p>
+                <p class="auth__panel-pie" aria-hidden="true">© {{ date('Y') }} Sparta Gym</p>
             </section>
 
             <section class="auth__panel-formulario">

@@ -16,11 +16,14 @@
         // El modal nuevo/editar (abajo) se reabre solo si la validación falló
         // en su propio formulario — ver _origen dentro del modal.
         $errorEditor = $errors->any() && old('_origen') === 'inventario';
-        $vacios = [
-            'name' => '', 'sku' => '', 'category' => 'suplemento', 'description' => '',
-            'cost_price' => '', 'sale_price' => '', 'min_stock' => '0',
-            'stock_inicial' => '', 'is_active' => true,
-        ];
+        $puedeGestionar = auth()->user()->tienePermiso('inventario.gestionar');
+        $colspan = 4 + ($puedeGestionar ? 1 : 0);
+$vacios = [
+        'name' => '', 'sku' => '', 'category' => 'suplemento', 'description' => '',
+        'cost_price' => '', 'sale_price' => '', 'min_stock' => '0',
+        'stock_inicial' => '', 'is_active' => true,
+        'generar_sku_automatico' => true,
+    ];
     @endphp
 
     <form class="panel__toolbar" method="GET">
@@ -31,61 +34,159 @@
         </div>
     </form>
 
-    <div class="tabla-envoltorio" data-revelar>
-        <table class="tabla tabla--tarjetas">
-            <thead><tr><th>Producto</th><th class="tabla__oculta-movil">Categoría</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
-            <tbody>
-                @forelse ($productos as $producto)
-                    <tr>
-                        <td class="es-fuerte" data-etiqueta="Producto">
-                            {{ $producto->name }}
-                            @if ($producto->sku)<br><span style="color:var(--ceniza);font-size:var(--t-xs);font-family:var(--f-mono)">{{ $producto->sku }}</span>@endif
-                        </td>
-                        <td class="tabla__oculta-movil" data-etiqueta="Categoría">{{ \App\Http\Controllers\Admin\ProductController::CATEGORIAS[$producto->category] ?? $producto->category }}</td>
-                        <td data-etiqueta="Precio">S/ {{ number_format($producto->sale_price, 2) }}</td>
-                        <td data-etiqueta="Stock">
-                            {{ $producto->stock }}
-                            @if ($producto->necesita_reposicion)
-                                <span class="etiqueta etiqueta--fuego">Reponer</span>
-                            @endif
-                        </td>
-                        <td data-etiqueta="nada">
-                            @if (auth()->user()->tienePermiso('inventario.gestionar'))
-                                <button class="btn btn--desnudo" type="button"
-                                        @click="window.dispatchEvent(new CustomEvent('abrir-inventario', { detail: @js([
-                                            'id' => $producto->id,
-                                            'name' => $producto->name,
-                                            'sku' => $producto->sku,
-                                            'category' => $producto->category,
-                                            'description' => $producto->description,
-                                            'cost_price' => (float) $producto->cost_price,
-                                            'sale_price' => (float) $producto->sale_price,
-                                            'min_stock' => $producto->min_stock,
-                                            'stock' => $producto->stock,
-                                            'is_active' => (bool) $producto->is_active,
-                                        ]) }))">
-                                    <x-icono nombre="lapiz" />
-                                </button>
-                                <button class="btn btn--desnudo" type="button"
-                                        @click="$store.confirmar.abrir({
-                                            accion: '{{ route('admin.inventario.destroy', $producto) }}',
-                                            titulo: 'Desactivar producto',
-                                            mensaje: '¿Desactivar {{ $producto->name }}? Dejará de poder venderse.',
-                                            etiqueta: 'Desactivar'
-                                        })">
-                                    <x-icono nombre="papelera" />
-                                </button>
-                            @endif
-                        </td>
-                    </tr>
-                @empty
-                    <tr><td colspan="5" class="tabla__vacio"><x-estado-vacio icono="caja" texto="Sin productos todavía." /></td></tr>
-                @endforelse
-            </tbody>
-        </table>
+    {{-- Indicadores de stock, accionables: cada tarjeta filtra la tabla por
+         su estado (mismo patrón de KPI que ventas; la banda de "bajo" vive en
+         config('sparta.stock_umbral_bajo')). --}}
+    @php
+        $estados = [
+            'normal'  => ['Stock normal', 'caja'],
+            'bajo'    => ['Stock bajo',   'caja'],
+            'critico' => ['Por agotarse', 'llama'],
+            'agotado' => ['Agotados',     'caja'],
+        ];
+    @endphp
+    <div class="kpis kpis--4" data-revelar data-revelar-grupo>
+        @foreach ($estados as $clave => [$etiqueta, $icono])
+            <a class="tarjeta kpi tarjeta--interactiva" href="{{ route('admin.inventario.index', array_filter(['estado' => $clave, 'q' => request('q')])) }}"
+               aria-current="{{ $estado === $clave ? 'true' : 'false' }}"
+               data-title="Filtrar: {{ $etiqueta }}">
+                <span class="kpi__cabecera">
+                    <span class="kpi__icono kpi__icono--brasa"><x-icono nombre="{{ $icono }}" /></span>
+                </span>
+                <b class="kpi__valor" data-contador="{{ $conteos[$clave] }}">0</b>
+                <span class="kpi__etiqueta">{{ $etiqueta }}</span>
+            </a>
+        @endforeach
     </div>
 
-    <div class="paginacion">{{ $productos->links() }}</div>
+    @if ($estado)
+        <div class="filtros-activos" data-revelar>
+            <span class="etiqueta etiqueta--fuego">
+                Filtrando: {{ $estados[$estado][0] }}
+                <a class="filtros-activos__quitar" href="{{ route('admin.inventario.index', array_filter(['q' => request('q')])) }}"
+                   aria-label="Quitar filtro de estado">
+                    <x-icono nombre="cerrar" />
+                </a>
+            </span>
+        </div>
+    @endif
+
+    <div class="tabla-bulk" x-data="{
+        seleccionados: [],
+        idsPagina: @js($productos->pluck('id')->all()),
+        alternar(id) {
+            this.seleccionados.includes(id)
+                ? this.seleccionados = this.seleccionados.filter(i => i !== id)
+                : this.seleccionados.push(id);
+        },
+        seleccionarTodos(estado) {
+            this.seleccionados = estado ? this.idsPagina.slice() : [];
+        },
+    }">
+        <div class="tabla-envoltorio" data-revelar>
+            <table class="tabla tabla--tarjetas">
+                <thead><tr>
+                    @if ($puedeGestionar)
+                        <th class="tabla__check">
+                            <input type="checkbox"
+                                   :checked="seleccionados.length > 0 && idsPagina.every(i => seleccionados.includes(i))"
+                                   @change="seleccionarTodos($el.checked)"
+                                   aria-label="Seleccionar todos los de esta página">
+                        </th>
+                    @endif
+                    <th>Producto</th><th class="tabla__oculta-movil">Categoría</th><th>Precio</th><th>Stock</th><th></th>
+                </tr></thead>
+                <tbody>
+                    @forelse ($productos as $producto)
+                        <tr :class="{ 'is-seleccionada': seleccionados.includes({{ $producto->id }}) }">
+                            @if ($puedeGestionar)
+                                <td class="tabla__check" data-etiqueta="check">
+                                    <input type="checkbox"
+                                           :checked="seleccionados.includes({{ $producto->id }})"
+                                           @change="alternar({{ $producto->id }})"
+                                           aria-label="Seleccionar a {{ $producto->name }}">
+                                </td>
+                            @endif
+                            <td class="es-fuerte" data-etiqueta="Producto">
+                                {{ $producto->name }}
+                                @if ($producto->sku)<br><span style="color:var(--ceniza);font-size:var(--t-xs);font-family:var(--f-mono)">{{ $producto->sku }}</span>@endif
+                            </td>
+                            <td class="tabla__oculta-movil" data-etiqueta="Categoría">{{ \App\Http\Controllers\Admin\ProductController::CATEGORIAS[$producto->category] ?? $producto->category }}</td>
+                            <td data-etiqueta="Precio">S/ {{ number_format($producto->sale_price, 2) }}</td>
+                            <td data-etiqueta="Stock">
+                                {{ $producto->stock }}
+                                @php
+                                    $estadoStock = $producto->estado_stock;
+                                    $tono = ['bajo' => 'bronce', 'critico' => 'fuego', 'agotado' => 'fuego'][$estadoStock] ?? null;
+                                @endphp
+                                @if ($tono)
+                                    <span class="etiqueta etiqueta--{{ $tono }}">
+                                        {{ ['bajo' => 'Bajo', 'critico' => 'Reponer', 'agotado' => 'Agotado'][$estadoStock] }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td data-etiqueta="nada">
+                                <div style="display:flex;gap:var(--e-2)">
+                                    <a class="btn btn--desnudo" href="{{ route('admin.inventario.show', $producto) }}"
+                                       aria-label="Ver detalle de {{ $producto->name }}">
+                                        <x-icono nombre="ojo" />
+                                    </a>
+                                    @if ($puedeGestionar)
+                                        <button class="btn btn--desnudo" type="button"
+                                                @click="window.dispatchEvent(new CustomEvent('abrir-inventario', { detail: @js([
+                                                    'id' => $producto->id,
+                                                    'name' => $producto->name,
+                                                    'sku' => $producto->sku,
+                                                    'category' => $producto->category,
+                                                    'description' => $producto->description,
+                                                    'cost_price' => (float) $producto->cost_price,
+                                                    'sale_price' => (float) $producto->sale_price,
+                                                    'min_stock' => $producto->min_stock,
+                                                    'stock' => $producto->stock,
+                                                    'is_active' => (bool) $producto->is_active,
+                                                ]) }))">
+                                            <x-icono nombre="lapiz" />
+                                        </button>
+                                        <button class="btn btn--desnudo" type="button"
+                                                @click="$store.confirmar.abrir({
+                                                    accion: '{{ route('admin.inventario.destroy', $producto) }}',
+                                                    titulo: 'Desactivar producto',
+                                                    mensaje: '¿Desactivar {{ $producto->name }}? Dejará de poder venderse.',
+                                                    etiqueta: 'Desactivar'
+                                                })">
+                                            <x-icono nombre="papelera" />
+                                        </button>
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="{{ $colspan }}" class="tabla__vacio"><x-estado-vacio icono="caja" texto="Sin productos todavía." /></td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if ($puedeGestionar)
+            <div class="bulk-bar" x-show="seleccionados.length > 0" x-cloak>
+                <span class="bulk-bar__info"
+                      x-text="seleccionados.length + (seleccionados.length === 1 ? ' seleccionado' : ' seleccionados')"></span>
+                <button class="btn btn--vidrio" type="button" @click="seleccionados = []">Limpiar</button>
+                <button class="btn btn--fuego" type="button"
+                        @click="$store.confirmar.abrir({
+                            accion: '{{ route('admin.inventario.masivo') }}',
+                            titulo: 'Desactivar seleccionados',
+                            mensaje: 'Se desactivarán ' + seleccionados.length + ' productos. Dejarán de poder venderse.',
+                            etiqueta: 'Desactivar',
+                            ids: seleccionados.slice()
+                        })">
+                    <x-icono nombre="papelera" /> Desactivar seleccionados
+                </button>
+            </div>
+        @endif
+
+        <div class="paginacion">{{ $productos->links() }}</div>
+    </div>
 
     <x-modal-confirmar />
 
@@ -128,8 +229,39 @@
                     <label class="campo"><span class="campo__etiqueta">Nombre</span>
                         <input class="campo__control" type="text" name="name" required x-model="fila.name"></label>
                     <label class="campo"><span class="campo__etiqueta">SKU (opcional)</span>
-                        <input class="campo__control" type="text" name="sku" x-model="fila.sku"></label>
+                        <input class="campo__control" type="text" name="sku" id="sku" x-model="fila.sku">
+                    </label>
                 </div>
+
+                <div class="formulario-panel__fila">
+                    <label class="campo">
+                        <input type="checkbox" name="generar_sku_automatico" id="generar_sku_automatico"
+                            value="1" checked>
+                        Generar SKU automáticamente
+                    </label>
+                </div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const chk = document.getElementById('generar_sku_automatico');
+                        const skuInput = document.getElementById('sku');
+                        if (!chk) return;
+                        if (chk.checked) {
+                            skuInput.readOnly = true;
+                            skuInput.value = '';
+                        } else {
+                            skuInput.readOnly = false;
+                        }
+                        chk.addEventListener('change', function() {
+                            if (this.checked) {
+                                skuInput.readOnly = true;
+                                skuInput.value = '';
+                            } else {
+                                skuInput.readOnly = false;
+                            }
+                        });
+                    });
+                </script>
 
                 <div class="formulario-panel__fila">
                     <label class="campo"><span class="campo__etiqueta">Categoría</span>

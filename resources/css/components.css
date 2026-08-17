@@ -344,6 +344,66 @@
     letter-spacing: .16em;
     text-transform: uppercase;
     color: var(--ceniza);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--e-1);
+}
+
+/* Ayuda de campo como tooltip: antes era un párrafo fijo bajo el input y
+   desalineaba la fila del formulario (cada campo con distinta altura). Un
+   "?" que solo revela el texto al pasar el cursor o enfocarlo no empuja el
+   layout. Reusa los tokens de tooltip que ya existía para Chart.js. */
+.campo__ayuda {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    border-radius: var(--r-full);
+    border: 1px solid var(--acero-claro);
+    color: var(--humo);
+    font-family: var(--f-mono);
+    font-size: 9px;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    cursor: help;
+}
+
+/* La burbuja del tooltip: <template x-teleport="body"> la saca del DOM de
+   .tarjeta y la reinserta al final de <body> (ver show.blade.php). No es
+   solo el overflow:hidden de .tarjeta (para el brillo al hover): .tarjeta
+   también trae SIEMPRE un transform activo (perspective(...) rotateX(0)
+   rotateY(0), aunque los ángulos estén en 0), y por spec CSS cualquier
+   transform ≠ none crea un containing block nuevo para position:fixed —
+   no solo para absolute. Un tooltip fixed que se queda DENTRO de .tarjeta
+   hereda ese containing block y termina atrapado igual, recortado contra
+   el borde de la tarjeta (bug real, visto en pantalla: "sigue saliendo
+   dentro del contenedor"). Teleportado al final de <body>, no tiene
+   ningún ancestro transformado — position:fixed sí queda relativo al
+   viewport de verdad. --x/--y los calcula el propio Alpine del icono al
+   abrir (mouseenter/focus), sin JS aparte en ui.js. */
+.tooltip-flotante {
+    position: fixed;
+    transform: translate(-50%, calc(-100% - var(--e-2)));
+    width: max-content;
+    max-width: 240px;
+    padding: var(--e-2) var(--e-3);
+    border-radius: var(--r-sm);
+    border: 1px solid var(--tooltip-borde);
+    background: var(--tooltip-fondo);
+    color: var(--tooltip-texto);
+    font-family: var(--f-texto);
+    font-size: var(--t-xs);
+    font-weight: 400;
+    line-height: 1.4;
+    white-space: normal;
+    text-transform: none;
+    letter-spacing: normal;
+    box-shadow: var(--s-lg);
+    pointer-events: none;
+    z-index: var(--z-modal);
 }
 
 .campo__control {

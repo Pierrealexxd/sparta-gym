@@ -11,22 +11,33 @@
     @if ($logo = \App\Support\GymContext::current()?->logo_path)
         <link rel="icon" href="{{ asset('storage/' . $logo) }}">
     @endif
-    @vite(['resources/css/app.css', 'resources/js/app-panel.js'])
+    @vite(['resources/css/panel-entry.css', 'resources/js/app-panel.js'])
 
-    {{-- Disponible en TODas las páginas del panel (no solo /mensajes): la
-         campanita vive en la cabecera compartida, así que necesita sus
-         rutas aquí y no en el @push('scripts') de una vista concreta. --}}
+    {{-- Campanita unificada (ver plan-notificaciones-toast.md): un solo
+         origen de notificaciones para los tres paneles, en vez de sumar
+         mensajes + stock + solicitudes en el cliente. Disponible en todas
+         las páginas del panel porque la campanita vive en la cabecera. --}}
+    @php
+        // $toastDuracion aparte, no @json(config(..., ['baja'=>4,'media'=>5,'alta'=>8]))
+        // inline: el parser de argumentos de @json de Blade se rompe con ESTA
+        // combinación exacta de anidamiento (@json→config→array) en cuanto el
+        // array literal trae 3 pares clave-valor — confirmado compilando el
+        // directive suelto: con 2 claves compila bien, con 3 corta el PHP a
+        // mitad de camino ("Unclosed '[' does not match ')'" en cada carga
+        // del panel). Con la config ya resuelta en una variable simple,
+        // @json() solo ve un argumento de un nivel y no dispara el bug.
+        $toastDuracion = config('sparta.notificaciones.toast_duracion', ['baja' => 4, 'media' => 5, 'alta' => 8]);
+    @endphp
     <script>
         window.spartaNotificaciones = {
-            lista: @json(route('mensajes.lista')),
-            noLeidas: @json(route('mensajes.no-leidas')),
-            abrirConversacion: @json(route('mensajes')) + '?con=',
-            {{-- Solo quien puede aprobar (admin) recibe esta ruta — si no
-                 viene, el bell simplemente no pregunta por solicitudes. --}}
-            @if (auth()->user()->tienePermiso('asistencia.aprobar'))
-                solicitudesAsistencia: @json(route('admin.asistencia.solicitudes.pendientes-json')),
-                abrirSolicitudes: @json(route('admin.asistencia.solicitudes.index')),
-            @endif
+            total: @json(route('notificaciones.total')),
+            lista: @json(route('notificaciones.index')),
+            nuevas: @json(route('notificaciones.nuevas')),
+            leida: @json(route('notificaciones.leida', ['id' => '__ID__'])),
+            leidas: @json(route('notificaciones.leidas')),
+            pollingMs: {{ (int) config('sparta.notificaciones.polling_segundos', 15) * 1000 }},
+            toastDuracion: @json($toastDuracion),
+            toastMax: {{ (int) config('sparta.notificaciones.toast_max_visibles', 4) }},
         };
     </script>
 
@@ -101,7 +112,7 @@
                 </div>
 
                 <div class="panel__cabecera-acciones">
-                    <div class="notificaciones" x-data="notificaciones()" @keydown.escape.window="abierto = false">
+                    <div class="notificaciones" x-data="campanita()" @keydown.escape.window="abierto = false">
                         <button type="button" class="panel__campana" @click="alternar()"
                                 aria-label="Notificaciones" title="Notificaciones">
                             <x-icono nombre="campana" />
@@ -124,26 +135,31 @@
                                        x-transition:leave="v-notif-sale" x-transition:leave-start="v-notif-entra-hasta" x-transition:leave-end="v-notif-entra-desde">
                                     <header class="notificaciones__cabecera">
                                         <b>Notificaciones</b>
-                                        <button type="button" class="modal__cerrar" @click="abierto = false" aria-label="Cerrar">
-                                            <x-icono nombre="cerrar" />
-                                        </button>
+                                        <div class="notificaciones__cabecera-acciones">
+                                            <button type="button" class="notificaciones__marcar-todas" @click="marcarTodas()"
+                                                    x-show="total > 0" x-cloak>Marcar todas como leídas</button>
+                                            <button type="button" class="modal__cerrar" @click="abierto = false" aria-label="Cerrar">
+                                                <x-icono nombre="cerrar" />
+                                            </button>
+                                        </div>
                                     </header>
 
                                     <div class="notificaciones__lista">
-                                        <template x-for="n in items" :key="n.tipo + '-' + n.id">
-                                            <button type="button" class="notificaciones__item" @click="irA(n)">
-                                                <span class="chat__avatar">
-                                                    <img x-show="n.avatar" :src="n.avatar" alt="">
-                                                    <span x-show="!n.avatar" x-text="n.iniciales"></span>
+                                        <template x-for="n in items" :key="n.id">
+                                            <button type="button" class="notificaciones__item" :class="{ 'is-no-leida': !n.leida }" @click="irA(n)">
+                                                <span class="notificaciones__item-icono">
+                                                    @foreach (['caja','chat','entrada','reloj','billetera','estrella','correo','usuarios','escudo','check','campana','objetivo','cerrar'] as $icono)
+                                                        <x-icono nombre="{{ $icono }}" x-show="n.icono === '{{ $icono }}'" />
+                                                    @endforeach
                                                 </span>
                                                 <span class="notificaciones__item-info">
-                                                    <b x-text="n.nombre"></b>
-                                                    <small x-text="n.ultimo || 'Nuevo mensaje'"></small>
+                                                    <b x-text="n.title"></b>
+                                                    <small x-text="n.body"></small>
                                                     {{-- Solo llega poblado para el admin, que ve notificaciones de
-                                                         todas sus sedes en un mismo cajón (ver MensajeController). --}}
+                                                         todas sus sedes en un mismo cajón. --}}
                                                     <span class="notificaciones__item-sede" x-show="n.sede" x-text="n.sede"></span>
                                                 </span>
-                                                <em class="chat__no-leidas" x-text="n.no_leidas"></em>
+                                                <span class="notificaciones__item-hora" x-text="n.hora"></span>
                                             </button>
                                         </template>
                                         <div class="notificaciones__vacio" x-show="!cargando && items.length === 0">
@@ -198,10 +214,13 @@
          style="position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.5)"
          @click="menuAbierto = false"></div>
 
-    {{-- Confirmaciones de sesión: flotan sobre el contenido y se retiran
-         solas, en vez de empujar el layout como el .aviso fijo de antes. --}}
-    @if (session('exito') || session('error'))
-        <div class="toasts">
+    {{-- Toasts: el contenedor vive SIEMPRE (los realtime los agrega
+         $store.toasts desde notificaciones.js) y el flash de confirmación
+         de sesión se pinta acá, en el mismo contenedor, para compartir
+         posición y z-index. No empujan el layout: flotan sobre el contenido
+         y se retiran solos. --}}
+    <div class="toasts" aria-live="polite">
+        @if (session('exito') || session('error'))
             <div class="toast toast--{{ session('exito') ? 'exito' : 'error' }}"
                  role="{{ session('exito') ? 'status' : 'alert' }}"
                  x-data="{ visible: true }" x-show="visible" x-cloak
@@ -213,8 +232,32 @@
                     <x-icono nombre="cerrar" />
                 </button>
             </div>
-        </div>
-    @endif
+        @endif
+
+        {{-- Toasts en tiempo real: los crea $store.toasts (notificaciones.js).
+             Cada uno con su prioridad (alta/media/baja) que decide borde,
+             icono y duración; el cursor pausa la cuenta regresiva. --}}
+        <template x-for="t in $store.toasts.items" :key="t.id">
+            <div class="toast" :class="'toast--' + t.prioridad" role="status"
+                 @mouseenter="$store.toasts.pausar(t)" @mouseleave="$store.toasts.reanudar(t)"
+                 x-transition.duration.300ms>
+                <span class="toast__icono">
+                    @foreach (['caja','chat','entrada','reloj','billetera','estrella','correo','usuarios','escudo','check','campana','objetivo','cerrar'] as $icono)
+                        <x-icono nombre="{{ $icono }}" x-show="t.icono === '{{ $icono }}'" />
+                    @endforeach
+                </span>
+                <span class="toast__texto">
+                    <b x-text="t.titulo"></b>
+                    <small x-text="t.cuerpo"></small>
+                </span>
+                <button class="toast__cerrar" type="button" @click="$store.toasts.cerrar(t.id)" aria-label="Cerrar">
+                    <x-icono nombre="cerrar" />
+                </button>
+            </div>
+        </template>
+    </div>
+
+    <x-modal-preview />
 
     @stack('scripts')
 </body>

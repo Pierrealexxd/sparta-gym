@@ -13,7 +13,8 @@
         </div>
     @endunless
 
-    <div class="kpis">
+    <h3 class="kpis__titulo">Tu cuerpo</h3>
+    <div class="kpis kpis--3">
         <article class="tarjeta kpi">
             <b class="kpi__valor">{{ $ultima?->weight_kg ?? '—' }} kg</b>
             <span class="kpi__etiqueta">Peso actual</span>
@@ -63,6 +64,11 @@
                 </span>
             @endif
         </article>
+    </div>
+
+    @if ($primera || $ultima)
+        <h3 class="kpis__titulo">Tu constancia</h3>
+        <div class="kpis kpis--2">
 
         @if ($primera)
             <article class="tarjeta kpi">
@@ -108,7 +114,8 @@
                 </span>
             </article>
         @endif
-    </div>
+        </div>
+    @endif
 
     <div class="g-2-1">
         <article class="tarjeta" id="registrar-hoy">

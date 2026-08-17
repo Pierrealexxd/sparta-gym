@@ -176,13 +176,32 @@
     place-items: center;
     pointer-events: none;
 }
-.auth__panel-agua img {
+/* La marca de agua es el camino de vuelta a la página pública (tocar el
+   logo = volver a la landing), así que el enlace rehabilita los pointer-
+   events que el contenedor decorativo niega — y abarca solo la imagen,
+   no todo el panel, para no convertir 44% de la tarjeta en un botón
+   accidental. El ancho se mueve del <img> al <a> para que el área
+   clicable y el área visible sean la misma caja. */
+.auth__panel-agua__enlace {
+    pointer-events: auto;
     width: min(80%, 430px);
+}
+.auth__panel-agua__enlace img {
+    width: 100%;
     opacity: .6;
     /* Un poco más arriba del centro geométrico y con un realce de brillo:
        centrado a secas quedaba "hundido" bajo el resto del panel. */
     transform: translateY(-6%);
     filter: brightness(1.7) contrast(1.15);
+    transition: opacity var(--v-rapido) var(--curva), filter var(--v-rapido) var(--curva);
+}
+/* Sutil, sin convertirse en botón: el logo solo sube opacidad y brillo
+   al pasar el cursor o enfocarlo con teclado. El anillo de foco global
+   (base.css) marca el enlace. */
+.auth__panel-agua__enlace:hover img,
+.auth__panel-agua__enlace:focus-visible img {
+    opacity: .85;
+    filter: brightness(1.9) contrast(1.15);
 }
 
 .auth__panel-pie {
