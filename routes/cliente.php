@@ -1,8 +1,9 @@
 <?php
 
 use App\Http\Controllers\Cliente\DashboardController;
+use App\Http\Controllers\Cliente\ProgramController;
 use App\Http\Controllers\Cliente\ProgressController;
-use App\Http\Controllers\Cliente\SavedMealController;
+use App\Http\Controllers\Cliente\RoutineController;
 use App\Http\Controllers\Cliente\TestimonialController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,12 +18,22 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('cliente')->name('cliente.')->middleware('rol:cliente')->group(function () {
     Route::get('/', DashboardController::class)->name('dashboard');
+    // Módulo canónico de la rutina (ver PROMPT-EJECUCION-MI-RUTINA.md): antes
+    // vivía duplicada en el dashboard y en progreso — ahora ambos enlazan
+    // acá en vez de repetir el detalle completo.
+    Route::get('rutina', RoutineController::class)->name('rutina');
     Route::get('progreso', ProgressController::class)->name('progreso');
     Route::post('progreso', [ProgressController::class, 'guardar'])->name('progreso.guardar');
-    Route::post('progreso/comidas', [ProgressController::class, 'guardarComida'])->name('progreso.comidas.guardar');
-    // Fase 4 del plan de nutrición: "Mis platos habituales".
-    Route::post('platos', [SavedMealController::class, 'store'])->name('platos.guardar');
-    Route::post('platos/{plato}/usar', [SavedMealController::class, 'usar'])->name('platos.usar');
-    Route::delete('platos/{plato}', [SavedMealController::class, 'destroy'])->name('platos.destroy');
     Route::post('resena', [TestimonialController::class, 'store'])->name('resena.store');
+
+    // Asignación automática al elegir un programa desde la landing (Parte 3
+    // de PLAN-PROGRAMAS.md). El socio autenticado sale del request->user(),
+    // nunca de un member_id enviado por el cliente.
+    Route::post('programa/asignar', [ProgramController::class, 'asignar'])->name('programa.asignar');
+
+    // Diario de comidas por porciones y "Mis platos habituales" — retirados
+    // de la vista de progreso (Parte 4 de PLAN-PROGRAMAS.md, el usuario pidió
+    // quitarlos). Las rutas se dan de baja porque solo las usaba
+    // progreso.blade.php (verificado, ver PROMPT-EJECUCION-PROGRAMAS.md
+    // regla 11); SavedMealController/MealLog y sus tablas se conservan.
 });

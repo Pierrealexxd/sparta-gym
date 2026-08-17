@@ -7,6 +7,7 @@ use App\Models\Exercise;
 use App\Models\Faq;
 use App\Models\Member;
 use App\Models\Plan;
+use App\Models\Program;
 use App\Models\Testimonial;
 use App\Models\Trainer;
 use App\Support\GymContext;
@@ -35,6 +36,14 @@ class LandingController extends Controller
             'heroPoster'    => $this->heroPoster(),
             'ejercicios'    => Exercise::disponibles()->orderBy('name')->get(),
             'categorias'    => Exercise::disponibles()->select('category')->distinct()->orderBy('category')->pluck('category'),
+            'programs'      => Program::publicos()->get(),
+            // Rutina tipo de cada programa (Fase 2): 4 ejercicios representativos
+            // de sus categorías, no toda la biblioteca — la sección de más
+            // arriba ya cubre el catálogo completo.
+            'ejemplosPrograma' => [
+                'ganar_masa'   => Exercise::disponibles()->where('category', 'fuerza')->orderBy('name')->take(4)->get(),
+                'perder_grasa' => Exercise::disponibles()->whereIn('category', ['cardio', 'funcional'])->orderBy('name')->take(4)->get(),
+            ],
         ]);
     }
 

@@ -27,8 +27,19 @@ class MemberMeasurement extends Model
         return [
             'measured_at'    => 'date',
             'weight_kg'      => 'decimal:2',
+            // height_cm es unsignedSmallInteger en la migración, no decimal:
+            // castearlo a decimal:1 lo devolvería como "170.0" (el cast
+            // decimal de Laravel produce string) y getAlturaAttribute()
+            // declara ?int. Se castea a integer, que es su tipo real.
+            'height_cm'      => 'integer',
             'body_fat_pct'   => 'decimal:1',
             'muscle_mass_kg' => 'decimal:2',
+            // Perímetros: decimal(5,1) en la migración, igual que body_fat_pct.
+            'chest_cm'       => 'decimal:1',
+            'waist_cm'       => 'decimal:1',
+            'hip_cm'         => 'decimal:1',
+            'arm_cm'         => 'decimal:1',
+            'thigh_cm'       => 'decimal:1',
         ];
     }
 

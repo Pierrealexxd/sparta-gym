@@ -38,6 +38,21 @@
         </button>
     </article>
 
+    {{-- "¿Cuán constante soy yo?" — fijo a las últimas 12 semanas, sin
+         importar el mes que se esté mirando abajo. Solo sus marcaciones. --}}
+    <article class="tarjeta grafico" data-revelar>
+        <div class="grafico__cabecera">
+            <h3 style="font-size:var(--t-lg)">Mi constancia · últimas 12 semanas</h3>
+        </div>
+        @if (array_sum($graficoMarcaciones['datasets'][0]['data']) > 0)
+            <div class="grafico__lienzo">
+                <canvas data-grafico="{{ json_encode(['tipo' => 'bar'] + $graficoMarcaciones) }}"></canvas>
+            </div>
+        @else
+            <x-estado-vacio icono="reloj" texto="Sin marcaciones en las últimas 12 semanas." />
+        @endif
+    </article>
+
     <form class="panel__toolbar" method="GET" data-revelar>
         <input type="hidden" name="mes" value="{{ $mes }}">
         <input type="hidden" name="anio" value="{{ $anio }}">

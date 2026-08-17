@@ -38,6 +38,7 @@
         'ojo-tachado'=> '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
         'lupa'       => '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
         'descargar'  => '<path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 19h16"/>',
+        'subir'      => '<path d="M12 19V5m0 0l-5 5m5-5l5 5"/><path d="M4 19h16"/>',
         'menu'       => '<path d="M4 7h16M4 12h16M4 17h16"/>',
         'cerrar'     => '<path d="M6 6l12 12M18 6L6 18"/>',
         'flecha-der' => '<path d="M5 12h14M13 6l6 6-6 6"/>',
@@ -56,6 +57,15 @@
         'mano-puno'  => '<rect x="6" y="8" width="12" height="10" rx="4"/><path d="M9 8V6M12 8V5M15 8V6"/><path d="M12 18v3"/>',
         'mano-cuenco'=> '<path d="M5 11c0 5 3.5 9 7 9s7-4 7-9"/><path d="M5 11h14"/>',
         'mano-pulgar'=> '<path d="M8 21h8a2 2 0 0 0 2-1.8l1-6.2a2 2 0 0 0-2-2.2h-4.3l.8-3.3a1.8 1.8 0 0 0-3.3-1.4L8 10.5V21z"/><path d="M8 10.5H6a1.5 1.5 0 0 0-1.5 1.5v7.5A1.5 1.5 0 0 0 6 21h2"/>',
+
+        // Programas + recomendaciones (Fase 0 — PLAN-RUTINAS-PERSONALIZADAS.md)
+        'rayo'      => '<path d="M13 2 4 14h6l-1 8 9-12h-6z"/>',
+        'plato'     => '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.4"/>',
+        'proteina'  => '<path d="M12 3c2.5 2 4 4.4 4 7.2A4 4 0 0 1 8 10.2C8 7.4 9.5 5 12 3z"/><path d="M9 21h6M12 15v6"/>',
+        'polvo'     => '<path d="M9 3h6l1 4H8z"/><path d="M8 7h8l1.2 11.2A2 2 0 0 1 15.2 20H8.8a2 2 0 0 1-2-1.8z"/><path d="M9.5 12h5"/>',
+        'gota'      => '<path d="M12 3s6 6.8 6 11a6 6 0 1 1-12 0c0-4.2 6-11 6-11z"/>',
+        'lampara'   => '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.4.9 1 .9 1.6V16h5.2v-.5c0-.6.3-1.2.9-1.6A6 6 0 0 0 12 3z"/>',
+        'libro'     => '<path d="M4 5.5C4 4.7 4.7 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5z"/>',
     ];
 @endphp
 

@@ -46,6 +46,18 @@ class Gym extends Model
     public function gallery(): HasMany     { return $this->hasMany(GalleryImage::class); }
     public function qrCodes(): HasMany     { return $this->hasMany(GymQrCode::class); }
 
+    // Resto de tablas con gym_id que no tenían su inversa declarada. Se
+    // omiten a propósito member_goals y meal_logs (cuelgan del socio, no
+    // llevan gym_id) y recipe_categories (no existe ese modelo).
+    public function programs(): HasMany       { return $this->hasMany(Program::class); }
+    public function products(): HasMany       { return $this->hasMany(Product::class); }
+    public function conversations(): HasMany  { return $this->hasMany(Conversation::class); }
+    public function contactMessages(): HasMany{ return $this->hasMany(ContactMessage::class); }
+    public function cashClosings(): HasMany   { return $this->hasMany(CashClosing::class); }
+    public function staffAttendances(): HasMany       { return $this->hasMany(StaffAttendance::class); }
+    public function attendanceEditRequests(): HasMany { return $this->hasMany(AttendanceEditRequest::class); }
+    public function recipes(): HasMany        { return $this->hasMany(Recipe::class); }
+
     /** Horario de hoy, listo para pintar en la landing. */
     public function horarioDeHoy(): ?array
     {

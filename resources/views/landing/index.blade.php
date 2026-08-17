@@ -5,6 +5,7 @@
     @include('landing.sections.historia')
     @include('landing.sections.beneficios')
     @include('landing.sections.ejercicios')
+    @include('landing.sections.programas')
     @include('landing.sections.guias')
     @include('landing.sections.planes')
     @include('landing.sections.testimonios')

@@ -29,6 +29,21 @@
     --metal: linear-gradient(180deg, #4A4F58 0%, #23262B 45%, #34383F 55%, #191B1F 100%);
     --filo:  linear-gradient(90deg, transparent, var(--acero-claro) 20%, var(--acero-claro) 80%, transparent);
 
+    /* Acentos puntuales (Fase 3 — recomendaciones nutricionales): el agua no
+       tiene un color en la marca (todo es rojo/fuego/bronce), así que aquí
+       vive su único uso — un azul discreto, ajeno al resto del sitio a
+       propósito, porque es el único dato que no es "calor". */
+    --agua:        #2D7DD2;
+    --agua-clara:  #45A5F5;
+    --bronce-claro:#D6A84A;
+
+    /* Marca externa (WhatsApp, #25D366): la única excepción admitida a
+       "todo color sale de un token" — ver PROMPT-EJECUCION-VENTAS.md regla
+       4. Se declara una sola vez aquí para que ningún componente escriba
+       el hex a mano. */
+    --whatsapp:       #25D366;
+    --whatsapp-hover: #1EBE5B;
+
     /* Cristal: el vidrio de la interfaz */
     --vidrio:        rgba(255, 255, 255, .04);
     --vidrio-borde:  rgba(255, 255, 255, .09);

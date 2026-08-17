@@ -2,17 +2,24 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\SaleExport;
 use App\Http\Controllers\Controller;
+use App\Imports\SaleImport;
 use App\Models\Member;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\StockMovement;
+use App\Support\GymContext;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * "Ventas" es el punto único para todo lo que entra por dinero: productos
@@ -79,6 +86,73 @@ class SaleController extends Controller
             'full_name' => $m->full_name,
             'code'      => $m->code,
         ]));
+    }
+
+    /**
+     * Exporta el listado ya filtrado (mismo $tipo/$desde/$hasta que la
+     * pantalla) a Excel o PDF. No usamos GymContext aquí a mano: Sale trae
+     * BelongsToGym, así que el global scope ya filtra por sede igual que
+     * en index().
+     */
+    public function exportar(Request $request): BinaryFileResponse|StreamedResponse
+    {
+        $tipo  = $request->get('tipo') === 'membresia' ? 'membresia' : 'producto';
+        $desde = $request->get('desde', now()->startOfMonth()->toDateString());
+        $hasta = $request->get('hasta', now()->toDateString());
+        $formato = $request->get('formato') === 'pdf' ? 'pdf' : 'excel';
+
+        $ventas = Sale::with(['items', 'member', 'soldBy'])
+            ->where('sale_type', $tipo)
+            ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
+            ->orderByDesc('sold_at')
+            ->get();
+
+        if ($formato === 'pdf') {
+            $pdf = Pdf::loadView('admin.ventas.pdf', [
+                'ventas' => $ventas,
+                'tipo'   => $tipo,
+                'desde'  => $desde,
+                'hasta'  => $hasta,
+                'gym'    => GymContext::current(),
+            ])->setPaper('a4', 'landscape');
+
+            return $pdf->download("ventas-{$tipo}-{$desde}-{$hasta}.pdf");
+        }
+
+        return Excel::download(new SaleExport($ventas, $tipo), "ventas-{$tipo}-{$desde}-{$hasta}.xlsx");
+    }
+
+    /**
+     * Importa ventas de mostrador desde un Excel/CSV. Solo `sale_type =
+     * producto`: una membresía siempre nace de MatriculaService (matrícula
+     * o renovación), nunca de un archivo — mezclar los dos caminos abriría
+     * la puerta a membresías sin las reglas de negocio (renewed_from,
+     * cambio de estado del socio, etc.) que ese servicio aplica.
+     */
+    public function importar(Request $request): RedirectResponse
+    {
+        // Se valida ANTES de leer una sola fila: tipo, tamaño y que el
+        // archivo exista. WithValidation en SaleImport valida cada fila
+        // después de esto.
+        $request->validate([
+            'archivo' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240'],
+        ]);
+
+        try {
+            Excel::import(
+                new SaleImport(GymContext::id(), $request->user()->id),
+                $request->file('archivo')
+            );
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $mensajes = collect($e->failures())
+                ->map(fn ($f) => "Fila {$f->row()}: " . implode(' ', $f->errors()))
+                ->take(5)
+                ->join(' | ');
+
+            return back()->with('error', "No se importó nada. Revisa el archivo: {$mensajes}");
+        }
+
+        return back()->with('exito', 'Ventas importadas correctamente.');
     }
 
     public function store(Request $request): RedirectResponse

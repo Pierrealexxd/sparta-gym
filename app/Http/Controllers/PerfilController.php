@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Recipe;
 use App\Models\User;
+use App\Services\NutritionAdvisor;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,9 +26,36 @@ class PerfilController extends Controller
 {
     public function mostrar(): View
     {
-        return view('perfil.index', [
-            'usuario' => auth()->user()->load(['member', 'trainer']),
-        ]);
+        $usuario = auth()->user()->load(['member', 'trainer']);
+
+        $datos = ['usuario' => $usuario];
+
+        // Recomendaciones (Fase 3 de PLAN-RUTINAS-PERSONALIZADAS.md): sólo
+        // aplica a socios (tienen expediente con peso/altura/meta); staff no
+        // ve esta tarjeta.
+        if ($usuario->member) {
+            $datos['recomendacion'] = (new NutritionAdvisor($usuario->member))->recomendar();
+
+            // El plan original pedía filtrar por tags 'ganar_masa'/'perder_grasa',
+            // pero RecipeSeeder no usa esas etiquetas (usa 'criollo', 'bajo en
+            // grasa', etc. — ver database/seeders/RecipeSeeder.php). En vez de
+            // añadir tags que no describen el plato, el criterio real es la
+            // porción de proteína (palma) para "ganar masa" y la etiqueta
+            // 'bajo en grasa' —cuando existe— para "perder grasa".
+            $datos['recetasMasa'] = Recipe::disponibles()
+                ->whereHas('portions', fn ($q) => $q->where('portion_type', 'palma')->where('count', '>=', 2))
+                ->orderBy('name')
+                ->take(3)
+                ->get();
+
+            $datos['recetasGrasa'] = Recipe::disponibles()
+                ->whereJsonContains('tags', 'bajo en grasa')
+                ->orderBy('name')
+                ->take(2)
+                ->get();
+        }
+
+        return view('perfil.index', $datos);
     }
 
     public function actualizar(Request $request): RedirectResponse

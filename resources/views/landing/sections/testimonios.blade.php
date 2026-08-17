@@ -1,7 +1,10 @@
 <section class="seccion">
     <div class="contenedor">
         <div class="seccion__cabecera" data-revelar>
-            <span class="eyebrow">Clientes</span>
+            {{-- Fase 5 (PLAN-RUTINAS-PERSONALIZADAS.md): el contador da
+                 prueba social real, no un texto fijo — sale directo de
+                 Testimonial::publicados() (ver LandingController). --}}
+            <span class="eyebrow">Clientes · {{ $testimonios->count() }}+ reseñas</span>
             <h2>Lo dicen ellos</h2>
         </div>
 

@@ -9,6 +9,13 @@
             <x-icono nombre="agregar" /> Registrar venta
         </button>
     @endif
+    {{-- Solo tiene sentido en la pestaña Productos: la importación crea
+         ventas de sale_type=producto (ver SaleController::importar). --}}
+    @if ($tipo === 'producto' && auth()->user()->tienePermiso('reportes.exportar'))
+        <button class="btn btn--vidrio" type="button" x-data @click="$dispatch('abrir-modal-importar')">
+            <x-icono nombre="subir" /> Importar Excel
+        </button>
+    @endif
 @endsection
 
 @section('contenido')
@@ -57,6 +64,23 @@
         <label class="campo"><input class="campo__control" type="date" name="hasta" value="{{ $hasta }}"></label>
         <button class="btn btn--vidrio" type="submit">Filtrar</button>
     </form>
+
+    {{-- Exportar: respeta el filtro de fechas y tipo activo (van en la
+         query string). Mismo permiso que importar: quien puede sacar el
+         Excel de referencia también puede volver a subirlo. --}}
+    @if (auth()->user()->tienePermiso('reportes.exportar'))
+        <div class="toolbar-acciones" data-revelar>
+            <span class="toolbar-acciones__label">Exportar:</span>
+            <a class="btn btn--vidrio btn--sm"
+               href="{{ route('admin.ventas.exportar', ['tipo' => $tipo, 'desde' => $desde, 'hasta' => $hasta, 'formato' => 'excel']) }}">
+                <x-icono nombre="descargar" /> Excel
+            </a>
+            <a class="btn btn--vidrio btn--sm"
+               href="{{ route('admin.ventas.exportar', ['tipo' => $tipo, 'desde' => $desde, 'hasta' => $hasta, 'formato' => 'pdf']) }}">
+                <x-icono nombre="descargar" /> PDF
+            </a>
+        </div>
+    @endif
 
     {{-- ---------- Productos ---------- --}}
     @if ($tipo === 'producto')
@@ -208,6 +232,49 @@
                         </div>
                     </form>
                 @endif
+            </div>
+        </div>
+    @endif
+
+    @if ($tipo === 'producto' && auth()->user()->tienePermiso('reportes.exportar'))
+        {{-- Mismo patrón modal__fondo del modal de venta de arriba. --}}
+        <div class="modal__fondo"
+             x-data="{ abierto: false }"
+             x-show="abierto" x-cloak
+             @abrir-modal-importar.window="abierto = true"
+             @keydown.escape.window="abierto = false">
+            <div class="tarjeta modal__caja" @click.outside="abierto = false">
+                <div class="modal__cabecera">
+                    <h3 style="font-size:var(--t-lg)">Importar ventas desde Excel</h3>
+                    <button class="modal__cerrar" type="button" @click="abierto = false">
+                        <x-icono nombre="cerrar" />
+                    </button>
+                </div>
+
+                <form class="formulario-panel" method="POST"
+                      action="{{ route('admin.ventas.importar') }}"
+                      enctype="multipart/form-data">
+                    @csrf
+
+                    <div class="aviso aviso--info">
+                        <p><b>Formato esperado del archivo:</b></p>
+                        <p style="font-size:var(--t-xs);color:var(--humo);margin-top:var(--e-2)">
+                            fecha (d/m/Y H:i) · cliente_codigo (opcional) · producto_nombre · cantidad · precio_unitario · metodo_pago · descuento (opcional) · notas (opcional)
+                        </p>
+                    </div>
+
+                    <label class="campo">
+                        <span class="campo__etiqueta">Archivo Excel (.xlsx, .xls, .csv — máx. 10&nbsp;MB)</span>
+                        <input class="campo__control" type="file" name="archivo"
+                               accept=".xlsx,.xls,.csv" required>
+                    </label>
+
+                    <div class="formulario-panel__acciones">
+                        <button class="btn btn--fuego btn--bloque" type="submit">
+                            <x-icono nombre="subir" /> Importar ventas
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     @endif

@@ -37,15 +37,25 @@ class MatriculaController extends Controller
             'method'         => ['required', 'in:efectivo,transferencia,yape,plin,tarjeta,otro'],
             'reference'      => ['nullable', 'string', 'max:120'],
             'registrar_pago' => ['nullable', 'boolean'],
-            'crear_acceso'   => ['nullable', 'boolean'],
+            // Nombre unificado a 'crear_login': el checkbox del blade manda
+            // ese name y la ejecución de abajo también lo lee. Con
+            // 'crear_acceso' aquí, access_email nunca entraba a $datos y la
+            // línea 76 tiraba 500 (Undefined array key) apenas alguien
+            // marcaba la casilla (PLAN-CORRECCIONES-TECNICAS.md 1.3).
+            'crear_login'    => ['nullable', 'boolean'],
             'first_name'     => ['required_without:member_id', 'nullable', 'string', 'max:80'],
             'last_name'      => ['required_without:member_id', 'nullable', 'string', 'max:120'],
             'document'       => ['nullable', 'string', 'max:20'],
             'phone'          => ['nullable', 'string', 'max:40'],
             'email'          => ['nullable', 'email', 'max:180'],
+            // Causa raíz del IMC mudo (PROMPT-EJECUCION-MI-RUTINA.md, Parte
+            // 2): el paso 1 nunca pedía altura. Opcional a propósito — no
+            // puede bloquear un alta en el mostrador. Misma regla que
+            // PerfilController::actualizar.
+            'height_cm'      => ['nullable', 'integer', 'min:100', 'max:260'],
         ];
 
-        if ($request->boolean('crear_acceso')) {
+        if ($request->boolean('crear_login')) {
             $reglas += ['access_email' => ['required', 'email', 'max:180', Rule::unique('users', 'email')]];
         }
 

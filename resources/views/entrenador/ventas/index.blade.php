@@ -53,6 +53,21 @@
 
     {{-- ---------- Productos ---------- --}}
     @if ($tipo === 'producto')
+        {{-- "¿Cómo van mis ventas?" — respeta el mismo rango de fechas que
+             ya filtra esta pantalla, no uno fijo. Solo lo que él vendió. --}}
+        <article class="tarjeta grafico" data-revelar>
+            <div class="grafico__cabecera">
+                <h3 style="font-size:var(--t-lg)">Mis ventas en el rango</h3>
+            </div>
+            @if (array_sum($graficoVentas['datasets'][0]['data']) > 0)
+                <div class="grafico__lienzo">
+                    <canvas data-grafico="{{ json_encode(['tipo' => 'line'] + $graficoVentas) }}"></canvas>
+                </div>
+            @else
+                <x-estado-vacio icono="caja" texto="Sin ventas en el rango elegido." />
+            @endif
+        </article>
+
         <div class="tabla-envoltorio" data-revelar>
             <table class="tabla tabla--tarjetas">
                 <thead><tr><th>N°</th><th>Fecha</th><th>Productos</th><th class="tabla__oculta-movil">Método</th><th>Total</th></tr></thead>

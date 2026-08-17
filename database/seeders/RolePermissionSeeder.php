@@ -76,7 +76,13 @@ class RolePermissionSeeder extends Seeder
             'pagos.ver', 'pagos.registrar', 'caja.ver',
             'asistencia.registrar', 'asistencia.ver',
             'inventario.ver', 'ventas.registrar',
-            'reportes.ver',
+            // reportes.exportar ya existía pero no estaba asignado a nadie
+            // más que admin (implícito): recepción es quien registra y
+            // anula ventas del día a día, así que es quien necesita
+            // exportar/importar el Excel de ventas — sin esto el botón
+            // nuevo de exportar quedaba invisible para todo el mundo salvo
+            // el administrador.
+            'reportes.ver', 'reportes.exportar',
         ],
         'entrenador' => [
             'clientes.ver', 'clientes.crear',

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Biblioteca de ejercicios.
@@ -30,6 +31,18 @@ class Exercise extends Model
     }
 
     public function gym(): BelongsTo { return $this->belongsTo(Gym::class); }
+
+    // Inversas de las tablas que apuntan a exercise_id: sirven para saber si
+    // un ejercicio está en uso antes de desactivarlo o borrarlo.
+    public function routineExercises(): HasMany
+    {
+        return $this->hasMany(RoutineExercise::class);
+    }
+
+    public function programRoutineExercises(): HasMany
+    {
+        return $this->hasMany(ProgramRoutineExercise::class);
+    }
 
     /** Los globales más los propios del gimnasio indicado. */
     public function scopeDisponibles(Builder $q, ?int $gymId = null): Builder

@@ -61,7 +61,16 @@ class AttendanceEditRequest extends Model
      */
     public function getObjetoAttribute(): string
     {
-        return ($this->relationLoaded('attendance') && $this->attendance) ? 'cliente' : 'staff';
+        // Sin el eager load, la versión anterior devolvía 'staff' para
+        // cualquier solicitud cuya relación no estuviera cargada — incluidas
+        // las de cliente, que quedaban mal etiquetadas. Si la relación no
+        // está cargada se consulta el FK directamente (una query, sólo en
+        // ese caso); con with(['attendance','staffAttendance']) no ocurre.
+        if ($this->relationLoaded('attendance')) {
+            return $this->attendance ? 'cliente' : 'staff';
+        }
+
+        return $this->attendance()->exists() ? 'cliente' : 'staff';
     }
 
     public function getEsEliminacionAttribute(): bool

@@ -80,9 +80,40 @@ class VentaController extends Controller
                     ->whereBetween('sold_at', $rango)
                     ->sum('total'),
             ];
+
+            // "¿Cómo van mis ventas?" — dentro del MISMO rango que ya filtra
+            // esta pantalla (no uno fijo): si el usuario mira "este mes", la
+            // gráfica muestra este mes. Solo lo que él vendió (sold_by).
+            $datos['graficoVentas'] = $this->ventasPorDia($request->user()->id, $rango[0], $rango[1]);
         }
 
         return view('entrenador.ventas.index', $datos);
+    }
+
+    /** Serie diaria de ventas propias dentro de un rango, con los días sin venta en cero. */
+    private function ventasPorDia(int $userId, \Illuminate\Support\Carbon $desde, \Illuminate\Support\Carbon $hasta): array
+    {
+        $filas = Sale::where('sold_by', $userId)
+            ->completadas()
+            ->whereBetween('sold_at', [$desde, $hasta])
+            ->selectRaw('DATE(sold_at) as dia, SUM(total) as total')
+            ->groupBy('dia')
+            ->pluck('total', 'dia');
+
+        $etiquetas = $datos = [];
+        $cursor = $desde->copy()->startOfDay();
+        $fin = $hasta->copy()->startOfDay();
+
+        while ($cursor->lte($fin)) {
+            $etiquetas[] = $cursor->translatedFormat('d M');
+            $datos[] = (float) ($filas[$cursor->toDateString()] ?? 0);
+            $cursor->addDay();
+        }
+
+        return [
+            'labels' => $etiquetas,
+            'datasets' => [['label' => 'Ventas (S/)', 'data' => $datos, 'token' => '--sangre']],
+        ];
     }
 
     public function store(Request $request): RedirectResponse

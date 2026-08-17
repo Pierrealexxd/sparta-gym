@@ -447,6 +447,8 @@
                                     <input class="campo__control" type="text" name="phone" x-model="nuevo.phone" :disabled="clienteExistenteId"></label>
                                 <label class="campo"><span class="campo__etiqueta">Correo</span>
                                     <input class="campo__control" type="email" name="email" x-model="nuevo.email" :disabled="clienteExistenteId"></label>
+                                <label class="campo"><span class="campo__etiqueta">Altura (cm) — opcional</span>
+                                    <input class="campo__control" type="number" name="height_cm" min="100" max="260" x-model="nuevo.height_cm" :disabled="clienteExistenteId"></label>
                             </div>
 
                             <div class="formulario-panel__acciones">
@@ -536,10 +538,10 @@
 function matricula() {
     return {
         paso: 1, enviando: false,
-        nuevo: { first_name: '', last_name: '', document: '', phone: '', email: '' },
+        nuevo: { first_name: '', last_name: '', document: '', phone: '', email: '', height_cm: '' },
         planId: null, startsAt: new Date().toISOString().slice(0, 10), discount: 0,
         registrarPago: true, method: 'efectivo', reference: '',
-        crearAcceso: false, accessEmail: '',
+        crearLogin: false, accessEmail: '',
         planes: @json($planes->map(fn ($p) => ['id' => $p->id, 'name' => $p->name, 'price' => (float) $p->price])),
 
         // Selector de cliente existente — elegir uno rellena el paso 1 solo.
@@ -556,7 +558,7 @@ function matricula() {
         },
         elegirCliente(m) {
             this.clienteExistenteId = m.id;
-            this.nuevo = { first_name: m.first_name, last_name: m.last_name, document: m.document ?? '', phone: m.phone ?? '', email: m.email ?? '' };
+            this.nuevo = { first_name: m.first_name, last_name: m.last_name, document: m.document ?? '', phone: m.phone ?? '', email: m.email ?? '', height_cm: '' };
             this.buscarQ = m.first_name + ' ' + m.last_name + (m.code ? ' (' + m.code + ')' : '');
             this.resultados = [];
         },

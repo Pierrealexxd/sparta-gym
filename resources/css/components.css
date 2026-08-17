@@ -148,6 +148,14 @@
 .btn--grande { padding: 1.15rem 2.6rem; font-size: var(--t-base); }
 .btn--bloque { width: 100%; }
 
+/* --- WhatsApp: color de marca externo, ver --whatsapp en tokens.css --- */
+.btn--whatsapp { background: var(--whatsapp); color: #fff; }
+.btn--whatsapp:hover { background: var(--whatsapp-hover); }
+.btn--whatsapp svg { width: 16px; height: 16px; color: #fff; }
+@media (max-width: 740px) {
+    .btn--whatsapp { width: 100%; }
+}
+
 /* A 320px, .btn--grande.btn--bloque con texto largo ("Enviar mensaje")
    desbordaba ~7px: el padding horizontal fijo no dejaba sitio al texto en
    un botón que ya está forzado al 100% del contenedor. */
@@ -415,3 +423,24 @@ textarea.campo__control { min-height: 8rem; resize: vertical; }
 
 .aviso--exito { border-color: color-mix(in srgb, var(--ok) 40%, transparent); background: color-mix(in srgb, var(--ok) 10%, transparent); color: var(--ok); }
 .aviso--error { border-color: color-mix(in srgb, var(--sangre) 45%, transparent); background: color-mix(in srgb, var(--sangre) 12%, transparent); color: var(--alerta); }
+/* Informativo (formato de archivo esperado, ayudas de formulario): reusa
+   --agua, el único acento "frío" del sistema (ver tokens.css), en vez de
+   inventar un azul literal como pedía el plan original. */
+.aviso--info { border-color: color-mix(in srgb, var(--agua) 35%, transparent); background: color-mix(in srgb, var(--agua) 10%, transparent); color: var(--ceniza); }
+.aviso--info b { color: var(--hueso); }
+
+/* Recordatorio de membresía por vencer (detalle de cliente › Membresías). */
+.aviso--whatsapp {
+    align-items: center;
+    border-color: color-mix(in srgb, var(--whatsapp) 30%, transparent);
+    background: color-mix(in srgb, var(--whatsapp) 10%, transparent);
+    color: var(--ceniza);
+    flex-wrap: wrap;
+}
+.aviso--whatsapp svg { width: 20px; height: 20px; color: var(--whatsapp); flex-shrink: 0; }
+.aviso--whatsapp .aviso__texto { flex: 1; min-width: 200px; }
+.aviso--whatsapp .aviso__texto b { color: var(--hueso); }
+
+@media (max-width: 740px) {
+    .aviso--whatsapp { flex-direction: column; align-items: flex-start; }
+}

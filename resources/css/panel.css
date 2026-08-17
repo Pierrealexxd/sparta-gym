@@ -450,6 +450,106 @@
 .grafico__cabecera { display: flex; align-items: baseline; justify-content: space-between; gap: var(--e-3); }
 .grafico__lienzo { position: relative; height: 260px; }
 
+/* Rediseño del dashboard del cliente (PLAN-DASHBOARD-CLIENTE.md): 180px en
+   mobile para que 4 gráficas apiladas no conviertan el panel en un scroll
+   interminable — 260px se reserva para cuando hay espacio de sobra. */
+@media (max-width: 740px) {
+    .grafico__lienzo { height: 180px; }
+}
+
+/* ---------- Mi rutina: cards por día, colapsables (dashboard del cliente) ----------
+   Reemplaza la tabla densa de ejercicios por card por día — el mismo
+   patrón de "colapsable con Alpine x-show" que el resto del panel, sin
+   plugin de collapse (el proyecto no lo trae, ver graficos.js). */
+.rutina-dias { display: grid; gap: var(--e-3); }
+.rutina-dia {
+    border: 1px solid var(--acero);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    background: var(--relleno-suave);
+}
+.rutina-dia__cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--e-3);
+    width: 100%;
+    padding: var(--e-4);
+    text-align: left;
+    color: var(--hueso);
+    background: none;
+    transition: background var(--v-rapido);
+}
+.rutina-dia__cabecera:hover { background: var(--relleno-hover); }
+.rutina-dia__titulo {
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--brasa);
+}
+.rutina-dia__foco { color: var(--humo); text-transform: none; letter-spacing: normal; }
+.rutina-dia__flecha { flex: none; display: grid; place-items: center; color: var(--humo); transition: transform var(--v-medio) var(--curva-seca); }
+.rutina-dia__cuerpo { padding: 0 var(--e-4) var(--e-4); }
+
+/* ---------- Mi rutina (módulo canónico, /cliente/rutina) ----------
+   Pensada para usarse de pie, con el celular en la mano, entre series
+   (PROMPT-EJECUCION-MI-RUTINA.md): objetivos táctiles más grandes que
+   .rutina-dia del dashboard, y ejercicios en cards en vez de tabla —
+   nada que obligue a hacer zoom. */
+.rutina-completa { display: grid; gap: var(--e-4); }
+.rutina-dia-completo { padding: 0; overflow: hidden; }
+.rutina-dia-completo__cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--e-3);
+    width: 100%;
+    padding: var(--e-5);
+    text-align: left;
+    color: var(--hueso);
+    background: none;
+    min-height: 3.5rem;
+    transition: background var(--v-rapido);
+}
+.rutina-dia-completo__cabecera:hover { background: var(--relleno-hover); }
+.rutina-dia-completo__titulos { display: grid; gap: var(--e-1); }
+.rutina-dia-completo__nombre { font-family: var(--f-display); font-size: var(--t-lg); }
+.rutina-dia-completo__foco { color: var(--humo); font-size: var(--t-sm); }
+.rutina-ejercicios { display: grid; gap: var(--e-3); padding: 0 var(--e-5) var(--e-5); }
+.rutina-ejercicio {
+    padding: var(--e-4);
+    background: var(--relleno-suave);
+    border: 1px solid var(--acero);
+    border-radius: var(--r-md);
+}
+.rutina-ejercicio__nombre { font-size: var(--t-base); font-weight: 600; color: var(--hueso); }
+.rutina-ejercicio__prescripcion {
+    font-family: var(--f-mono);
+    font-size: var(--t-sm);
+    color: var(--brasa);
+    margin-top: var(--e-2);
+}
+.rutina-ejercicio__notas { font-size: var(--t-sm); color: var(--humo); margin-top: var(--e-2); font-style: italic; }
+
+/* Tablet (741–1024px): dos columnas por día para no dejar tanto espacio
+   muerto en el ancho medio — en mobile y desktop se queda a una columna
+   (desktop porque el contenido central ya tiene un ancho máximo cómodo). */
+@media (min-width: 741px) and (max-width: 1024px) {
+    .rutina-ejercicios { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---------- Mis metas: cards individuales (dashboard del cliente) ---------- */
+.meta-tarjeta {
+    padding: var(--e-4);
+    margin-bottom: var(--e-3);
+    background: var(--relleno-suave);
+    border: 1px solid var(--acero);
+    border-radius: var(--r-md);
+}
+.meta-tarjeta:last-child { margin-bottom: 0; }
+.meta-tarjeta .ficha__dato { border-bottom: 0; padding: 0; }
+
 /* ---------- Tablas ---------- */
 
 .tabla-envoltorio {
@@ -492,8 +592,10 @@
 }
 
 /* En móvil se ocultan las columnas menos críticas de cada tabla (las que
-   tienen la clase) para acortar el scroll horizontal — ver auditoría. */
-@media (max-width: 640px) {
+   tienen la clase) para acortar el scroll horizontal — ver auditoría.
+   Breakpoint: ver nota de "Tablas como tarjetas" debajo — debe coincidir
+   con ese, por eso es 960px y no 640px. */
+@media (max-width: 960px) {
     .tabla th.tabla__oculta-movil,
     .tabla td.tabla__oculta-movil { display: none; }
 }
@@ -507,8 +609,22 @@
                               propia franja separada por un filete.
      data-etiqueta="check"  → celdas de selección, sin etiqueta.
    Las columnas con tabla__oculta-movil siguen desapareciendo y, por eso,
-   no ocupan sitio dentro de la tarjeta. */
-@media (max-width: 640px) {
+   no ocupan sitio dentro de la tarjeta.
+
+   BUG REAL investigado (ago-2026): este breakpoint estaba en 640px, pero
+   el panel completo (.panel, línea ~185) pasa a layout de una sola columna
+   con menú hamburguesa recién a los 960px. Entre 641-960px (tablets,
+   phablets, cualquier phone en horizontal — la franja más común de "vista
+   móvil" real) la tabla se quedaba en modo comprimido de escritorio: el
+   .tabla-envoltorio con overflow-x:auto la recortaba y la celda de
+   acciones (editar/eliminar) quedaba fuera del área visible sin scroll
+   horizontal evidente. Medido en admin/clientes a 700px: scrollWidth 752px
+   vs clientWidth 656px, con los botones de editar/eliminar completamente
+   fuera del viewport (visibleInViewport:false). Subir este breakpoint a
+   960px lo alinea con el del panel: la tabla pasa a tarjetas en el mismo
+   punto en que el layout general ya se considera "móvil", así no queda
+   una franja intermedia donde ninguno de los dos modos funciona bien. */
+@media (max-width: 960px) {
     .tabla--tarjetas thead { display: none; }
     .tabla--tarjetas, .tabla--tarjetas tbody { display: block; width: 100%; }
     .tabla--tarjetas tbody tr {
@@ -635,6 +751,21 @@
     width: 16px; height: 16px; color: var(--humo); pointer-events: none;
 }
 .panel__busqueda input { padding-left: 2.6rem; }
+
+/* Fila de acciones secundarias debajo del filtro (hoy: exportar ventas).
+   Separada de .panel__toolbar porque no es un formulario: son enlaces de
+   descarga directa. */
+.toolbar-acciones {
+    display: flex; align-items: center; gap: var(--e-3);
+    margin: var(--e-4) 0;
+    flex-wrap: wrap;
+}
+.toolbar-acciones__label {
+    font-family: var(--f-mono);
+    font-size: var(--t-xs); text-transform: uppercase;
+    letter-spacing: .06em; color: var(--humo);
+}
+.btn--sm { padding: var(--e-2) var(--e-3); font-size: var(--t-xs); }
 
 /* ---------- Ficha / detalle ---------- */
 
@@ -1265,6 +1396,120 @@
     margin-bottom: var(--e-5);
 }
 .perfil__avatar--vista { width: 72px; height: 72px; flex: none; }
+
+/* ---------- Recomendaciones nutricionales (Fase 3 — perfil del socio) ---------- */
+.recomendaciones { display: grid; gap: var(--e-5); }
+.recomendaciones__titulo {
+    display: flex;
+    align-items: center;
+    gap: var(--e-2);
+    font-family: var(--f-display);
+    font-size: var(--t-lg);
+    text-transform: uppercase;
+    margin: 0;
+}
+.recomendaciones__titulo svg { width: 22px; height: 22px; color: var(--brasa); }
+
+.recomendaciones__grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--e-3); }
+
+.recomendacion {
+    display: flex;
+    align-items: center;
+    gap: var(--e-3);
+    padding: var(--e-4);
+    background: var(--relleno-suave);
+    border-radius: var(--r-md);
+    border: 1px solid var(--acero);
+}
+.recomendacion__icono {
+    width: 44px; height: 44px; min-width: 44px;
+    display: grid; place-items: center;
+    border-radius: var(--r-md);
+    color: var(--hueso);
+}
+.recomendacion__icono svg { width: 20px; height: 20px; }
+/* Cuatro acentos propios (proteína/creatina/agua/calorías): mismo criterio
+   que .recomendacion__icono--*, con degradados fijos que no viven en tokens
+   porque son combinaciones puntuales de esta tarjeta, no colores de marca. */
+.recomendacion__icono--proteina { background: var(--fuego); }
+.recomendacion__icono--creatina { background: linear-gradient(135deg, var(--bronce), var(--bronce-claro)); }
+.recomendacion__icono--agua     { background: linear-gradient(135deg, var(--agua), var(--agua-clara)); }
+.recomendacion__icono--calorias { background: linear-gradient(135deg, var(--brasa), var(--bronce-claro)); }
+
+.recomendacion__datos small {
+    display: block;
+    color: var(--humo);
+    font-size: var(--t-xs);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+.recomendacion__datos b { display: block; color: var(--hueso); font-size: var(--t-lg); font-family: var(--f-mono); }
+.recomendacion__datos span { color: var(--ceniza); font-size: var(--t-xs); }
+
+.recomendaciones__macros h4 {
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--ceniza);
+    margin: 0 0 var(--e-3);
+}
+.macro-barra { display: flex; height: 36px; border-radius: var(--r-md); overflow: hidden; }
+.macro {
+    display: grid;
+    place-items: center;
+    background: var(--sangre);
+    color: var(--hueso);
+    transition: flex var(--v-lento) var(--curva);
+    min-width: 2ch;
+}
+.macro--carbs { background: var(--brasa); }
+.macro--grasas { background: var(--bronce); }
+.macro b { font-family: var(--f-mono); font-size: var(--t-xs); font-weight: 600; }
+.macro small { font-size: 9px; text-transform: uppercase; letter-spacing: .04em; opacity: .8; }
+
+.recomendaciones__guia { justify-self: start; }
+
+@media (max-width: 740px) {
+    .recomendaciones__grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- Panel de progreso: aro de IMC + recordatorio (Fase 4) ---------- */
+.progreso-kpi__circulo {
+    width: 64px; height: 64px;
+    border-radius: var(--r-full);
+    background: conic-gradient(var(--brasa) calc(var(--progreso, 0) * 3.6deg), var(--acero) 0);
+    display: grid; place-items: center;
+    margin-bottom: var(--e-1);
+}
+.progreso-kpi__circulo span {
+    width: 52px; height: 52px;
+    display: grid; place-items: center;
+    border-radius: var(--r-full);
+    background: var(--grafito);
+    font-family: var(--f-mono);
+    font-size: var(--t-sm);
+    color: var(--hueso);
+}
+
+.recordatorio {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--e-3);
+    padding: var(--e-3) var(--e-4);
+    background: color-mix(in srgb, var(--brasa) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brasa) 20%, transparent);
+    border-radius: var(--r-md);
+    color: var(--ceniza);
+    font-size: var(--t-sm);
+}
+.recordatorio svg { width: 18px; height: 18px; color: var(--brasa); flex: none; }
+.recordatorio b { color: var(--brasa); }
+.recordatorio .btn { margin-left: auto; }
+@media (max-width: 480px) {
+    .recordatorio .btn { margin-left: 0; width: 100%; justify-content: center; }
+}
 
 /* ============================================================
    MENSAJERÍA · chat interno entre usuarios de la sede

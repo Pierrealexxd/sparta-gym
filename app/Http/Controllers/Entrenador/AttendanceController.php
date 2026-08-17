@@ -150,7 +150,38 @@ class AttendanceController extends Controller
             'turno'       => $turno,
             'filtros'     => array_filter(['turno' => $turno]),
             'kpis'        => $kpis,
+            'graficoMarcaciones' => $this->marcacionesPorSemana($request->user()->id, 12),
         ]);
+    }
+
+    /**
+     * "¿Cuán constante soy yo?" — sus propias marcaciones (user_id = él),
+     * por semana, fijo a las últimas 12 sin importar el mes que se esté
+     * mirando arriba. Una sola consulta agrupada por semana ISO.
+     */
+    private function marcacionesPorSemana(int $userId, int $semanas): array
+    {
+        $desde = now()->startOfWeek()->subWeeks($semanas - 1);
+
+        $filas = StaffAttendance::where('user_id', $userId)
+            ->where('clocked_in_at', '>=', $desde)
+            ->selectRaw('YEARWEEK(clocked_in_at, 3) as semana, COUNT(*) as total')
+            ->groupBy('semana')
+            ->pluck('total', 'semana');
+
+        $etiquetas = $datos = [];
+
+        for ($i = $semanas - 1; $i >= 0; $i--) {
+            $inicioSemana = now()->startOfWeek()->subWeeks($i);
+            $clave = (int) $inicioSemana->format('oW');
+            $etiquetas[] = $inicioSemana->translatedFormat('d M');
+            $datos[] = (int) ($filas[$clave] ?? 0);
+        }
+
+        return [
+            'labels' => $etiquetas,
+            'datasets' => [['label' => 'Marcaciones', 'data' => $datos, 'token' => '--brasa']],
+        ];
     }
 
     public function marcar(Request $request): RedirectResponse
@@ -303,7 +334,7 @@ class AttendanceController extends Controller
 
     public function marcarSalida(Request $request, Attendance $attendance): RedirectResponse
     {
-        abort_unless($attendance->registered_by === $request->user()->id, 403, 'Solo podés cerrar asistencias que registraste vos.');
+        abort_unless($attendance->registered_by === $request->user()->id, 403, 'Solo puedes cerrar asistencias que registraste.');
 
         $this->asistencias->marcarSalida($attendance);
 

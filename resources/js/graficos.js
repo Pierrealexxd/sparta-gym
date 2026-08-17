@@ -101,15 +101,53 @@ function construir(canvas) {
         };
     });
 
+    // Segundo eje Y (Fase 4 — panel de progreso): cuando un dataset trae
+    // "eje: 'y1'" (peso vs % grasa, escalas muy distintas), se le asigna su
+    // propio yAxisID y se agrega la escala derecha. Sin datasets con "eje",
+    // el gráfico queda exactamente como antes — un solo eje y.
+    const tieneEjeSecundario = datasets.some((ds) => ds.eje === 'y1');
+    datasets.forEach((ds) => { if (ds.eje === 'y1') ds.yAxisID = 'y1'; });
+
+    // Barra horizontal (dashboard del cliente — "¿qué días entreno?"):
+    // Chart.js no tiene un tipo dedicado, se logra con indexAxis: 'y' en el
+    // bar chart normal. Se lee del config GLOBAL (no del dataset, que es
+    // por-serie) y se resuelve ANTES de construir `options`/`new Chart()` —
+    // nunca con chart.update() después, que fuerza un segundo render.
+    // Al girar los ejes, el eje de VALOR pasa de 'y' a 'x' (y el de
+    // categorías de 'x' a 'y'); sin este swap el beginAtZero/rejilla se
+    // quedaban pegados al nombre de eje en vez de a su función real.
+    const horizontal = cfg.horizontal === true;
+    const ejeValor = horizontal ? 'x' : 'y';
+    const ejeIndice = horizontal ? 'y' : 'x';
+
+    const escalas = tipo === 'doughnut' ? {} : {
+        [ejeIndice]: { grid: { display: false } },
+        [ejeValor]: {
+            grid: { color: token('--grafico-rejilla-suave') },
+            beginAtZero: true,
+            title: tieneEjeSecundario && cfg.tituloEjeY ? { display: true, text: cfg.tituloEjeY, color: token('--grafico-texto') } : undefined,
+        },
+        ...(tieneEjeSecundario ? {
+            y1: {
+                type: 'linear',
+                position: 'right',
+                beginAtZero: true,
+                grid: { drawOnChartArea: false },
+                title: cfg.tituloEjeY1 ? { display: true, text: cfg.tituloEjeY1, color: token('--grafico-texto') } : undefined,
+            },
+        } : {}),
+    };
+
     const grafico = new Chart(canvas, {
         type: tipo,
         data: { labels: cfg.labels, datasets },
         options: {
+            indexAxis: horizontal ? 'y' : 'x',
             responsive: true,
             maintainAspectRatio: false,
             interaction: { intersect: false, mode: 'index' },
             plugins: {
-                legend: { display: tipo === 'doughnut', position: 'bottom', labels: { boxWidth: 10, padding: 16 } },
+                legend: { display: tipo === 'doughnut' || tieneEjeSecundario, position: 'bottom', labels: { boxWidth: 10, padding: 16 } },
                 tooltip: {
                     backgroundColor: token('--tooltip-fondo'),
                     borderColor: token('--tooltip-borde'),
@@ -120,10 +158,7 @@ function construir(canvas) {
                     cornerRadius: 8,
                 },
             },
-            scales: tipo === 'doughnut' ? {} : {
-                x: { grid: { display: false } },
-                y: { grid: { color: token('--grafico-rejilla-suave') }, beginAtZero: true },
-            },
+            scales: escalas,
         },
     });
 

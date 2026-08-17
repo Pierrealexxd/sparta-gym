@@ -38,6 +38,14 @@ class DashboardController extends Controller
             ->whereDate('sold_at', now()->subWeek()->toDateString())
             ->sum('total');
 
+        // Retención: de las membresías que vencieron en los últimos 30 días,
+        // cuántas sí se renovaron (hay otra membresía con renewed_from
+        // apuntando a ellas). Se compara contra el tramo de 30 días previo
+        // (día -60 a -31) para darle variación al número, mismo patrón que
+        // el cierre de hoy vs. hace una semana.
+        $retencionActual   = $this->retencion(now()->subDays(30), now());
+        $retencionAnterior = $this->retencion(now()->subDays(60), now()->subDays(31));
+
         $datos = [
             'kpis' => [
                 'ingresosHoy'          => $hoy,
@@ -51,6 +59,9 @@ class DashboardController extends Controller
                 'membresiasVencidas'=> $this->memberships()->vencidas()->count(),
                 'matriculasMes'     => $this->members()->whereMonth('joined_at', now()->month)->whereYear('joined_at', now()->year)->count(),
                 'asistenciaHoy'     => $this->attendances()->deHoy()->count(),
+                'retencion30dias'      => $retencionActual['pct'],
+                'retencion30diasAntes' => $retencionAnterior['pct'],
+                'retencionVariacion'   => $retencionActual['pct'] - $retencionAnterior['pct'],
             ],
 
             'porVencer' => $this->members()->with('currentMembership')
@@ -70,6 +81,13 @@ class DashboardController extends Controller
             'graficoMetodos'    => $this->distribucionMetodos(),
             'graficoAcumulado'  => $this->ingresosAcumuladosDelMes(),
             'graficoAltas'      => $this->altasSocios(6),
+
+            // Eje de clientes (rebalanceo del dashboard, sesgado a ingresos):
+            // altas diarias, altas vs bajas reales por mes, y una foto de la
+            // composición actual de la cartera.
+            'graficoAltasDiarias'   => $this->altasDiarias(30),
+            'graficoAltasVsBajas'   => $this->altasVsBajasPorMes(6),
+            'graficoComposicion'    => $this->composicionClientes(),
         ];
 
         // Modo "todas las sedes" (GymContext::id() es null): además del
@@ -255,6 +273,106 @@ class DashboardController extends Controller
         return [
             'labels' => $etiquetas,
             'datasets' => [['label' => 'Nuevos clientes', 'data' => $datos, 'token' => '--brasa']],
+        ];
+    }
+
+    /** Altas día a día: "los indicadores diarios de los clientes que voy registrando". */
+    private function altasDiarias(int $dias): array
+    {
+        $desde = now()->subDays($dias - 1)->startOfDay();
+
+        $filas = $this->members()->where('joined_at', '>=', $desde->toDateString())
+            ->selectRaw('joined_at as dia, COUNT(*) as total')
+            ->groupBy('dia')
+            ->pluck('total', 'dia');
+
+        return $this->rellenarDias($dias, fn (Carbon $d) => (int) ($filas[$d->toDateString()] ?? 0));
+    }
+
+    /**
+     * Altas vs. bajas reales por mes: no hay tabla de historial de estado
+     * (members.status es un enum del momento actual), así que la "baja" se
+     * deriva de las membresías — una que venció y a la que nadie apunta
+     * como renovación (renewed_from) es una baja de verdad. Dos consultas
+     * agrupadas (una por serie), no una por mes en un loop.
+     */
+    private function altasVsBajasPorMes(int $meses): array
+    {
+        $desde = now()->subMonthsNoOverflow($meses - 1)->startOfMonth();
+
+        $altas = $this->members()->where('joined_at', '>=', $desde->toDateString())
+            ->selectRaw('YEAR(joined_at) as anio, MONTH(joined_at) as mes, COUNT(*) as total')
+            ->groupBy('anio', 'mes')
+            ->get()
+            ->keyBy(fn ($f) => $f->anio . '-' . $f->mes);
+
+        $bajas = $this->memberships()
+            ->where('ends_at', '>=', $desde)
+            ->where('ends_at', '<', now())
+            ->whereNotExists(function ($q) {
+                $q->selectRaw('1')
+                    ->from('memberships as r')
+                    ->whereColumn('r.renewed_from', 'memberships.id');
+            })
+            ->selectRaw('YEAR(ends_at) as anio, MONTH(ends_at) as mes, COUNT(*) as total')
+            ->groupBy('anio', 'mes')
+            ->get()
+            ->keyBy(fn ($f) => $f->anio . '-' . $f->mes);
+
+        $etiquetas = $datosAltas = $datosBajas = [];
+
+        for ($i = $meses - 1; $i >= 0; $i--) {
+            $m = now()->subMonthsNoOverflow($i);
+            $clave = $m->year . '-' . $m->month;
+            $etiquetas[] = $m->translatedFormat('M');
+            $datosAltas[] = (int) ($altas[$clave]->total ?? 0);
+            $datosBajas[] = (int) ($bajas[$clave]->total ?? 0);
+        }
+
+        return [
+            'labels' => $etiquetas,
+            'datasets' => [
+                ['label' => 'Altas', 'data' => $datosAltas, 'token' => '--brasa'],
+                ['label' => 'Bajas', 'data' => $datosBajas, 'token' => '--sangre', 'relleno' => false, 'guiones' => [6, 5]],
+            ],
+        ];
+    }
+
+    /** Foto de hoy: cuántos socios están activos, inactivos o suspendidos ahora mismo. */
+    private function composicionClientes(): array
+    {
+        $filas = $this->members()
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $mapa = ['activo' => 'Activos', 'inactivo' => 'Inactivos', 'suspendido' => 'Suspendidos'];
+
+        return [
+            'labels' => array_values($mapa),
+            'data'   => array_map(fn ($clave) => (int) ($filas[$clave] ?? 0), array_keys($mapa)),
+        ];
+    }
+
+    /**
+     * % de membresías con ends_at en [$desde, $hasta] que sí se renovaron
+     * (existe otra membresía con renewed_from apuntando a ellas). Una sola
+     * consulta agregada, no una por membresía.
+     */
+    private function retencion(Carbon $desde, Carbon $hasta): array
+    {
+        $fila = $this->memberships()
+            ->whereBetween('ends_at', [$desde->toDateString(), $hasta->toDateString()])
+            ->selectRaw('COUNT(*) as total, SUM(CASE WHEN EXISTS (SELECT 1 FROM memberships r WHERE r.renewed_from = memberships.id) THEN 1 ELSE 0 END) as renovadas')
+            ->first();
+
+        $total = (int) ($fila->total ?? 0);
+        $renovadas = (int) ($fila->renovadas ?? 0);
+
+        return [
+            'total'     => $total,
+            'renovadas' => $renovadas,
+            'pct'       => $total > 0 ? (int) round($renovadas / $total * 100) : 0,
         ];
     }
 }

@@ -151,6 +151,61 @@
                     </div>
                 </form>
 
+                {{-- Recordatorio de WhatsApp: aparece solo cuando la
+                     membresía vigente está a punto de vencer o ya venció
+                     (mismo umbral que se usa para "socios por vencer" en
+                     el dashboard) y el cliente tiene teléfono. Es un enlace
+                     wa.me plano — no hay integración con la API de
+                     WhatsApp Business, el admin revisa y presiona Enviar
+                     desde su propio WhatsApp. --}}
+                @php
+                    $membresiaActual = $cliente->currentMembership;
+                    $diasRestantes = $membresiaActual?->dias_restantes;
+                    $umbralWhatsApp = config('sparta.aviso_vencimiento_dias', 7);
+                    $mostrarWhatsApp = $membresiaActual && $diasRestantes !== null && $diasRestantes <= $umbralWhatsApp;
+                @endphp
+
+                @if ($mostrarWhatsApp && $cliente->phone)
+                    @php
+                        $nombreCliente = $cliente->first_name;
+                        $planNombre = $membresiaActual->plan_name;
+                        $fechaVencimiento = $membresiaActual->ends_at->translatedFormat('d \\d\\e F');
+
+                        $mensajeWhatsApp = match (true) {
+                            $diasRestantes > 4 => "Hola {$nombreCliente}, tu membresía de {$planNombre} vence en {$diasRestantes} días ({$fechaVencimiento}). ¿Deseas renovarla? 💪",
+                            $diasRestantes > 2 => "Hola {$nombreCliente}, te recordamos que tu membresía de {$planNombre} vence en {$diasRestantes} días ({$fechaVencimiento}). ¡No la dejes pasar! 💪",
+                            $diasRestantes > 0 => "Hola {$nombreCliente}, tu membresía de {$planNombre} vence MAÑANA ({$fechaVencimiento}). ¡Agenda tu renovación! 💪",
+                            $diasRestantes === 0 => "Hola {$nombreCliente}, tu membresía de {$planNombre} vence HOY. ¡Ven a renovarla! 💪",
+                            default => "Hola {$nombreCliente}, tu membresía de {$planNombre} venció hace " . abs($diasRestantes) . " días ({$fechaVencimiento}). ¡Te esperamos para renovar! 💪",
+                        };
+
+                        // preg_replace deja solo dígitos: quita +, espacios y
+                        // guiones que la recepción pudo teclear al registrar
+                        // el teléfono — wa.me exige el número "pelado".
+                        $urlWhatsApp = 'https://wa.me/' . preg_replace('/\D+/', '', $cliente->phone)
+                                      . '?text=' . urlencode($mensajeWhatsApp);
+                    @endphp
+
+                    <div class="aviso aviso--whatsapp"
+                         x-data="{ abierto: true }"
+                         x-show="abierto"
+                         x-init="setTimeout(() => abierto = false, 3000)">
+                        <x-icono nombre="whatsapp" />
+                        <div class="aviso__texto">
+                            @if ($diasRestantes > 0)
+                                <b>Faltan {{ $diasRestantes }} días</b> para que venza la membresía
+                            @elseif ($diasRestantes === 0)
+                                <b>La membresía vence hoy</b>
+                            @else
+                                <b>La membresía venció hace {{ abs($diasRestantes) }} días</b>
+                            @endif
+                        </div>
+                        <a class="btn btn--whatsapp" href="{{ $urlWhatsApp }}" target="_blank" rel="noopener">
+                            <x-icono nombre="whatsapp" /> Enviar WhatsApp
+                        </a>
+                    </div>
+                @endif
+
                 <div class="tabla-envoltorio">
                     <table class="tabla tabla--tarjetas">
                         <thead><tr><th>Plan</th><th>Periodo</th><th>Precio</th><th>Estado</th></tr></thead>

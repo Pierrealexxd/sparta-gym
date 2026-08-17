@@ -71,6 +71,17 @@
             <span class="kpi__etiqueta">Matrículas este mes</span>
         </article>
 
+        <article class="tarjeta kpi tarjeta--interactiva">
+            <div class="kpi__cabecera">
+                <span class="kpi__icono"><x-icono nombre="escudo" /></span>
+            </div>
+            <b class="kpi__valor"><span data-contador="{{ $kpis['retencion30dias'] }}">0</span>%</b>
+            <span class="kpi__etiqueta">Retención · últimos 30 días</span>
+            <span class="kpi__variacion" style="color:var(--{{ $kpis['retencionVariacion'] < 0 ? 'sangre' : 'brasa' }})">
+                {{ $kpis['retencionVariacion'] >= 0 ? '+' : '−' }}{{ abs($kpis['retencionVariacion']) }} pts vs. tramo anterior
+            </span>
+        </article>
+
     </div>
 
     @if (\App\Support\GymContext::id() === null)
@@ -131,6 +142,47 @@
             </div>
         </article>
     </div>
+
+    <div class="g-2-1" data-revelar data-revelar-grupo>
+        <article class="tarjeta grafico">
+            <div class="grafico__cabecera">
+                <h3 style="font-size:var(--t-lg)">Altas de clientes · últimos 30 días</h3>
+            </div>
+            @if (array_sum($graficoAltasDiarias['data']) > 0)
+                <div class="grafico__lienzo">
+                    <canvas data-grafico="{{ json_encode(['tipo' => 'bar', 'labels' => $graficoAltasDiarias['labels'], 'datasets' => [['label' => 'Altas', 'data' => $graficoAltasDiarias['data'], 'token' => '--brasa']]]) }}"></canvas>
+                </div>
+            @else
+                <x-estado-vacio icono="usuarios" texto="Sin altas registradas en los últimos 30 días." />
+            @endif
+        </article>
+
+        <article class="tarjeta grafico">
+            <div class="grafico__cabecera">
+                <h3 style="font-size:var(--t-lg)">Composición de clientes · hoy</h3>
+            </div>
+            @if (array_sum($graficoComposicion['data']) > 0)
+                <div class="grafico__lienzo">
+                    <canvas data-grafico="{{ json_encode(['tipo' => 'doughnut', 'labels' => $graficoComposicion['labels'], 'label' => 'Clientes', 'data' => $graficoComposicion['data']]) }}"></canvas>
+                </div>
+            @else
+                <x-estado-vacio icono="usuarios" texto="Todavía no hay clientes registrados." />
+            @endif
+        </article>
+    </div>
+
+    <article class="tarjeta grafico" data-revelar>
+        <div class="grafico__cabecera">
+            <h3 style="font-size:var(--t-lg)">Altas vs. bajas · últimos 6 meses</h3>
+        </div>
+        @if (array_sum($graficoAltasVsBajas['datasets'][0]['data']) > 0 || array_sum($graficoAltasVsBajas['datasets'][1]['data']) > 0)
+            <div class="grafico__lienzo">
+                <canvas data-grafico="{{ json_encode($graficoAltasVsBajas) }}"></canvas>
+            </div>
+        @else
+            <x-estado-vacio icono="grafico" texto="Sin altas ni bajas en los últimos 6 meses." />
+        @endif
+    </article>
 
     <article class="tarjeta grafico" data-revelar>
         <div class="grafico__cabecera">

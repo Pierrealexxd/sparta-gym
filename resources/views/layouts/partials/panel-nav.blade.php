@@ -149,6 +149,11 @@
         <a class="panel__enlace" href="{{ route('cliente.dashboard') }}" data-title="Mi panel" aria-current="{{ request()->routeIs('cliente.dashboard') ? 'true' : 'false' }}">
             <x-icono nombre="panel" /> <span class="panel__texto">Mi panel</span>
         </a>
+        {{-- Módulo canónico de la rutina (PROMPT-EJECUCION-MI-RUTINA.md):
+             el dashboard sólo muestra un preview, acá está completa. --}}
+        <a class="panel__enlace" href="{{ route('cliente.rutina') }}" data-title="Mi rutina" aria-current="{{ request()->routeIs('cliente.rutina') ? 'true' : 'false' }}">
+            <x-icono nombre="pesa" /> <span class="panel__texto">Mi rutina</span>
+        </a>
         <a class="panel__enlace" href="{{ route('perfil') }}" data-title="Mi perfil" aria-current="{{ request()->routeIs('perfil') ? 'true' : 'false' }}">
             <x-icono nombre="perfil" /> <span class="panel__texto">Mi perfil</span>
         </a>

@@ -3,53 +3,28 @@
 namespace App\Http\Controllers\Cliente;
 
 use App\Http\Controllers\Controller;
-use App\Models\MealLog;
 use App\Models\MemberGoal;
 use App\Models\MemberMeasurement;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class ProgressController extends Controller
 {
-    /** Los cuatro tipos de comida que soporta el diario (Fase 2). */
-    private const TIPOS_COMIDA = ['desayuno', 'almuerzo', 'cena', 'merienda'];
-
     public function __invoke(Request $request): View
     {
+        // La rutina se quitó de acá (PROMPT-EJECUCION-MI-RUTINA.md, Parte 1):
+        // Progreso es medición, la rutina completa vive en /cliente/rutina —
+        // ya no hace falta cargar 'routines' en este controlador.
         $socio = $request->user()->member()->with([
             'measurements' => fn ($q) => $q->orderBy('measured_at'),
             'goals' => fn ($q) => $q->activos(),
-            'mealLogs' => fn ($q) => $q->delDia()->with('items'),
         ])->firstOrFail();
 
-        // Por tipo de comida, para precargar el formulario de "Hoy" con lo
-        // que ya se registró (y no partir de cero si vuelve a entrar).
-        $comidasHoy = $socio->mealLogs->keyBy('meal_type');
-
-        // Historial y platos se paganinan aparte: la colección measurements
-        // completa sigue alimentando KPIs, gráficos y metas.
         $medidasPag = $socio->measurements()->latest('measured_at')->paginate(10);
-        $platosPag  = $socio->savedMeals()->with('items')->latest()->paginate(10);
-
-        // Suma del día, para comparar contra la referencia de la Fase 1
-        // (Member::porcionesDiarias) — mismo cálculo que <x-discos> ya usa
-        // para "cuánto llevas de tu meta".
-        $totalHoy = ['palma' => 0, 'puno' => 0, 'cuenco' => 0, 'pulgar' => 0];
-        foreach ($socio->mealLogs as $comida) {
-            foreach ($comida->conteo as $tipo => $cantidad) {
-                $totalHoy[$tipo] += $cantidad;
-            }
-        }
 
         return view('cliente.progreso', [
-            'comidasHoy'      => $comidasHoy,
-            'totalHoy'        => $totalHoy,
-            'objetivoDiario'  => $socio->porcionesDiarias(),
-            'tiposComida'     => self::TIPOS_COMIDA,
             'medidasPag'      => $medidasPag,
-            'platosPag'       => $platosPag,
             'socio'           => $socio,
             'ultima'  => $socio->measurements->last(),
             'primera' => $socio->measurements->first(),
@@ -61,6 +36,30 @@ class ProgressController extends Controller
             'graficoGrasa' => [
                 'labels' => $socio->measurements->whereNotNull('body_fat_pct')->map(fn (MemberMeasurement $m) => $m->measured_at->format('d/m/y'))->values()->all(),
                 'data'   => $socio->measurements->whereNotNull('body_fat_pct')->map(fn (MemberMeasurement $m) => (float) $m->body_fat_pct)->values()->all(),
+            ],
+            // Fase 4 (PLAN-RUTINAS-PERSONALIZADAS.md): peso y grasa en el
+            // mismo gráfico, en dos ejes, para ver si de verdad se
+            // correlacionan — reemplaza los dos gráficos sueltos de antes
+            // (ver progreso.blade.php), que decían lo mismo por separado.
+            'graficoCombinado' => [
+                'tipo'   => 'line',
+                'labels' => $socio->measurements->map(fn (MemberMeasurement $m) => $m->measured_at->format('d/m/y'))->all(),
+                'tituloEjeY'  => 'Peso (kg)',
+                'tituloEjeY1' => '% Grasa',
+                'datasets' => [
+                    [
+                        'label'  => 'Peso (kg)',
+                        'data'   => $socio->measurements->map(fn (MemberMeasurement $m) => (float) $m->weight_kg)->all(),
+                        'token'  => '--sangre',
+                    ],
+                    [
+                        'label'  => '% Grasa',
+                        'data'   => $socio->measurements->map(fn (MemberMeasurement $m) => $m->body_fat_pct !== null ? (float) $m->body_fat_pct : null)->all(),
+                        'token'  => '--brasa',
+                        'eje'    => 'y1',
+                        'relleno'=> false,
+                    ],
+                ],
             ],
             'metas' => $socio->goals->map(function (MemberGoal $meta) use ($socio) {
                 $primera = $socio->measurements->first();
@@ -83,7 +82,21 @@ class ProgressController extends Controller
                     };
                 }
 
-                return ['meta' => $meta, 'progreso' => $progreso];
+                // "¿Cuánto me falta?" en unidades reales, no sólo el % —
+                // responde a la pregunta que el % no contesta por sí solo
+                // (PROMPT-EJECUCION-MI-RUTINA.md, Parte 3). Sólo necesita la
+                // última medida, no dos como el % de tendencia de arriba.
+                $restante = null;
+                if ($ultima && $meta->target_value && in_array($meta->type, ['perder_peso', 'ganar_musculo'], true)) {
+                    $actual   = (float) $ultima->weight_kg;
+                    $objetivo = (float) $meta->target_value;
+
+                    $restante = $meta->type === 'perder_peso'
+                        ? round($actual - $objetivo, 1)
+                        : round($objetivo - $actual, 1);
+                }
+
+                return ['meta' => $meta, 'progreso' => $progreso, 'restante' => $restante];
             }),
         ]);
     }
@@ -111,38 +124,5 @@ class ProgressController extends Controller
         );
 
         return back()->with('exito', 'Medida registrada.');
-    }
-
-    /**
-     * Diario de comidas por porciones (Fase 2): un registro por comida por
-     * día — volver a enviar la misma actualiza los conteos, no acumula
-     * filas (mismo criterio que guardar() con el peso). Sin calorías ni
-     * gramos: cuatro números, uno por porción de mano.
-     */
-    public function guardarComida(Request $request): RedirectResponse
-    {
-        $datos = $request->validate([
-            'meal_type' => ['required', Rule::in(self::TIPOS_COMIDA)],
-            'palma'     => ['nullable', 'integer', 'min:0', 'max:20'],
-            'puno'      => ['nullable', 'integer', 'min:0', 'max:20'],
-            'cuenco'    => ['nullable', 'integer', 'min:0', 'max:20'],
-            'pulgar'    => ['nullable', 'integer', 'min:0', 'max:20'],
-        ]);
-
-        $socio = $request->user()->member()->firstOrFail();
-
-        $comida = $socio->mealLogs()->updateOrCreate(
-            ['member_id' => $socio->id, 'meal_type' => $datos['meal_type'], 'logged_on' => now()->toDateString()],
-            [],
-        );
-
-        foreach (['palma', 'puno', 'cuenco', 'pulgar'] as $tipo) {
-            $comida->items()->updateOrCreate(
-                ['meal_log_id' => $comida->id, 'portion_type' => $tipo],
-                ['count' => $datos[$tipo] ?? 0],
-            );
-        }
-
-        return back()->with('exito', ucfirst($datos['meal_type']) . ' registrado.');
     }
 }

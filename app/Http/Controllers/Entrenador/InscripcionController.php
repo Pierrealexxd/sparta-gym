@@ -64,11 +64,45 @@ class InscripcionController extends Controller
         ];
 
         return view('entrenador.inscripciones.index', [
-            'inscripciones' => $inscripciones,
-            'planes'        => Plan::activos()->orderBy('price')->get(),
-            'aCargo'        => $aCargo,
-            'kpis'          => $kpis,
+            'inscripciones'         => $inscripciones,
+            'planes'                => Plan::activos()->orderBy('price')->get(),
+            'aCargo'                => $aCargo,
+            'kpis'                  => $kpis,
+            'graficoInscripciones'  => $this->inscripcionesPorMes($request->user()->id, 6),
         ]);
+    }
+
+    /**
+     * "¿Cómo va mi captación?" — inscripciones que ÉL registró, por mes.
+     * Solo las suyas (created_by = el entrenador logueado): un entrenador
+     * nunca ve el agregado de otros ni del gimnasio entero. Una sola
+     * consulta agrupada, no una por mes en un loop.
+     */
+    private function inscripcionesPorMes(int $userId, int $meses): array
+    {
+        $desde = now()->subMonthsNoOverflow($meses - 1)->startOfMonth();
+
+        $filas = Membership::where('created_by', $userId)
+            ->whereNull('renewed_from')
+            ->where('created_at', '>=', $desde)
+            ->selectRaw('YEAR(created_at) as anio, MONTH(created_at) as mes, COUNT(*) as total')
+            ->groupBy('anio', 'mes')
+            ->get()
+            ->keyBy(fn ($f) => $f->anio . '-' . $f->mes);
+
+        $etiquetas = $datos = [];
+
+        for ($i = $meses - 1; $i >= 0; $i--) {
+            $m = now()->subMonthsNoOverflow($i);
+            $clave = $m->year . '-' . $m->month;
+            $etiquetas[] = $m->translatedFormat('M');
+            $datos[] = (int) ($filas[$clave]->total ?? 0);
+        }
+
+        return [
+            'labels' => $etiquetas,
+            'datasets' => [['label' => 'Inscripciones', 'data' => $datos, 'token' => '--brasa']],
+        ];
     }
 
     /** Selector de cliente existente para el paso 1 del modal. */
@@ -106,15 +140,23 @@ class InscripcionController extends Controller
             'method'         => ['required', 'in:efectivo,transferencia,yape,plin,tarjeta,otro'],
             'reference'      => ['nullable', 'string', 'max:120'],
             'registrar_pago' => ['nullable', 'boolean'],
-            'crear_acceso'   => ['nullable', 'boolean'],
+            // Mismo bug que Admin\MatriculaController (PLAN-CORRECCIONES-
+            // TECNICAS.md 1.4): validación y ejecución debían usar el mismo
+            // nombre. Unificado a 'crear_login', que es el name real del
+            // checkbox en el blade.
+            'crear_login'    => ['nullable', 'boolean'],
             'first_name'     => ['required_without:member_id', 'nullable', 'string', 'max:80'],
             'last_name'      => ['required_without:member_id', 'nullable', 'string', 'max:120'],
             'document'       => ['nullable', 'string', 'max:20'],
             'phone'          => ['nullable', 'string', 'max:40'],
             'email'          => ['nullable', 'email', 'max:180'],
+            // Mismo arreglo que Admin\MatriculaController: opcional a
+            // propósito, no puede bloquear una inscripción en el mostrador
+            // (PROMPT-EJECUCION-MI-RUTINA.md, Parte 2).
+            'height_cm'      => ['nullable', 'integer', 'min:100', 'max:260'],
         ];
 
-        if ($request->boolean('crear_acceso')) {
+        if ($request->boolean('crear_login')) {
             $reglas += ['access_email' => ['required', 'email', 'max:180', Rule::unique('users', 'email')]];
         }
 

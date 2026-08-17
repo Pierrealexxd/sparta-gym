@@ -15,7 +15,7 @@ class Routine extends Model
     use HasFactory, SoftDeletes, BelongsToGym;
 
     protected $fillable = [
-        'gym_id', 'member_id', 'trainer_id', 'name', 'objective',
+        'gym_id', 'member_id', 'trainer_id', 'program_id', 'name', 'objective',
         'notes', 'starts_at', 'ends_at', 'status',
     ];
 
@@ -26,6 +26,7 @@ class Routine extends Model
 
     public function member(): BelongsTo  { return $this->belongsTo(Member::class); }
     public function trainer(): BelongsTo { return $this->belongsTo(Trainer::class); }
+    public function program(): BelongsTo { return $this->belongsTo(Program::class); }
 
     public function days(): HasMany
     {

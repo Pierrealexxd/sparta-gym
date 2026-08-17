@@ -78,9 +78,18 @@ class Sale extends Model
     {
         $gymId = GymContext::id();
 
+        // Sin sede activa, el when() se saltaba el filtro y tomaba el último
+        // número de TODAS las sedes: dos sedes trabajando a la vez podían
+        // recibir el mismo correlativo. Es preferible fallar ruidosamente
+        // que emitir un número duplicado — quien llame sin contexto de
+        // gimnasio tiene un problema antes de llegar hasta aquí.
+        if (! $gymId) {
+            throw new \RuntimeException('No hay gimnasio activo para generar número de venta.');
+        }
+
         $ultimo = DB::transaction(function () use ($gymId) {
             return static::query()
-                ->when($gymId, fn (Builder $q) => $q->where('gym_id', $gymId))
+                ->where('gym_id', $gymId)
                 ->lockForUpdate()
                 ->orderByDesc('id')
                 ->value('number');

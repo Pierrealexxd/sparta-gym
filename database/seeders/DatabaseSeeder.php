@@ -17,6 +17,8 @@ class DatabaseSeeder extends Seeder
             SpartaGymSeeder::class,
             ExerciseSeeder::class,
             RecipeSeeder::class,
+            ProgramSeeder::class,
+            ProgramRoutineSeeder::class,
             DemoSeeder::class,
         ]);
     }

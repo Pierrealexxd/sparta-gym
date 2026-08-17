@@ -1312,6 +1312,176 @@
 }
 
 /* ============================================================
+   PROGRAMAS · rutinas personalizadas (Fase 1-2 de
+   PLAN-RUTINAS-PERSONALIZADAS.md)
+   ============================================================ */
+
+.programas {
+    display: grid;
+    gap: var(--e-5);
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.programa {
+    display: grid;
+    gap: var(--e-4);
+    text-align: center;
+    justify-items: center;
+    cursor: pointer;
+}
+.programa__icono {
+    width: 64px; height: 64px;
+    display: grid; place-items: center;
+    background: var(--fuego);
+    border-radius: var(--r-lg);
+    color: var(--hueso);
+}
+.programa__icono svg { width: 28px; height: 28px; }
+.programa__nombre {
+    font-family: var(--f-display);
+    font-size: var(--t-2xl);
+    text-transform: uppercase;
+    letter-spacing: .02em;
+}
+.programa__objetivo {
+    font-family: var(--f-mono);
+    color: var(--brasa);
+    font-size: var(--t-xs);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+}
+.programa__caracteristicas {
+    list-style: none;
+    display: grid;
+    gap: var(--e-3);
+    text-align: left;
+    color: var(--ceniza);
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    max-width: 28ch;
+}
+.programa__caracteristicas li {
+    display: flex;
+    align-items: center;
+    gap: var(--e-2);
+    font-size: var(--t-sm);
+}
+.programa__caracteristicas svg { width: 16px; height: 16px; color: var(--brasa); flex: none; }
+.programa__cta { margin-top: var(--e-2); }
+
+/* Carrusel en móvil: mismo patrón que planes/testimonios/biblioteca. */
+@media (max-width: 740px) {
+    .programas {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: var(--e-4);
+        margin: 0 calc(-1 * var(--e-4));
+        padding: var(--e-5) var(--e-4) var(--e-2);
+    }
+    .programas::-webkit-scrollbar { display: none; }
+    .programa { flex: 0 0 85%; scroll-snap-align: center; }
+}
+
+/* ---------- Modal de detalle de programa ---------- */
+.modal-info__caja--ancho { width: min(600px, 100%); }
+
+.programa-detalle { display: grid; gap: var(--e-5); }
+.programa-detalle__cabecera {
+    display: flex;
+    align-items: center;
+    gap: var(--e-4);
+    padding-right: var(--e-7);
+    padding-bottom: var(--e-4);
+    border-bottom: 1px solid var(--acero);
+}
+.programa-detalle__icono {
+    width: 56px; height: 56px; min-width: 56px;
+    display: grid; place-items: center;
+    border-radius: var(--r-lg);
+    background: var(--fuego);
+    color: var(--hueso);
+}
+.programa-detalle__icono svg { width: 26px; height: 26px; }
+.programa-detalle__titulo {
+    font-family: var(--f-display);
+    font-size: var(--t-xl);
+    text-transform: uppercase;
+    margin: 0;
+}
+.programa-detalle__tagline {
+    font-family: var(--f-mono);
+    color: var(--brasa);
+    font-size: var(--t-xs);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin: var(--e-1) 0 0;
+}
+.programa-detalle__descripcion { display: grid; gap: var(--e-3); color: var(--humo); font-size: var(--t-sm); line-height: 1.6; }
+.programa-detalle__lista { list-style: none; display: grid; gap: var(--e-3); padding: 0; margin: 0; }
+.programa-detalle__lista li {
+    display: flex;
+    align-items: center;
+    gap: var(--e-2);
+    color: var(--ceniza);
+    font-size: var(--t-sm);
+}
+.programa-detalle__lista li::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--brasa);
+    border-radius: var(--r-full);
+    flex-shrink: 0;
+}
+.programa-detalle__ejemplo {
+    background: var(--relleno-suave);
+    border-radius: var(--r-md);
+    padding: var(--e-4);
+}
+.programa-detalle__ejemplo h4 {
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--ceniza);
+    margin: 0 0 var(--e-3);
+}
+.programa-detalle__ejercicios { display: grid; gap: var(--e-3); }
+.programa-detalle__ejercicio {
+    display: flex;
+    align-items: center;
+    gap: var(--e-3);
+    padding: var(--e-3);
+    background: var(--grafito);
+    border-radius: var(--r-md);
+    border: 1px solid var(--acero);
+}
+.programa-detalle__ejercicio .etiqueta {
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    text-transform: uppercase;
+    color: var(--brasa);
+    min-width: 60px;
+}
+.programa-detalle__ejercicio b { color: var(--hueso); font-weight: 500; flex: 1; }
+.programa-detalle__ejercicio small { color: var(--humo); font-size: var(--t-xs); }
+.programa-detalle__acciones {
+    display: flex;
+    gap: var(--e-3);
+    justify-content: center;
+    flex-wrap: wrap;
+    padding-top: var(--e-4);
+    border-top: 1px solid var(--acero);
+}
+
+@media (max-width: 480px) {
+    .programa-detalle__ejercicio { flex-wrap: wrap; }
+}
+
+/* ============================================================
    GUÍAS PARA EMPEZAR
    ============================================================ */
 
@@ -1456,7 +1626,8 @@ ul.guia__lista li::before {
 @media (max-width: 740px) {
     .planes .tarjeta--interactiva,
     .testimonios .tarjeta--interactiva,
-    .biblioteca .tarjeta--interactiva {
+    .biblioteca .tarjeta--interactiva,
+    .programas .tarjeta--interactiva {
         transition: transform var(--v-medio) var(--curva),
                     opacity var(--v-medio) var(--curva),
                     filter var(--v-medio) var(--curva);

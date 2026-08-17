@@ -34,6 +34,10 @@ class MatriculaService
                 'document'   => $datosSocio['document'] ?? null,
                 'phone'      => $datosSocio['phone'] ?? null,
                 'email'      => $datosSocio['email'] ?? null,
+                // Opcional: si el mostrador no la tiene a mano, la matrícula
+                // se completa igual (ver PROMPT-EJECUCION-MI-RUTINA.md,
+                // Parte 2 — sin esto el IMC queda mudo en Mi progreso).
+                'height_cm'  => $datosSocio['height_cm'] ?? null,
                 'status'     => 'activo',
                 'code'       => Member::generarCodigo(),
             ]);

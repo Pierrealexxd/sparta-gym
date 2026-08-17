@@ -13,6 +13,8 @@ use App\Http\Controllers\Admin\MatriculaController;
 use App\Http\Controllers\Admin\MembershipController;
 use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProgramController;
+use App\Http\Controllers\Admin\ProgramRoutineController;
 use App\Http\Controllers\Admin\RecipeController;
 use App\Http\Controllers\Admin\SaleController;
 use App\Http\Controllers\Admin\TestimonialController;
@@ -153,6 +155,37 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
             ->name('contenido.contacto');
         Route::post('contenido/contacto', [ContactoController::class, 'guardar'])
             ->name('contenido.contacto.guardar');
+
+        // Programas (PLAN-PROGRAMAS.md): CRUD como modal, igual que FAQs y
+        // testimonios — solo 'create'/'edit' quedan fuera porque no hay
+        // páginas propias (ver corrección #3 de PROMPT-EJECUCION-PROGRAMAS.md).
+        Route::resource('programas', ProgramController::class)
+            ->only(['index', 'store', 'update', 'destroy'])
+            ->parameters(['programas' => 'programa']);
+        Route::post('programas/{programa}/publicar', [ProgramController::class, 'publicar'])
+            ->name('programas.publicar');
+        Route::post('programas/{programa}/ocultar', [ProgramController::class, 'ocultar'])
+            ->name('programas.ocultar');
+
+        // Rutinas base por programa: sí llevan páginas propias (create/edit),
+        // el formulario con días/ejercicios anidados no cabe en un modal.
+        // Días/ejercicios se agregan/quitan con sus propias rutas, mismo
+        // patrón que entrenador.entrenamientos.dias.* / dias.ejercicios.* —
+        // el plan pedía un único formulario Alpine con arrays anidados, pero
+        // el código real de rutinas (entrenador/rutinas) no funciona así:
+        // se editan una vez creada la rutina, día a día (ver corrección en
+        // PROMPT-EJECUCION-PROGRAMAS.md, "el código real manda").
+        Route::resource('programas.rutinas', ProgramRoutineController::class)
+            ->except(['show'])
+            ->parameters(['programas' => 'programa', 'rutinas' => 'rutina']);
+        Route::post('programas/{programa}/rutinas/{rutina}/dias', [ProgramRoutineController::class, 'agregarDia'])
+            ->name('programas.rutinas.dias.store');
+        Route::delete('rutinas-base/dias/{dia}', [ProgramRoutineController::class, 'eliminarDia'])
+            ->name('programas.rutinas.dias.destroy');
+        Route::post('rutinas-base/dias/{dia}/ejercicios', [ProgramRoutineController::class, 'agregarEjercicio'])
+            ->name('programas.rutinas.dias.ejercicios.store');
+        Route::delete('rutinas-base/ejercicios/{ejercicio}', [ProgramRoutineController::class, 'eliminarEjercicio'])
+            ->name('programas.rutinas.ejercicios.destroy');
     });
 
     Route::middleware('permiso:inventario.ver')->group(function () {
@@ -171,6 +204,13 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
         ->name('ventas.anular')->middleware('permiso:pagos.anular');
     Route::get('ventas/buscar-cliente', [SaleController::class, 'buscarCliente'])
         ->name('ventas.buscar-cliente')->middleware('permiso:ventas.registrar');
+    // Antes de "ventas/{venta}/anular" en el archivo no importa (Laravel
+    // matchea por método+segmento literal primero), pero "exportar" e
+    // "importar" son literales fijos, así que no chocan con {venta}.
+    Route::get('ventas/exportar', [SaleController::class, 'exportar'])
+        ->name('ventas.exportar')->middleware('permiso:reportes.exportar');
+    Route::post('ventas/importar', [SaleController::class, 'importar'])
+        ->name('ventas.importar')->middleware('permiso:reportes.exportar');
 
     Route::get('usuarios/buscar-clientes', [UserController::class, 'buscarClientes'])
         ->name('usuarios.buscar-clientes')
