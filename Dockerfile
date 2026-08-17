@@ -7,6 +7,9 @@ RUN npm run build
 
 FROM composer:2 AS deps
 WORKDIR /app
+RUN apk add --no-cache freetype-dev libpng-dev libjpeg-turbo-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --prefer-dist --no-scripts --no-progress
 COPY . .
@@ -14,8 +17,9 @@ RUN composer install --no-dev --no-interaction --prefer-dist --no-scripts --no-p
 
 FROM php:8.3-cli-alpine
 WORKDIR /app
-RUN apk add --no-cache icu-dev oniguruma-dev \
-    && docker-php-ext-install pdo_mysql mbstring intl \
+RUN apk add --no-cache icu-dev oniguruma-dev freetype-dev libpng-dev libjpeg-turbo-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_mysql mbstring intl gd \
     && docker-php-ext-enable opcache
 COPY --from=deps /app /app
 COPY --from=assets /app/public/build /app/public/build
