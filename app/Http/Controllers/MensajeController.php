@@ -92,8 +92,16 @@ class MensajeController extends Controller
     {
         $datos = $request->validate(['user_id' => ['required', 'exists:users,id']]);
 
+        // Corrección de bug real (producción, agosto 2026): un admin viendo
+        // "Todas las sedes" tiene GymContext::id() === null a propósito (ver
+        // EstablecerSedeActiva) — filtrar acá por ese null convertía el
+        // where en un "gym_id IS NULL" (Laravel interpreta where(col, null)
+        // como whereNull) y de ahí, o no encontraba al destinatario (404) o
+        // encontraba solo cuentas con gym_id nulo por error de datos. El
+        // directorio ya listó a este usuario sin ese filtro roto (ver
+        // directorio() más abajo) — acá debe poder encontrarlo igual.
         $otro = User::query()
-            ->where('gym_id', GymContext::id())
+            ->when(GymContext::id(), fn ($q) => $q->where('gym_id', GymContext::id()))
             ->where('is_active', true)
             ->findOrFail($datos['user_id']);
 
@@ -112,7 +120,21 @@ class MensajeController extends Controller
 
         if (! $conversacion) {
             $conversacion = DB::transaction(function () use ($otro, $request) {
-                $hilo = Conversation::create();
+                // Conversation::create() dependía de que BelongsToGym rellenara
+                // gym_id desde GymContext::id() — con el admin en "Todas las
+                // sedes" ese valor es null a propósito, y como la columna no
+                // admite NULL, el INSERT tiraba
+                // "SQLSTATE[HY000]: 1364 Field 'gym_id' doesn't have a default
+                // value" (500 real visto en producción). Se resuelve un
+                // gym_id explícito: el del destinatario primero (con quién
+                // se conversa manda), y solo si tampoco lo tiene, el del
+                // gimnasio por defecto de la config.
+                $gymId = $otro->gym_id
+                    ?? $request->user()->gym_id
+                    ?? GymContext::id()
+                    ?? \App\Models\Gym::where('slug', config('sparta.gym_slug'))->value('id');
+
+                $hilo = Conversation::create(['gym_id' => $gymId]);
                 $hilo->participants()->createMany([
                     ['user_id' => $request->user()->id],
                     ['user_id' => $otro->id],
@@ -131,8 +153,15 @@ class MensajeController extends Controller
         $rol = $request->query('rol', '');
         $termino = trim((string) $request->query('q'));
 
+        // Mismo bug que en conversar(): con GymContext::id() null (admin en
+        // "Todas las sedes"), un where('gym_id', null) sin querer se lee
+        // como "gym_id IS NULL" — de ahí que el filtro "Admin" saliera
+        // vacío ("nadie con ese filtro") aunque sí hubiera admins/recepción
+        // reales, y que "Todos" mostrara únicamente cuentas con gym_id nulo
+        // por error de datos en vez de todo el mundo. Con GymContext::id()
+        // presente (sede específica elegida) el filtro sigue igual que antes.
         $usuarios = User::query()
-            ->where('gym_id', GymContext::id())
+            ->when(GymContext::id(), fn ($q) => $q->where('gym_id', GymContext::id()))
             ->where('is_active', true)
             ->where('id', '!=', $request->user()->id)
             ->with('role')

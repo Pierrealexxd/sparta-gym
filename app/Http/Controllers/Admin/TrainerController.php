@@ -47,6 +47,16 @@ class TrainerController extends Controller
     {
         $datos = $this->validarDatos($request);
 
+        // Corrección de bug real (producción, agosto 2026): con el admin
+        // viendo "Todas las sedes", GymContext::id() es null a propósito
+        // (ver EstablecerSedeActiva) — eso dejaba crear un entrenador con
+        // gym_id nulo (users.gym_id sí admite NULL) que después rompía
+        // cualquier cosa que sí lo necesite obligatorio, como abrir una
+        // conversación con él (ver MensajeController::conversar). Un
+        // entrenador pertenece a una sede física real, así que se pide
+        // elegir una específica en vez de adivinar o guardar a medias.
+        abort_if(GymContext::id() === null, 422, 'Elige una sede específica (no "Todas las sedes") antes de registrar un entrenador.');
+
         $user = User::create([
             'gym_id'   => GymContext::id(),
             'role_id'  => Role::where('slug', 'entrenador')->value('id'),
