@@ -75,7 +75,13 @@ class MensajeController extends Controller
 
         $datos = $request->validate(['body' => ['required', 'string', 'max:2000']]);
 
+        // Mismo bug de fondo que conversar(): messages.gym_id tampoco admite
+        // NULL y dependía de BelongsToGym + GymContext::id() (null con el
+        // admin en "Todas las sedes"). El hilo ya tiene un gym_id resuelto
+        // desde que se creó — un mensaje nuevo hereda el de su conversación,
+        // no el del contexto ambiguo de quien lo escribe.
         $mensaje = $conversacion->messages()->create([
+            'gym_id'    => $conversacion->gym_id,
             'sender_id' => $yo->id,
             'body'      => trim($datos['body']),
         ]);
@@ -135,9 +141,15 @@ class MensajeController extends Controller
                     ?? \App\Models\Gym::where('slug', config('sparta.gym_slug'))->value('id');
 
                 $hilo = Conversation::create(['gym_id' => $gymId]);
+
+                // Mismo problema, una tabla más abajo: conversation_participants
+                // también exige gym_id y también dependía del mismo
+                // BelongsToGym + GymContext::id() (null en "Todas las sedes").
+                // Se usa el gym_id que ya quedó resuelto arriba en $hilo, no
+                // GymContext, para no repetir el mismo bug fila por fila.
                 $hilo->participants()->createMany([
-                    ['user_id' => $request->user()->id],
-                    ['user_id' => $otro->id],
+                    ['user_id' => $request->user()->id, 'gym_id' => $hilo->gym_id],
+                    ['user_id' => $otro->id, 'gym_id' => $hilo->gym_id],
                 ]);
 
                 return $hilo;
