@@ -93,6 +93,12 @@ class ProductController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Mismo freno que TrainerController: un producto exige gym_id y no
+        // debe quedar sin sede porque el admin estaba viendo "Todas las sedes".
+        if ($bloqueo = $this->exigirSedeEspecifica('un producto')) {
+            return $bloqueo;
+        }
+
         // Si el admin marcó "Generar SKU automáticamente", inyectamos el SKU
         // generado antes devalidar, de modo que la validación de unicidad pase
         // (el SKU es SP-XXXX con número máximo+1, garantizado único).

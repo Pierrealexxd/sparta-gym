@@ -205,6 +205,20 @@
                     <div class="aviso aviso--exito" role="status" data-revelar>{{ session('bienvenida') }}</div>
                 @endif
 
+                {{-- Recordatorio permanente (no un toast que se cierra solo):
+                     con "Todas las sedes" activa, GymContext::id() es null a
+                     propósito para que los reportes agreguen todo — pero
+                     crear clientes/entrenadores/planes/productos exige una
+                     sede real (ver Controller::exigirSedeEspecifica). Mejor
+                     avisar antes de que el admin llene un formulario entero
+                     y recién ahí se entere. --}}
+                @if (auth()->user()->tienePermiso('sedes.ver-todas') && \App\Support\GymContext::id() === null)
+                    <div class="aviso aviso--info" role="status">
+                        <b>Viendo "Todas las sedes".</b>
+                        Para crear clientes, entrenadores, planes o productos, cambia primero a una sede específica en el menú lateral (📍 arriba).
+                    </div>
+                @endif
+
                 <section class="membrete" data-revelar>
                     <div class="membrete__texto">
                         <span class="membrete__sede">{{ \App\Support\GymContext::current()?->name ?? 'Todas las sedes' }}</span>

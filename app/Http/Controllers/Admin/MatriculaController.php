@@ -29,6 +29,13 @@ class MatriculaController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Mismo freno que TrainerController/ProductController/PlanController:
+        // un cliente nuevo (Member) exige gym_id y no puede quedar sin sede
+        // porque el admin estaba viendo "Todas las sedes" cuando lo registró.
+        if ($bloqueo = $this->exigirSedeEspecifica('un cliente')) {
+            return $bloqueo;
+        }
+
         $reglas = [
             'member_id'      => ['nullable', 'integer'],
             'plan_id'        => ['required', 'exists:plans,id'],

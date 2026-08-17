@@ -30,6 +30,12 @@ class PlanController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Mismo freno que TrainerController: un plan exige gym_id y no debe
+        // quedar sin sede porque el admin estaba viendo "Todas las sedes".
+        if ($bloqueo = $this->exigirSedeEspecifica('un plan')) {
+            return $bloqueo;
+        }
+
         $datos = $this->validarDatos($request);
         $datos['slug'] = Str::slug($datos['name']);
 
