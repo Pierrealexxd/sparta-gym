@@ -147,19 +147,32 @@
                                     <div class="notificaciones__lista">
                                         <template x-for="n in items" :key="n.id">
                                             <button type="button" class="notificaciones__item" :class="{ 'is-no-leida': !n.leida }" @click="irA(n)">
-                                                <span class="notificaciones__item-icono">
+                                                {{-- El backend serializa la columna como "icon" (ver
+                                                     NotificationService::serializar), no "icono" — con la clave en
+                                                     español ningún x-show de abajo matcheaba nunca, así que el chip
+                                                     salía siempre vacío ("cuadrado que no carga"), sin importar el
+                                                     tipo de notificación. data-icono (el atributo, no la clave JS)
+                                                     colorea el chip según el módulo que la originó. --}}
+                                                <span class="notificaciones__item-icono" :data-icono="n.icon">
                                                     @foreach (['caja','chat','entrada','reloj','billetera','estrella','correo','usuarios','escudo','check','campana','objetivo','cerrar'] as $icono)
-                                                        <x-icono nombre="{{ $icono }}" x-show="n.icono === '{{ $icono }}'" />
+                                                        <x-icono nombre="{{ $icono }}" x-show="n.icon === '{{ $icono }}'" />
                                                     @endforeach
                                                 </span>
                                                 <span class="notificaciones__item-info">
-                                                    <b x-text="n.title"></b>
-                                                    <small x-text="n.body"></small>
+                                                    <b x-text="n.title" :title="n.title"></b>
+                                                    {{-- La hora vivía en una columna aparte a la derecha del todo:
+                                                         en el cajón angosto de móvil eso le quitaba ancho al título
+                                                         y lo truncaba casi de inmediato ("Nuevo m…"). Ahora comparte
+                                                         línea con el cuerpo, debajo del título, que así aprovecha
+                                                         todo el ancho disponible. --}}
+                                                    <span class="notificaciones__item-meta">
+                                                        <small x-text="n.body" :title="n.body"></small>
+                                                        <span class="notificaciones__item-hora" x-text="n.hora"></span>
+                                                    </span>
                                                     {{-- Solo llega poblado para el admin, que ve notificaciones de
                                                          todas sus sedes en un mismo cajón. --}}
                                                     <span class="notificaciones__item-sede" x-show="n.sede" x-text="n.sede"></span>
                                                 </span>
-                                                <span class="notificaciones__item-hora" x-text="n.hora"></span>
                                             </button>
                                         </template>
                                         <div class="notificaciones__vacio" x-show="!cargando && items.length === 0">
@@ -247,8 +260,8 @@
                     @endforeach
                 </span>
                 <span class="toast__texto">
-                    <b x-text="t.titulo"></b>
-                    <small x-text="t.cuerpo"></small>
+                    <b x-text="t.titulo" :title="t.titulo"></b>
+                    <small x-text="t.cuerpo" :title="t.cuerpo"></small>
                 </span>
                 <button class="toast__cerrar" type="button" @click="$store.toasts.cerrar(t.id)" aria-label="Cerrar">
                     <x-icono nombre="cerrar" />

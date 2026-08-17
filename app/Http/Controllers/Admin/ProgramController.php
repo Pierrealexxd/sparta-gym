@@ -95,15 +95,29 @@ class ProgramController extends Controller
             'duration_weeks' => ['nullable', 'integer', 'min:1', 'max:52'],
             'difficulty'     => ['required', 'in:principiante,intermedio,avanzado'],
             'sort_order'     => ['nullable', 'integer', 'min:0'],
+            // FASE 3 de PLAN-GUIAS-EJERCICIO.md: recomendaciones que ve el
+            // cliente en "Mi Rutina" — mismo patrón de "uno por línea" que
+            // highlights, convertidas a array JSON abajo.
+            'nutrition_tips'   => ['nullable', 'string'],
+            'recovery_tips'    => ['nullable', 'string'],
+            'hydration_tips'   => ['nullable', 'string'],
+            'supplements_tips' => ['nullable', 'string'],
         ]);
 
-        // Un rasgo por línea, igual que "features" en Plan y "muscle_groups"
-        // en Exercise — así el admin no batalla con un editor de arrays JSON.
-        $datos['highlights'] = collect(explode("\n", $datos['highlights'] ?? ''))
+        // Un rasgo/tip por línea, igual que "features" en Plan y
+        // "muscle_groups" en Exercise — así el admin no batalla con un
+        // editor de arrays JSON.
+        $lineasAArray = fn (?string $texto) => collect(explode("\n", $texto ?? ''))
             ->map(fn ($l) => trim($l))
             ->filter()
             ->values()
             ->all();
+
+        $datos['highlights']        = $lineasAArray($datos['highlights'] ?? '');
+        $datos['nutrition_tips']    = $lineasAArray($datos['nutrition_tips'] ?? '') ?: null;
+        $datos['recovery_tips']     = $lineasAArray($datos['recovery_tips'] ?? '') ?: null;
+        $datos['hydration_tips']    = $lineasAArray($datos['hydration_tips'] ?? '') ?: null;
+        $datos['supplements_tips']  = $lineasAArray($datos['supplements_tips'] ?? '') ?: null;
 
         $datos['sort_order'] = $datos['sort_order'] ?? 0;
         $datos['is_active'] = $request->boolean('is_active', true);

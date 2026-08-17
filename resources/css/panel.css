@@ -599,6 +599,61 @@
     .rutina-ejercicios { grid-template-columns: repeat(2, 1fr); }
 }
 
+.btn--pequeno { font-size: var(--t-xs); padding: var(--e-2) var(--e-3); flex: none; }
+
+/* ---------- Modal de guía de ejercicio (FASE 2, PLAN-GUIAS-EJERCICIO.md) ----------
+   Reutiliza .modal__fondo/.modal__caja (ya definidos arriba, mismo patrón
+   que todos los modales del panel) — solo se agrega lo propio del
+   contenido: el marco de video y las secciones de descripción/tips/errores. */
+.ejercicio-detalle__video {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: #000;
+    margin-bottom: var(--e-4);
+}
+.ejercicio-detalle__video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+.ejercicio-detalle { display: grid; gap: var(--e-4); }
+.ejercicio-detalle__seccion h4 {
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--ceniza);
+    margin-bottom: var(--e-2);
+}
+.ejercicio-detalle__seccion p { color: var(--hueso); line-height: 1.6; }
+.ejercicio-detalle__seccion--tips { border-left: 3px solid var(--brasa); padding-left: var(--e-4); }
+.ejercicio-detalle__seccion--errores { border-left: 3px solid var(--sangre); padding-left: var(--e-4); }
+.ejercicio-detalle__meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--e-4);
+    padding-top: var(--e-4);
+    border-top: 1px solid var(--acero);
+}
+.ejercicio-detalle__musculos { display: flex; flex-wrap: wrap; gap: var(--e-2); }
+
+/* ---------- Recomendaciones del programa (FASE 3) ---------- */
+.recomendaciones { border-left: 3px solid var(--brasa); }
+.recomendacion { margin-top: var(--e-4); }
+.recomendacion h4 {
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--brasa);
+    margin-bottom: var(--e-3);
+    display: flex;
+    align-items: center;
+    gap: var(--e-2);
+}
+.recomendacion ul { list-style: none; padding: 0; display: grid; gap: var(--e-2); }
+.recomendacion li { color: var(--hueso); font-size: var(--t-sm); padding-left: var(--e-4); position: relative; }
+.recomendacion li::before { content: '•'; position: absolute; left: 0; color: var(--brasa); }
+
 /* ---------- Mis metas: cards individuales (dashboard del cliente) ---------- */
 .meta-tarjeta {
     padding: var(--e-4);
@@ -774,8 +829,8 @@
    tapa los botones de un modal abierto, que suelen vivir abajo-derecha. */
 .toasts {
     position: fixed;
+    top: var(--e-5);
     right: var(--e-5);
-    bottom: var(--e-5);
     z-index: var(--z-toast);
     display: grid;
     gap: var(--e-3);
@@ -784,9 +839,14 @@
 }
 .toast {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--e-3);
-    padding: var(--e-4) var(--e-5);
+    /* Antes var(--e-4) var(--e-5) (más alto que ancho) + título sin
+       truncar: con un remitente largo ("Nuevo mensaje de Administrador
+       Sparta") el título se envolvía en 2 líneas y el toast terminaba casi
+       cuadrado. Con el título a una sola línea (ver .toast__texto b) esta
+       proporción más baja ya no deja tanto aire vertical de sobra. */
+    padding: var(--e-3) var(--e-4);
     border-radius: var(--r-md);
     border: 1px solid;
     font-size: var(--t-sm);
@@ -794,8 +854,7 @@
     box-shadow: var(--s-lg);
     pointer-events: auto;
 }
-.toast svg { flex: none; margin-top: .1rem; }
-.toast span { flex: 1; }
+.toast svg { flex: none; }
 .toast--exito { border-color: color-mix(in srgb, var(--ok) 40%, transparent); color: var(--ok); }
 .toast--error { border-color: color-mix(in srgb, var(--sangre) 45%, transparent); color: var(--alerta); }
 
@@ -807,9 +866,19 @@
 .toast--alta .toast__icono  { color: var(--sangre-viva); }
 .toast--media .toast__icono { color: var(--brasa); }
 .toast--baja  .toast__icono { color: var(--humo); }
-.toast__icono { flex: none; margin-top: .1rem; display: inline-flex; }
+.toast__icono { flex: none; display: inline-flex; }
 .toast__texto { flex: 1; min-width: 0; display: grid; gap: 2px; }
-.toast__texto b { font-weight: 600; color: var(--hueso); font-size: var(--t-sm); }
+/* Antes sin truncar: un remitente largo envolvía el título en 2 líneas y
+   convertía el toast en un bloque casi cuadrado. Una sola línea + "…",
+   mismo tratamiento que ya tenía el cuerpo (small) justo abajo. */
+.toast__texto b {
+    font-weight: 600;
+    color: var(--hueso);
+    font-size: var(--t-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .toast__texto small {
     color: var(--ceniza);
     font-size: var(--t-xs);
@@ -820,14 +889,17 @@
 .toast__cerrar { flex: none; color: inherit; opacity: .6; transition: opacity var(--v-rapido); }
 .toast__cerrar:hover { opacity: 1; }
 
-/* Móvil: el toast ocupa casi todo el ancho, pegado abajo, sin tapaar la
-   campanita (arriba-derecha) ni el menú (izquierda). El safe-area lo
-   separa de la barra de gestos del iPhone. */
+/* Móvil: el toast ocupa casi todo el ancho, sin tapar la campanita
+   (arriba-derecha) ni el menú (izquierda). Antes "top: var(--e-4)" (16px)
+   lo dejaba pegado al borde superior, literalmente encima de la cabecera
+   (.panel__cabecera mide ~73px de alto ahí) — tapaba el botón del menú, la
+   campanita y el de tema, los tres a la vista. 4.75rem (76px) lo baja por
+   debajo de la cabecera con un pequeño respiro. */
 @media (max-width: 560px) {
     .toasts {
         right: var(--e-4);
         left: var(--e-4);
-        bottom: calc(var(--e-4) + env(safe-area-inset-bottom, 0px));
+        top: 4.75rem;
         width: auto;
     }
 }
@@ -1075,9 +1147,38 @@
     color: var(--humo);
 }
 .notificaciones__item-icono svg { width: 1.1em; height: 1.1em; }
+/* Identificación por módulo: cada tipo de notificación (mensaje, venta,
+   asistencia, reseña…) ya trae su propio nombre de ícono desde el backend
+   (ver NotificationService::disparar) — antes todos se pintaban con el
+   mismo fondo/gris neutro, así que a simple vista no se distinguía de qué
+   se trataba sin leer el texto completo. */
+.notificaciones__item-icono[data-icono="chat"]     { background: color-mix(in srgb, var(--brasa) 14%, transparent); color: var(--brasa); }
+.notificaciones__item-icono[data-icono="billetera"],
+.notificaciones__item-icono[data-icono="entrada"],
+.notificaciones__item-icono[data-icono="check"]    { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+.notificaciones__item-icono[data-icono="estrella"] { background: color-mix(in srgb, var(--bronce) 16%, transparent); color: var(--bronce); }
+.notificaciones__item-icono[data-icono="usuarios"] { background: color-mix(in srgb, var(--sangre) 14%, transparent); color: var(--sangre-viva); }
+.notificaciones__item-icono[data-icono="caja"],
+.notificaciones__item-icono[data-icono="cerrar"]   { background: color-mix(in srgb, var(--alerta) 16%, transparent); color: var(--alerta); }
+.notificaciones__item-icono[data-icono="objetivo"] { background: color-mix(in srgb, var(--brasa) 14%, transparent); color: var(--brasa); }
+.notificaciones__item-icono[data-icono="correo"]   { background: var(--relleno-suave); color: var(--acero-claro); }
+
 .notificaciones__item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.notificaciones__item-info b { font-size: var(--t-sm); }
-.notificaciones__item-info small { color: var(--ceniza); font-size: var(--t-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Antes el título no truncaba y, además, compartía fila con la hora en una
+   columna aparte a la derecha: entre las dos cosas, en el cajón angosto de
+   móvil (70vw, ver .notificaciones__panel) un título largo ("Nuevo mensaje
+   de Kevin Alvarado") apenas tenía espacio y se cortaba casi de inmediato
+   ("Nuevo m…") o se envolvía en 3-4 líneas, inflando el alto de la fila.
+   La hora bajó a compartir línea con el cuerpo (ver .notificaciones__item-meta)
+   para devolverle al título todo el ancho disponible. */
+.notificaciones__item-info b {
+    font-size: var(--t-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.notificaciones__item-meta { display: flex; align-items: baseline; gap: var(--e-2); min-width: 0; }
+.notificaciones__item-info small { flex: 1; min-width: 0; color: var(--ceniza); font-size: var(--t-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .notificaciones__item-sede {
     font-family: var(--f-mono);
     font-size: .65rem;
@@ -1121,8 +1222,13 @@
 }
 .notificaciones__vacio-icono svg { width: 1.5em; height: 1.5em; }
 
+/* Mismo grosor que el cajón del sidebar en móvil (.panel__lateral usa
+   inset: 0 30% 0 0, es decir 70% del ancho) — antes este cajón tapaba la
+   pantalla completa (100vw) mientras el del menú dejaba ver un 30% detrás,
+   lo cual se sentía como dos comportamientos distintos para el mismo tipo
+   de panel lateral. */
 @media (max-width: 480px) {
-    .notificaciones__panel { width: 100vw; }
+    .notificaciones__panel { width: 70vw; }
 }
 
 /* Entrada/salida del cajón — nombradas para los x-transition:enter/leave

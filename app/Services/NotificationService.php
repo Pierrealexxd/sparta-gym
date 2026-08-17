@@ -138,22 +138,34 @@ class NotificationService
 
     /**
      * Filas nuevas desde un cursor, para los toasts en tiempo real.
-     * Devuelve [toasts, ultimoId]. `ultimo_id` avanza con todas las filas
-     * (leídas incluidas) para que el cursor no se quede clavado si el
-     * usuario marcó todo en otra pestaña; solo se toastean las no leídas.
+     * Devuelve [toasts, ultimoCursor].
+     *
+     * Cursor por `updated_at`, no por `id`: el dedupe de disparar() reusa
+     * la fila de una conversación mientras siga sin leer (mismo id, ver
+     * docblock de la clase) — con un cursor por id, un segundo mensaje del
+     * mismo hilo actualizaba esa fila pero nunca volvía a cruzar
+     * `id > $desde`, así que el badge se refrescaba pero el toast dejaba
+     * de dispararse a partir del segundo mensaje sin leer. `updated_at` sí
+     * avanza en cada refresco, y sigue siendo solo 1 fila en la campanita
+     * (el dedupe de la lista no cambia, esto solo decide cuándo re-toastear).
+     * Precisión de segundo (columna `timestamp` de Laravel): dos refrescos
+     * en el mismo segundo comparten cursor y el segundo no re-toastea, un
+     * caso de borde aceptable a la escala de este sistema.
      */
-    public function nuevas(User $usuario, int $desde): array
+    public function nuevas(User $usuario, ?string $desde): array
     {
-        $consulta = $this->base($usuario)->where('id', '>', $desde);
+        $cursor = $desde ? \Illuminate\Support\Carbon::parse($desde) : \Illuminate\Support\Carbon::createFromTimestamp(0);
 
-        $ultimoId = (int) (clone $consulta)->max('id');
+        $consulta = $this->base($usuario)->where('updated_at', '>', $cursor);
 
-        $toasts = $consulta->noLeidas()->orderBy('id')->get()
+        $ultimoCursor = (clone $consulta)->max('updated_at') ?? $desde;
+
+        $toasts = $consulta->noLeidas()->orderBy('updated_at')->get()
             ->map(fn (Notification $n) => $this->serializar($n, $usuario))
             ->values()
             ->all();
 
-        return [$toasts, $ultimoId];
+        return [$toasts, $ultimoCursor];
     }
 
     /** Marca leídas las filas de un tipo+sujeto (p. ej. al abrir un chat). */

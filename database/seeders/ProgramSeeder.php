@@ -33,6 +33,25 @@ class ProgramSeeder extends Seeder
                 'duration_weeks' => 12,
                 'difficulty'     => 'intermedio',
                 'sort_order'     => 1,
+                // FASE 3 de PLAN-GUIAS-EJERCICIO.md: recomendaciones de demo.
+                'nutrition_tips' => [
+                    'Al menos 1.8 g de proteína por kg de peso al día.',
+                    'No entrenes en ayunas si tu objetivo es ganar masa.',
+                    'Añade un batido post-entreno si te cuesta llegar a las calorías del día.',
+                ],
+                'recovery_tips' => [
+                    'Duerme 7-8 horas: es cuando más músculo se repara.',
+                    'Deja 48h entre sesiones del mismo grupo muscular.',
+                    'Un día de descanso total por semana no es opcional.',
+                ],
+                'hydration_tips' => [
+                    'Mínimo 3 litros de agua al día, más si hace calor.',
+                    'Un vaso de agua al levantarte, antes del café.',
+                ],
+                'supplements_tips' => [
+                    'Creatina monohidratada: 5 g al día, cualquier hora.',
+                    'Proteína en polvo solo si no llegas con comida real.',
+                ],
             ],
         );
 
@@ -55,6 +74,23 @@ class ProgramSeeder extends Seeder
                 'duration_weeks' => 8,
                 'difficulty'     => 'principiante',
                 'sort_order'     => 2,
+                'nutrition_tips' => [
+                    'Déficit calórico moderado: no más de 500 kcal por debajo de tu mantenimiento.',
+                    'Prioriza proteína en cada comida para no perder músculo.',
+                    'Evita azúcares líquidos (gaseosas, jugos envasados).',
+                ],
+                'recovery_tips' => [
+                    'Recuperación activa el día libre: caminata suave o movilidad.',
+                    'El cardio de intervalos también necesita descanso — no lo hagas todos los días.',
+                ],
+                'hydration_tips' => [
+                    'Un vaso de agua antes de cada comida ayuda a controlar la porción.',
+                    'Evita bebidas azucaradas incluso las "light" con frecuencia.',
+                ],
+                'supplements_tips' => [
+                    'BCAA es opcional, no imprescindible con proteína suficiente en la dieta.',
+                    'Cafeína pre-entreno (100-200 mg) si te ayuda a rendir más en el HIIT.',
+                ],
             ],
         );
     }

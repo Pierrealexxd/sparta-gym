@@ -27,11 +27,15 @@ class NotificationController extends Controller
 
     public function nuevas(Request $request): JsonResponse
     {
-        $desde = max(0, (int) $request->query('desde', 0));
+        // Cursor por timestamp (updated_at), no por id — ver el docblock de
+        // NotificationService::nuevas() para por qué: con id, un segundo
+        // mensaje de una conversación ya notificada (dedupe, misma fila)
+        // nunca volvía a cruzar el cursor y dejaba de toastear.
+        $desde = $request->query('desde');
 
-        [$toasts, $ultimoId] = $this->notificaciones->nuevas($request->user(), $desde);
+        [$toasts, $ultimoCursor] = $this->notificaciones->nuevas($request->user(), $desde ? (string) $desde : null);
 
-        return response()->json(['ultimo_id' => $ultimoId, 'toasts' => $toasts]);
+        return response()->json(['ultimo_cursor' => $ultimoCursor, 'toasts' => $toasts]);
     }
 
     public function marcarLeida(Request $request, int $id): JsonResponse

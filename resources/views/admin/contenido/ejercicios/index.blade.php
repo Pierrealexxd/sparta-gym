@@ -21,8 +21,8 @@
         $vacios = [
             'name' => '', 'equipment' => '', 'category' => 'fuerza', 'level' => 'principiante',
             'muscle_groups' => '', 'description' => '', 'common_mistakes' => '',
-            'tips' => '', 'video_url' => '', 'is_active' => true,
-            'imagen_existente' => null,
+            'tips' => '', 'video_source' => 'youtube', 'video_url' => '', 'is_active' => true,
+            'imagen_existente' => null, 'video_existente' => null,
         ];
     @endphp
 
@@ -45,7 +45,12 @@
                         <td class="es-fuerte" data-etiqueta="Ejercicio">{{ $ejercicio->name }}</td>
                         <td data-etiqueta="Categoría">{{ \App\Http\Controllers\Admin\ExerciseController::CATEGORIAS[$ejercicio->category] ?? $ejercicio->category }}</td>
                         <td data-etiqueta="Nivel">{{ \App\Http\Controllers\Admin\ExerciseController::NIVELES[$ejercicio->level] ?? $ejercicio->level }}</td>
-                        <td data-etiqueta="Video">{{ $ejercicio->video_url ? 'Sí' : '—' }}</td>
+                        <td data-etiqueta="Video">
+                            @php
+                                $fuentes = ['youtube' => 'YouTube', 'vimeo' => 'Vimeo', 'gdrive' => 'Google Drive', 'url' => 'URL', 'upload' => 'Subido'];
+                            @endphp
+                            {{ ($ejercicio->video_url || $ejercicio->video_file_path) ? ($fuentes[$ejercicio->video_source] ?? 'Sí') : '—' }}
+                        </td>
                         <td data-etiqueta="Estado"><span class="estado estado--{{ $ejercicio->is_active ? 'activo' : 'inactivo' }}">{{ $ejercicio->is_active ? 'Publicado' : 'Oculto' }}</span></td>
                         <td data-etiqueta="nada">
                             <div style="display:flex;gap:var(--e-2)">
@@ -79,9 +84,11 @@
                                             'description' => $ejercicio->description,
                                             'common_mistakes' => $ejercicio->common_mistakes,
                                             'tips' => $ejercicio->tips,
+                                            'video_source' => $ejercicio->video_source ?? 'youtube',
                                             'video_url' => $ejercicio->video_url,
                                             'is_active' => (bool) $ejercicio->is_active,
                                             'imagen_existente' => $ejercicio->image_path ? asset('storage/' . $ejercicio->image_path) : null,
+                                            'video_existente' => $ejercicio->video_file_path ? asset('storage/' . $ejercicio->video_file_path) : null,
                                         ]) }))">
                                     <x-icono nombre="lapiz" />
                                 </button>
@@ -171,8 +178,29 @@
                         <textarea class="campo__control" name="tips" x-model="fila.tips"></textarea></label>
                 </div>
 
-                <label class="campo"><span class="campo__etiqueta">Video (enlace de YouTube, opcional)</span>
-                    <input class="campo__control" type="url" name="video_url" placeholder="https://www.youtube.com/watch?v=…" x-model="fila.video_url"></label>
+                {{-- FASE 1 de PLAN-GUIAS-EJERCICIO.md: fuente de video en vez
+                     de asumir siempre YouTube. Con 'upload' se sube un
+                     archivo; con las demás fuentes se pega un enlace. --}}
+                <label class="campo"><span class="campo__etiqueta">Fuente de video</span>
+                    <select class="campo__control" name="video_source" x-model="fila.video_source">
+                        <option value="youtube">YouTube</option>
+                        <option value="vimeo">Vimeo</option>
+                        <option value="gdrive">Google Drive</option>
+                        <option value="url">URL de incrustación</option>
+                        <option value="upload">Video subido</option>
+                    </select></label>
+
+                <label class="campo" x-show="fila.video_source !== 'upload'" x-cloak>
+                    <span class="campo__etiqueta">Enlace del video</span>
+                    <input class="campo__control" type="url" name="video_url" placeholder="https://…" x-model="fila.video_url"></label>
+
+                <div x-show="fila.video_source === 'upload'" x-cloak>
+                    <label class="campo"><span class="campo__etiqueta">Archivo de video (mp4, webm, ogg)</span>
+                        <input class="campo__control" type="file" name="video_file" accept="video/*"></label>
+                    <div x-show="editando && fila.video_existente" x-cloak style="margin-top:var(--e-2)">
+                        <a :href="fila.video_existente" target="_blank" style="color:var(--brasa);font-size:var(--t-sm)">Ver video actual</a>
+                    </div>
+                </div>
 
                 <label class="campo"><span class="campo__etiqueta">Foto (opcional)</span>
                     <input class="campo__control" type="file" name="imagen" accept="image/*"></label>

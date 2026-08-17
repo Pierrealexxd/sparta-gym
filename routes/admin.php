@@ -203,6 +203,11 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
             ->name('programas.rutinas.dias.ejercicios.store');
         Route::delete('rutinas-base/ejercicios/{ejercicio}', [ProgramRoutineController::class, 'eliminarEjercicio'])
             ->name('programas.rutinas.ejercicios.destroy');
+        // FASE 1.6 de PLAN-GUIAS-EJERCICIO.md: editar la guía (video/
+        // descripción/tips/errores) de un ejercicio ya agregado, sin tocar
+        // su prescripción — ver ProgramRoutineController::editarEjercicio.
+        Route::put('rutinas-base/ejercicios/{ejercicio}/guia', [ProgramRoutineController::class, 'editarEjercicio'])
+            ->name('programas.rutinas.ejercicios.guia');
     });
 
     Route::middleware('permiso:inventario.ver')->group(function () {

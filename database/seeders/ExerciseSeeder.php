@@ -93,6 +93,10 @@ class ExerciseSeeder extends Seeder
                     'common_mistakes' => $error,
                     'tips'            => $consejo,
                     'video_url'       => $video,
+                    // FASE 1 de PLAN-GUIAS-EJERCICIO.md: todos los videos de
+                    // este seeder ya eran de YouTube, así que es explícito
+                    // en vez de depender del default de la migración.
+                    'video_source'    => 'youtube',
                     'is_active'       => true,
                 ]
             );

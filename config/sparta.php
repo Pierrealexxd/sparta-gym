@@ -26,7 +26,7 @@ return [
     // aunque el cron no haya corrido.
     'notificaciones' => [
         'vigencia_horas'     => 24,        // horas de vida de una notificación
-        'polling_segundos'   => 15,        // ciclo del badge + toasts realtime
+        'polling_segundos'   => 5,         // ciclo del badge + toasts realtime
         'toast_duracion'     => [          // segundos visibles por prioridad
             'baja'  => 4,
             'media' => 5,

@@ -6,9 +6,18 @@
 @section('contenido')
     {{-- Rediseño del dashboard (PLAN-DASHBOARD-CLIENTE.md): 4 KPIs con
          tendencia, 4 gráficas que responden "¿cuán constante soy? ¿qué días
-         entreno? ¿cómo va mi cuerpo? ¿cuánto he invertido?", rutina en
-         cards colapsables y metas con disco de progreso — reemplaza las
-         tablas de texto plano de antes. --}}
+         entreno? ¿cómo va mi cuerpo? ¿cuánto he invertido?" y rutina en
+         cards colapsables — reemplaza las tablas de texto plano de antes.
+         Auditoría de agosto 2026: se quitó la sección "Metas" (duplicaba
+         el cálculo de ProgressController y el entrenador rara vez la usaba
+         desde acá) y se corrigió "Días de membresía" para que use los
+         mismos atributos de Membership que el admin, en vez de una fórmula
+         propia. --}}
+    @php
+        // Mismas etiquetas que admin/clientes/show.blade.php para el
+        // estado visual de la membresía (activa/por-vencer/vencida/...).
+        $etiquetasEstadoMem = ['activa' => 'Activa', 'por-vencer' => 'Por vencer', 'vencida' => 'Vencida', 'cancelada' => 'Cancelada', 'congelada' => 'Congelada'];
+    @endphp
     <div class="kpis kpis--4" data-revelar data-revelar-grupo>
         <article class="tarjeta kpi tarjeta--interactiva" style="justify-items:center;text-align:center">
             <div class="progreso-kpi__circulo" style="--progreso: {{ $kpis['diasRestantesPct'] }}%">
@@ -46,6 +55,38 @@
         </article>
     </div>
 
+    {{-- Línea de tiempo / cuenta regresiva de la membresía: mismo componente
+         que el admin ve en el detalle del cliente (admin/clientes/show.blade.php,
+         pestaña Resumen), reutilizando Membership::porcentaje_transcurrido /
+         dias_restantes / estado_visual y las clases .membresia-resumen /
+         .membresia-rail ya existentes en panel.css — no se creó CSS nuevo. --}}
+    <article class="tarjeta membresia-resumen" data-revelar>
+        <h3 style="font-size:var(--t-lg)">Tu membresía</h3>
+        @if ($membresiaActual)
+            <div class="membresia-resumen__cuerpo">
+                <div class="progreso-kpi__circulo membresia__circulo" style="--progreso: {{ $membresiaActual->porcentaje_transcurrido }}%">
+                    <span>{{ $membresiaActual->dias_restantes }}</span>
+                </div>
+                <div class="membresia-resumen__datos">
+                    <div class="membresia__cabecera">
+                        <h4 class="membresia__plan">{{ $membresiaActual->plan_name }}</h4>
+                        <span class="estado estado--{{ $membresiaActual->estado_visual }}">{{ $etiquetasEstadoMem[$membresiaActual->estado_visual] ?? ucfirst($membresiaActual->estado_visual) }}</span>
+                    </div>
+                    <div class="membresia-rail" data-estado="{{ $membresiaActual->estado_visual }}" style="--progreso: {{ $membresiaActual->porcentaje_transcurrido }}%">
+                        <span class="membresia-rail__relleno"></span>
+                        <span class="membresia-rail__hoy"></span>
+                    </div>
+                    <div class="membresia__fechas">
+                        <span>{{ $membresiaActual->starts_at->format('d/m/y') }}</span>
+                        <span>{{ $membresiaActual->ends_at->format('d/m/y') }}</span>
+                    </div>
+                </div>
+            </div>
+        @else
+            <x-estado-vacio icono="tarjetas" texto="Sin membresía vigente." />
+        @endif
+    </article>
+
     <div class="g-1-1" data-revelar data-revelar-grupo>
         <article class="tarjeta grafico">
             <div class="grafico__cabecera">
@@ -65,43 +106,21 @@
                 <h3 style="font-size:var(--t-lg)">Tu progreso corporal</h3>
             </div>
             @if ($hayMedidas)
+                {{-- Peso, altura, IMC y grasa corporal de un vistazo (mismos
+                     accesores que /cliente/progreso: MemberMeasurement::bmi
+                     y bmi_category), antes de la curva de evolución. --}}
+                <div style="margin-bottom:var(--e-3)">
+                    <div class="ficha__dato"><span>Peso</span><span>{{ $kpis['pesoActual'] ?? '—' }}{{ $kpis['pesoActual'] ? ' kg' : '' }}</span></div>
+                    <div class="ficha__dato"><span>Altura</span><span>{{ $kpis['altura'] ?? '—' }}{{ $kpis['altura'] ? ' cm' : '' }}</span></div>
+                    <div class="ficha__dato"><span>IMC</span><span>{{ $kpis['imc'] ?? '—' }}{{ $kpis['imcCategoria'] ? ' · ' . $kpis['imcCategoria'] : '' }}</span></div>
+                    <div class="ficha__dato"><span>Grasa corporal</span><span>{{ $kpis['grasaActual'] ?? '—' }}{{ $kpis['grasaActual'] ? '%' : '' }}</span></div>
+                </div>
                 <div class="grafico__lienzo">
                     <canvas data-grafico="{{ json_encode($graficoProgreso) }}"></canvas>
                 </div>
             @else
                 <x-estado-vacio icono="balanza" texto="Registra tu peso en Progreso para ver tu curva." />
                 <a href="{{ route('cliente.progreso') }}" class="btn btn--vidrio btn--sm" style="justify-self:center">Registrar peso</a>
-            @endif
-        </article>
-    </div>
-
-    <div class="g-1-1" data-revelar data-revelar-grupo>
-        <article class="tarjeta grafico">
-            <div class="grafico__cabecera">
-                <h3 style="font-size:var(--t-lg)">Tus días de entrenamiento</h3>
-            </div>
-            @if ($hayFrecuenciaDias)
-                <div class="grafico__lienzo">
-                    <canvas data-grafico="{{ json_encode($graficoFrecuencia) }}"></canvas>
-                </div>
-                @if ($diaMaxFrecuencia)
-                    <p style="color:var(--ceniza);font-size:var(--t-xs);text-align:center">{{ $diaMaxFrecuencia }} es tu día favorito</p>
-                @endif
-            @else
-                <x-estado-vacio icono="reloj" texto="Aún no tienes suficientes visitas para mostrar el patrón." />
-            @endif
-        </article>
-
-        <article class="tarjeta grafico">
-            <div class="grafico__cabecera">
-                <h3 style="font-size:var(--t-lg)">Tu inversión en salud</h3>
-            </div>
-            @if ($hayInversion)
-                <div class="grafico__lienzo">
-                    <canvas data-grafico="{{ json_encode($graficoInversion) }}"></canvas>
-                </div>
-            @else
-                <x-estado-vacio icono="billetera" texto="Sin registros de pago aún." />
             @endif
         </article>
     </div>
@@ -155,29 +174,6 @@
         @else
             <x-estado-vacio icono="lista" texto="Todavía no tienes una rutina. Selecciona un programa en la landing o pásate por recepción." />
         @endif
-    </article>
-
-    <article class="tarjeta" data-revelar>
-        <h3 style="font-size:var(--t-lg);margin-bottom:var(--e-4)">Mis metas</h3>
-        @forelse ($metas as $item)
-            @php $meta = $item['meta']; $progreso = $item['progreso']; @endphp
-            <div class="meta-tarjeta">
-                <div class="ficha__dato">
-                    <span>{{ $meta->title }}</span>
-                    <span>{{ $progreso !== null ? round($progreso * 100) . '%' : ($meta->target_value ? $meta->target_value . ' ' . $meta->unit : '—') }}</span>
-                </div>
-                @if ($progreso !== null)
-                    <div style="margin-top:var(--e-2)">
-                        <x-discos :valor="(int) round($progreso * 8)" :total="8" />
-                    </div>
-                @endif
-                @if ($meta->description)
-                    <p style="color:var(--humo);font-size:var(--t-xs);margin-top:var(--e-2)">{{ $meta->description }}</p>
-                @endif
-            </div>
-        @empty
-            <x-estado-vacio icono="objetivo" texto="Tu entrenador aún no definió objetivos." />
-        @endforelse
     </article>
 
     <article class="tarjeta">

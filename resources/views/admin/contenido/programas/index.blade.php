@@ -22,6 +22,8 @@
             'name' => '', 'tagline' => '', 'objective' => 'ganar_masa', 'description' => '',
             'highlights' => '', 'icon' => 'llama', 'accent_color' => '', 'duration_weeks' => '',
             'difficulty' => 'intermedio', 'sort_order' => '0', 'is_active' => true, 'is_public' => true,
+            // FASE 3 de PLAN-GUIAS-EJERCICIO.md: recomendaciones, una por línea.
+            'nutrition_tips' => '', 'recovery_tips' => '', 'hydration_tips' => '', 'supplements_tips' => '',
         ];
         $objetivos = [
             'ganar_masa' => 'Ganar masa', 'perder_grasa' => 'Perder grasa', 'fuerza' => 'Fuerza',
@@ -90,6 +92,10 @@
                                         'sort_order' => $programa->sort_order,
                                         'is_active' => (bool) $programa->is_active,
                                         'is_public' => (bool) $programa->is_public,
+                                        'nutrition_tips' => implode("\n", $programa->nutrition_tips ?? []),
+                                        'recovery_tips' => implode("\n", $programa->recovery_tips ?? []),
+                                        'hydration_tips' => implode("\n", $programa->hydration_tips ?? []),
+                                        'supplements_tips' => implode("\n", $programa->supplements_tips ?? []),
                                     ];
                                 @endphp
                                 <button class="btn btn--desnudo" type="button" title="Editar"
@@ -203,6 +209,23 @@
                         Visible para todos los gimnasios
                     </label>
                 </div>
+
+                {{-- FASE 3 de PLAN-GUIAS-EJERCICIO.md: recomendaciones que el
+                     socio ve en "Mi Rutina" — colapsado porque son opcionales
+                     y la mayoría de programas no las necesitan de entrada. --}}
+                <details style="margin-top:var(--e-3)">
+                    <summary class="btn btn--desnudo" style="cursor:pointer">Recomendaciones (opcional)</summary>
+                    <div style="display:grid;gap:var(--e-4);margin-top:var(--e-4)">
+                        <label class="campo"><span class="campo__etiqueta">Alimentación (una por línea)</span>
+                            <textarea class="campo__control" name="nutrition_tips" style="min-height:5rem" x-model="fila.nutrition_tips"></textarea></label>
+                        <label class="campo"><span class="campo__etiqueta">Recuperación (una por línea)</span>
+                            <textarea class="campo__control" name="recovery_tips" style="min-height:5rem" x-model="fila.recovery_tips"></textarea></label>
+                        <label class="campo"><span class="campo__etiqueta">Hidratación (una por línea)</span>
+                            <textarea class="campo__control" name="hydration_tips" style="min-height:5rem" x-model="fila.hydration_tips"></textarea></label>
+                        <label class="campo"><span class="campo__etiqueta">Suplementos (una por línea)</span>
+                            <textarea class="campo__control" name="supplements_tips" style="min-height:5rem" x-model="fila.supplements_tips"></textarea></label>
+                    </div>
+                </details>
 
                 <div class="formulario-panel__acciones">
                     <button class="btn btn--vidrio" type="button" @click="cerrar()">Cancelar</button>

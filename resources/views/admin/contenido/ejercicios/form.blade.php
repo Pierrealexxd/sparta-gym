@@ -43,10 +43,27 @@
                 <textarea class="campo__control" name="tips">{{ old('tips', $ejercicio->tips) }}</textarea></label>
         </div>
 
-        <label class="campo"><span class="campo__etiqueta">Video (enlace de YouTube, opcional)</span>
-            <input class="campo__control" type="url" name="video_url" placeholder="https://www.youtube.com/watch?v=…" value="{{ old('video_url', $ejercicio->video_url) }}">
+        {{-- FASE 1 de PLAN-GUIAS-EJERCICIO.md: fuente de video, no solo YouTube. --}}
+        <label class="campo"><span class="campo__etiqueta">Fuente de video</span>
+            <select class="campo__control" name="video_source" x-data x-on:change="$el.closest('form').querySelector('[data-campo-video-url]').hidden = ($event.target.value === 'upload'); $el.closest('form').querySelector('[data-campo-video-file]').hidden = ($event.target.value !== 'upload')">
+                @foreach (['youtube' => 'YouTube', 'vimeo' => 'Vimeo', 'gdrive' => 'Google Drive', 'url' => 'URL de incrustación', 'upload' => 'Video subido'] as $valor => $etiqueta)
+                    <option value="{{ $valor }}" @selected(old('video_source', $ejercicio->video_source ?? 'youtube') === $valor)>{{ $etiqueta }}</option>
+                @endforeach
+            </select></label>
+
+        <label class="campo" data-campo-video-url @if (old('video_source', $ejercicio->video_source ?? 'youtube') === 'upload') hidden @endif>
+            <span class="campo__etiqueta">Enlace del video</span>
+            <input class="campo__control" type="url" name="video_url" placeholder="https://…" value="{{ old('video_url', $ejercicio->video_url) }}">
             @error('video_url')<span class="campo__error">{{ $message }}</span>@enderror
         </label>
+
+        <div data-campo-video-file @if (old('video_source', $ejercicio->video_source ?? 'youtube') !== 'upload') hidden @endif>
+            <label class="campo"><span class="campo__etiqueta">Archivo de video (mp4, webm, ogg)</span>
+                <input class="campo__control" type="file" name="video_file" accept="video/*"></label>
+            @if ($ejercicio->video_file_path)
+                <a href="{{ asset('storage/' . $ejercicio->video_file_path) }}" target="_blank" style="color:var(--brasa);font-size:var(--t-sm)">Ver video actual</a>
+            @endif
+        </div>
 
         <label class="campo"><span class="campo__etiqueta">Foto (opcional)</span>
             <input class="campo__control" type="file" name="imagen" accept="image/*"></label>

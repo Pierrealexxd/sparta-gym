@@ -67,6 +67,10 @@ class ExerciseController extends Controller
             $datos['image_path'] = $ruta;
         }
 
+        if ($ruta = $this->guardarVideo($request)) {
+            $datos['video_file_path'] = $ruta;
+        }
+
         Exercise::create($datos);
 
         return redirect()->route('admin.ejercicios.index')->with('exito', 'Ejercicio creado.');
@@ -86,6 +90,13 @@ class ExerciseController extends Controller
                 Storage::disk('public')->delete($ejercicio->image_path);
             }
             $datos['image_path'] = $ruta;
+        }
+
+        if ($ruta = $this->guardarVideo($request)) {
+            if ($ejercicio->video_file_path) {
+                Storage::disk('public')->delete($ejercicio->video_file_path);
+            }
+            $datos['video_file_path'] = $ruta;
         }
 
         $ejercicio->update($datos);
@@ -137,11 +148,18 @@ class ExerciseController extends Controller
             'muscle_groups'   => ['nullable', 'string'],
             'common_mistakes' => ['nullable', 'string', 'max:500'],
             'tips'            => ['nullable', 'string', 'max:500'],
+            // FASE 1 de PLAN-GUIAS-EJERCICIO.md: video_url deja de ser "solo
+            // YouTube" — video_source dice cómo interpretarlo. Con 'upload'
+            // el enlace no aplica (se usa video_file en su lugar).
+            'video_source'    => ['nullable', 'in:youtube,vimeo,gdrive,url,upload'],
             'video_url'       => ['nullable', 'url', 'max:255'],
+            'video_file'      => ['nullable', 'file', 'mimetypes:video/mp4,video/webm,video/ogg', 'max:51200'],
             'imagen'          => ['nullable', 'image', 'max:3072'],
         ]);
 
-        unset($datos['imagen']);
+        unset($datos['imagen'], $datos['video_file']);
+
+        $datos['video_source'] = $datos['video_source'] ?: 'youtube';
 
         // Igual que "features" en planes: una línea, un grupo muscular.
         $datos['muscle_groups'] = collect(explode("\n", $datos['muscle_groups'] ?? ''))
@@ -162,6 +180,16 @@ class ExerciseController extends Controller
         }
 
         return $request->file('imagen')->store('ejercicios', 'public');
+    }
+
+    /** Mismo patrón que guardarImagen(), para video_source = 'upload'. */
+    private function guardarVideo(Request $request): ?string
+    {
+        if (! $request->hasFile('video_file')) {
+            return null;
+        }
+
+        return $request->file('video_file')->store('ejercicios/videos', 'public');
     }
 
     private function generarSlug(string $name): string

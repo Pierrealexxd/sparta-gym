@@ -32,7 +32,7 @@
              Alpine con arrays anidados, pero el código real no funciona así). --}}
         <div style="display:grid;gap:var(--e-5);margin-top:var(--e-5)">
             @foreach ($rutina->days as $dia)
-                <article class="tarjeta">
+                <article class="tarjeta" x-data="{ editandoGuia: null }">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--e-4)">
                         <div>
                             <h3 style="font-size:var(--t-lg)">{{ $dia->name }}</h3>
@@ -51,21 +51,66 @@
 
                     <div class="tabla-envoltorio">
                         <table class="tabla tabla--tarjetas">
-                            <thead><tr><th>Ejercicio</th><th>Prescripción</th><th></th></tr></thead>
+                            <thead><tr><th>Ejercicio</th><th>Prescripción</th><th>Guía</th><th></th></tr></thead>
                             <tbody>
                                 @forelse ($dia->exercises as $pe)
                                     <tr>
                                         <td class="es-fuerte" data-etiqueta="Ejercicio">{{ $pe->exercise->name }}</td>
                                         <td data-etiqueta="Prescripción">{{ $pe->prescripcion }}</td>
+                                        {{-- FASE 1.6 de PLAN-GUIAS-EJERCICIO.md: indicador visual de override. --}}
+                                        <td data-etiqueta="Guía">
+                                            @if ($pe->tiene_guia_personalizada)
+                                                <span class="estado estado--activo">Personalizada</span>
+                                            @else
+                                                <span style="color:var(--humo);font-size:var(--t-sm)">Hereda del ejercicio</span>
+                                            @endif
+                                        </td>
                                         <td data-etiqueta="nada">
-                                            <form method="POST" action="{{ route('admin.programas.rutinas.ejercicios.destroy', $pe) }}">
-                                                @csrf @method('DELETE')
-                                                <button class="btn btn--desnudo" type="submit"><x-icono nombre="cerrar" /></button>
+                                            <div style="display:flex;gap:var(--e-2)">
+                                                <button type="button" class="btn btn--desnudo" title="Editar guía"
+                                                        @click="editandoGuia = (editandoGuia === {{ $pe->id }} ? null : {{ $pe->id }})">
+                                                    <x-icono nombre="lapiz" />
+                                                </button>
+                                                <form method="POST" action="{{ route('admin.programas.rutinas.ejercicios.destroy', $pe) }}">
+                                                    @csrf @method('DELETE')
+                                                    <button class="btn btn--desnudo" type="submit"><x-icono nombre="cerrar" /></button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr x-show="editandoGuia === {{ $pe->id }}" x-cloak>
+                                        <td colspan="4" data-etiqueta="">
+                                            {{-- Guía personalizada solo para esta rutina: en blanco, hereda del
+                                                 Exercise (ver trait HasExerciseGuideOverrides). --}}
+                                            <form method="POST" action="{{ route('admin.programas.rutinas.ejercicios.guia', $pe) }}" class="formulario-panel" style="padding:var(--e-3) 0">
+                                                @csrf @method('PUT')
+                                                <div class="formulario-panel__fila">
+                                                    <label class="campo"><span class="campo__etiqueta">Fuente de video</span>
+                                                        <select class="campo__control" name="guide_video_source">
+                                                            @foreach (['youtube' => 'YouTube', 'vimeo' => 'Vimeo', 'gdrive' => 'Google Drive', 'url' => 'URL de incrustación'] as $valor => $etiqueta)
+                                                                <option value="{{ $valor }}" @selected($pe->guide_video_source === $valor)>{{ $etiqueta }}</option>
+                                                            @endforeach
+                                                        </select></label>
+                                                    <label class="campo"><span class="campo__etiqueta">Enlace del video (opcional)</span>
+                                                        <input class="campo__control" type="url" name="guide_video_url" placeholder="Vacío = usa el video del ejercicio" value="{{ $pe->guide_video_url }}"></label>
+                                                </div>
+                                                <label class="campo"><span class="campo__etiqueta">Descripción para este programa (opcional)</span>
+                                                    <textarea class="campo__control" name="guide_description" placeholder="Vacío = usa la descripción del ejercicio">{{ $pe->guide_description }}</textarea></label>
+                                                <div class="formulario-panel__fila">
+                                                    <label class="campo"><span class="campo__etiqueta">Hazlo así (opcional)</span>
+                                                        <textarea class="campo__control" name="guide_tips" placeholder="Vacío = hereda del ejercicio">{{ $pe->guide_tips }}</textarea></label>
+                                                    <label class="campo"><span class="campo__etiqueta">Evita (opcional)</span>
+                                                        <textarea class="campo__control" name="guide_common_mistakes" placeholder="Vacío = hereda del ejercicio">{{ $pe->guide_common_mistakes }}</textarea></label>
+                                                </div>
+                                                <div class="formulario-panel__acciones">
+                                                    <button class="btn btn--vidrio" type="button" @click="editandoGuia = null">Cerrar</button>
+                                                    <button class="btn btn--fuego" type="submit">Guardar guía</button>
+                                                </div>
                                             </form>
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="3" class="tabla__vacio" data-etiqueta="">Sin ejercicios en este día.</td></tr>
+                                    <tr><td colspan="4" class="tabla__vacio" data-etiqueta="">Sin ejercicios en este día.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>

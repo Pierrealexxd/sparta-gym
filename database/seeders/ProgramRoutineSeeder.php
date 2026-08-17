@@ -15,6 +15,38 @@ use Illuminate\Database\Seeder;
  */
 class ProgramRoutineSeeder extends Seeder
 {
+    /**
+     * FASE 4 de PLAN-GUIAS-EJERCICIO.md: guía personalizada por programa en
+     * algunos ejercicios de demo — el resto hereda del Exercise (comportamiento
+     * normal, ver HasExerciseGuideOverrides). [video, descripción, tips, errores]
+     */
+    private const GUIAS = [
+        'Sentadilla trasera' => [
+            'https://www.youtube.com/watch?v=lONrEX7zAbY',
+            'La sentadilla trasera es el ejercicio base de este programa: si solo tienes tiempo para uno, que sea este.',
+            'Respira, llena de aire el abdomen y mantenlo firme durante todo el descenso.',
+            'No dejar que las rodillas colapsen hacia adentro en la subida.',
+        ],
+        'Press de banca' => [
+            'https://www.youtube.com/watch?v=WYbdpUw7Pa4',
+            'Movimiento principal de empuje horizontal. Prioriza la técnica antes que el peso en la barra.',
+            'Retrae las escápulas y mantenlas fijas durante todo el recorrido.',
+            null,
+        ],
+        'Peso muerto convencional' => [
+            null,
+            'El más técnico de los tres básicos: si tienes dudas, pide que el entrenador te revise la forma antes de subir peso.',
+            null,
+            'Redondear la espalda baja para "ganar" unos centímetros de recorrido.',
+        ],
+        'Bicicleta de aire' => [
+            'https://www.youtube.com/watch?v=OU8QSSSGyGc',
+            'Aquí es donde se rompe el corazón del día — literal, es el bloque de intervalos.',
+            'Marca un ritmo sostenible: mejor constante que explosivo al inicio y muerto al final.',
+            null,
+        ],
+    ];
+
     public function run(): void
     {
         $ejercicios = Exercise::pluck('id', 'name');
@@ -122,12 +154,19 @@ class ProgramRoutineSeeder extends Seeder
                     continue;
                 }
 
+                [$guideVideo, $guideDesc, $guideTips, $guideErrores] = self::GUIAS[$nombreEjercicio] ?? [null, null, null, null];
+
                 $dia->exercises()->create([
-                    'exercise_id'  => $exerciseId,
-                    'sort_order'   => $j++,
-                    'sets'         => $sets,
-                    'reps'         => $reps,
-                    'rest_seconds' => $descanso,
+                    'exercise_id'            => $exerciseId,
+                    'sort_order'             => $j++,
+                    'sets'                   => $sets,
+                    'reps'                   => $reps,
+                    'rest_seconds'           => $descanso,
+                    'guide_video_url'        => $guideVideo,
+                    'guide_video_source'     => 'youtube',
+                    'guide_description'      => $guideDesc,
+                    'guide_tips'             => $guideTips,
+                    'guide_common_mistakes'  => $guideErrores,
                 ]);
             }
         }

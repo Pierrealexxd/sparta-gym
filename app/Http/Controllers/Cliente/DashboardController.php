@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Cliente;
 
 use App\Http\Controllers\Controller;
 use App\Models\Member;
-use App\Models\MemberGoal;
 use App\Models\MemberMeasurement;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -17,12 +16,10 @@ class DashboardController extends Controller
         $socio = $request->user()->member()->with([
             'currentMembership.plan',
             'currentAssignment.trainer.user',
-            'goals' => fn ($q) => $q->activos(),
             // Rediseño de programas (PLAN-RUTINAS-PERSONALIZADAS.md): la
             // rutina puede venir de un programa asignado en la landing —
             // se carga 'program' para poder mostrar su nombre en "Mi rutina".
             'routines' => fn ($q) => $q->activas()->with(['days.exercises.exercise', 'program']),
-            'sales' => fn ($q) => $q->completadas()->latest('sold_at')->take(8),
             'attendances' => fn ($q) => $q->latest('checked_in_at')->take(5),
             'measurements' => fn ($q) => $q->orderBy('measured_at'),
             'testimonial',
@@ -56,19 +53,28 @@ class DashboardController extends Controller
             ? round($ultimaMedida->weight_kg - $primeraMedida->weight_kg, 1)
             : null;
 
-        $duracionPlan = $socio->currentMembership?->plan?->duration_days;
-        $diasRestantesPct = ($duracionPlan && $duracionPlan > 0)
-            ? max(0, min(100, round((1 - ($socio->days_left ?? 0) / $duracionPlan) * 100)))
-            : 0;
+        // Corrección al plan: en vez de recalcular a mano el % transcurrido
+        // de la membresía (fórmula que vivía duplicada y desactualizada
+        // acá), se reutilizan los mismos atributos que ya usa el detalle
+        // del cliente en el admin (Membership::dias_restantes /
+        // porcentaje_transcurrido, ver admin/clientes/show.blade.php).
+        $membresiaActual = $socio->currentMembership;
 
         $kpis = [
-            'diasRestantes'    => $socio->days_left,
-            'diasRestantesPct' => $diasRestantesPct,
+            'diasRestantes'    => $membresiaActual?->dias_restantes,
+            'diasRestantesPct' => $membresiaActual?->porcentaje_transcurrido ?? 0,
             'asistenciasMes'   => $asistenciasMes,
             'deltaAsistencia'  => $deltaAsistencia,
             'racha'            => $racha,
             'pesoActual'       => $ultimaMedida?->weight_kg,
             'deltaPeso'        => $deltaPeso,
+            // Altura, IMC y % grasa: mismos datos y mismo cálculo (accesores
+            // de MemberMeasurement) que ya usa /cliente/progreso, ahora
+            // también visibles de un vistazo en el dashboard.
+            'altura'           => $ultimaMedida?->altura,
+            'imc'              => $ultimaMedida?->bmi,
+            'imcCategoria'     => $ultimaMedida?->bmi_category,
+            'grasaActual'      => $ultimaMedida?->body_fat_pct,
         ];
 
         // ── GRÁFICA 1: Asistencia semanal (12 semanas) ────────
@@ -104,36 +110,6 @@ class DashboardController extends Controller
             'tituloEjeY' => 'Visitas',
         ];
 
-        // ── GRÁFICA 2: Frecuencia por día de la semana (3 meses) ──
-        $asistenciasPorDia = $socio->attendances()
-            ->where('attended_on', '>=', now()->subMonths(3)->toDateString())
-            ->selectRaw('DAYOFWEEK(attended_on) as dia, COUNT(*) as total')
-            ->groupBy('dia')
-            ->pluck('total', 'dia');
-
-        $diasNombres = [1 => 'Dom', 2 => 'Lun', 3 => 'Mar', 4 => 'Mié', 5 => 'Jue', 6 => 'Vie', 7 => 'Sáb'];
-        $diasData = array_map(fn ($d) => (int) ($asistenciasPorDia[$d] ?? 0), range(1, 7));
-        $hayFrecuenciaDias = array_sum($diasData) > 0;
-
-        $diaMax = null;
-        if ($hayFrecuenciaDias) {
-            $indiceMax = array_search(max($diasData), $diasData);
-            $diaMax = array_values($diasNombres)[$indiceMax];
-        }
-
-        $graficoFrecuencia = [
-            'tipo' => 'bar',
-            // Se lee del config global, no del dataset (ver graficos.js).
-            'horizontal' => true,
-            'labels' => array_values($diasNombres),
-            'datasets' => [[
-                'label' => 'Visitas',
-                'data' => $diasData,
-                'token' => '--brasa',
-            ]],
-            'tituloEjeY' => 'Visitas',
-        ];
-
         // ── GRÁFICA 3: Progreso corporal (peso + grasa) ───────
         // Mismo patrón de eje dual que ProgressController::graficoCombinado
         // (no se toca ese controlador), recortado a las últimas 12 tomas
@@ -162,79 +138,15 @@ class DashboardController extends Controller
             ],
         ];
 
-        // ── GRÁFICA 4: Inversión acumulada (12 meses) ─────────
-        $ventasPorMes = $socio->sales()
-            ->completadas()
-            ->where('sold_at', '>=', now()->subMonths(11)->startOfMonth())
-            ->selectRaw('DATE_FORMAT(sold_at, "%Y-%m") as mes, SUM(total) as total')
-            ->groupBy('mes')
-            ->orderBy('mes')
-            ->pluck('total', 'mes');
-
-        $acumulado = 0;
-        $inversionLabels = [];
-        $inversionData = [];
-        for ($i = 11; $i >= 0; $i--) {
-            $fecha = now()->subMonths($i);
-            $clave = $fecha->format('Y-m');
-            $acumulado += (float) ($ventasPorMes[$clave] ?? 0);
-            $inversionLabels[] = $fecha->translatedFormat('M');
-            $inversionData[] = round($acumulado, 2);
-        }
-
-        $hayInversion = $acumulado > 0;
-
-        $graficoInversion = [
-            'tipo' => 'line',
-            'labels' => $inversionLabels,
-            'datasets' => [[
-                'label' => 'Inversión (S/)',
-                'data' => $inversionData,
-                'token' => '--bronce',
-                'relleno' => true,
-            ]],
-            'tituloEjeY' => 'S/',
-        ];
-
-        // ── Mis metas ──────────────────────────────────────────
-        // Mismo cálculo de progreso que ProgressController@__invoke (no se
-        // toca ese controlador): % avanzado entre la primera y la última
-        // medida de peso hacia el valor objetivo de cada meta.
-        $metas = $socio->goals->map(function (MemberGoal $meta) use ($primeraMedida, $ultimaMedida) {
-            $progreso = null;
-            if ($primeraMedida && $ultimaMedida && $primeraMedida->id !== $ultimaMedida->id && $meta->target_value) {
-                $inicio = (float) $primeraMedida->weight_kg;
-                $actual = (float) $ultimaMedida->weight_kg;
-                $objetivo = (float) $meta->target_value;
-
-                $progreso = match ($meta->type) {
-                    'perder_peso' => $inicio - $objetivo > 0
-                        ? round(min(1, max(0, ($inicio - $actual) / ($inicio - $objetivo))), 2)
-                        : null,
-                    'ganar_musculo' => $objetivo - $inicio > 0
-                        ? round(min(1, max(0, ($actual - $inicio) / ($objetivo - $inicio))), 2)
-                        : null,
-                    default => null,
-                };
-            }
-
-            return ['meta' => $meta, 'progreso' => $progreso];
-        });
-
         return view('cliente.dashboard', [
             'socio'                => $socio,
             'kpis'                 => $kpis,
+            'membresiaActual'      => $membresiaActual,
             'graficoAsistencia'    => $graficoAsistencia,
             'hayAsistenciaSemanal' => $hayAsistenciaSemanal,
-            'graficoFrecuencia'    => $graficoFrecuencia,
-            'hayFrecuenciaDias'    => $hayFrecuenciaDias,
-            'diaMaxFrecuencia'     => $diaMax,
             'graficoProgreso'      => $graficoProgreso,
             'hayMedidas'           => $hayMedidas,
-            'graficoInversion'     => $graficoInversion,
-            'hayInversion'         => $hayInversion,
             'rutinaActiva'         => $socio->routines->first(),
-            'metas'                => $metas,
         ]);
     }
 

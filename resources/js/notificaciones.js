@@ -29,7 +29,14 @@ document.addEventListener('alpine:init', () => {
         items: [],
         _siguienteId: 0,
 
-        mostrar({ titulo, cuerpo = '', icono = 'campana', prioridad = 'media', url = '' }) {
+        // El backend serializa cada notificación con nombres en inglés
+        // (title/body/icon/priority — mismos nombres que las columnas de la
+        // tabla `notifications`, ver NotificationService::serializar()), y
+        // recibirNuevas() pasa esos objetos tal cual. Sin este mapeo,
+        // "titulo"/"cuerpo"/"icono"/"prioridad" llegaban siempre undefined
+        // y todo toast salía en blanco con el ícono y prioridad por
+        // defecto, sin importar la notificación real.
+        mostrar({ title: titulo, body: cuerpo = '', icon: icono = 'campana', priority: prioridad = 'media', url = '' }) {
             const max = window.spartaNotificaciones?.toastMax ?? 4;
 
             const id = ++this._siguienteId;
@@ -86,9 +93,13 @@ document.addEventListener('alpine:init', () => {
         items: [],
         total: 0,
         cargando: false,
-        // Cursor de toasts: la primera pasada solo lo sincroniza (toastear
-        // lo que ya existía al cargar la página sería ruido — eso va al cajón).
-        ultimoId: 0,
+        // Cursor de toasts, por timestamp (updated_at) — no por id: el
+        // dedupe del backend reutiliza la misma fila mientras la conversación
+        // siga sin leer, así que un cursor por id dejaba de re-toastear a
+        // partir del segundo mensaje sin leer (ver NotificationService::nuevas).
+        // La primera pasada solo lo sincroniza (toastear lo que ya existía
+        // al cargar la página sería ruido — eso va al cajón).
+        ultimoCursor: '',
         _primeraPeticion: true,
         temporizador: null,
 
@@ -117,8 +128,8 @@ document.addEventListener('alpine:init', () => {
 
         async recibirNuevas() {
             try {
-                const { data } = await axios.get(RUTA('nuevas') + '?desde=' + this.ultimoId);
-                this.ultimoId = data.ultimo_id || this.ultimoId;
+                const { data } = await axios.get(RUTA('nuevas') + '?desde=' + encodeURIComponent(this.ultimoCursor));
+                this.ultimoCursor = data.ultimo_cursor || this.ultimoCursor;
 
                 if (this._primeraPeticion) {
                     this._primeraPeticion = false;

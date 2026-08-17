@@ -110,17 +110,35 @@ class ProgramRoutineController extends Controller
 
     public function agregarEjercicio(Request $request, ProgramRoutineDay $dia): RedirectResponse
     {
-        $datos = $request->validate([
-            'exercise_id'  => ['required', 'exists:exercises,id'],
-            'sets'         => ['required', 'integer', 'min:1', 'max:20'],
-            'reps'         => ['nullable', 'string', 'max:20'],
-            'rest_seconds' => ['nullable', 'integer', 'min:0'],
-            'notes'        => ['nullable', 'string', 'max:300'],
-        ]);
+        $datos = $request->validate($this->reglasEjercicio());
 
         $dia->exercises()->create($datos + ['sort_order' => $dia->exercises()->count()]);
 
         return back()->with('exito', 'Ejercicio agregado.');
+    }
+
+    /**
+     * FASE 1.6 de PLAN-GUIAS-EJERCICIO.md: editar la guía personalizada de
+     * un ejercicio ya agregado a una rutina base — nunca cambia el ejercicio
+     * ni la prescripción (eso ya lo cubre eliminar + agregar de nuevo), solo
+     * los campos guide_*. Enviar todo en blanco vuelve a heredar del
+     * Exercise (ver ProgramRoutineExercise::getEffective*Attribute).
+     */
+    public function editarEjercicio(Request $request, ProgramRoutineExercise $ejercicio): RedirectResponse
+    {
+        $datos = $request->validate([
+            'guide_video_source'     => ['nullable', 'in:youtube,vimeo,gdrive,url,upload'],
+            'guide_video_url'        => ['nullable', 'url', 'max:255'],
+            'guide_description'      => ['nullable', 'string', 'max:1000'],
+            'guide_tips'             => ['nullable', 'string', 'max:500'],
+            'guide_common_mistakes'  => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $datos['guide_video_source'] = $datos['guide_video_source'] ?: 'youtube';
+
+        $ejercicio->update($datos);
+
+        return back()->with('exito', 'Guía del ejercicio actualizada.');
     }
 
     public function eliminarEjercicio(ProgramRoutineExercise $ejercicio): RedirectResponse
@@ -128,6 +146,17 @@ class ProgramRoutineController extends Controller
         $ejercicio->delete();
 
         return back()->with('exito', 'Ejercicio eliminado.');
+    }
+
+    private function reglasEjercicio(): array
+    {
+        return [
+            'exercise_id'  => ['required', 'exists:exercises,id'],
+            'sets'         => ['required', 'integer', 'min:1', 'max:20'],
+            'reps'         => ['nullable', 'string', 'max:20'],
+            'rest_seconds' => ['nullable', 'integer', 'min:0'],
+            'notes'        => ['nullable', 'string', 'max:300'],
+        ];
     }
 
     /** El día/rutina pedido tiene que pertenecer al programa de la URL. */

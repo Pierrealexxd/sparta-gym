@@ -2,17 +2,22 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasExerciseGuideOverrides;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProgramRoutineExercise extends Model
 {
-    use HasFactory;
+    use HasFactory, HasExerciseGuideOverrides;
 
     protected $fillable = [
         'program_routine_day_id', 'exercise_id', 'sort_order',
         'sets', 'reps', 'weight_kg', 'time_seconds', 'rest_seconds', 'notes',
+        // FASE 1.4 de PLAN-GUIAS-EJERCICIO.md: override de guía por programa.
+        // Todos nullable — vacíos, se hereda del Exercise (ver el trait).
+        'guide_video_url', 'guide_video_source', 'guide_video_file_path',
+        'guide_description', 'guide_tips', 'guide_common_mistakes',
     ];
 
     protected function casts(): array

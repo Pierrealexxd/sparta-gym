@@ -79,6 +79,16 @@ class ProgramController extends Controller
                     'time_seconds'   => $ejPlantilla->time_seconds,
                     'rest_seconds'   => $ejPlantilla->rest_seconds,
                     'notes'          => $ejPlantilla->notes,
+                    // FASE 1 de PLAN-GUIAS-EJERCICIO.md: la guía personalizada
+                    // vive en la plantilla (program_routine_exercises) — sin
+                    // copiarla acá, "Mi Rutina" (que lee routine_exercises,
+                    // no la plantilla) nunca la vería.
+                    'guide_video_url'       => $ejPlantilla->guide_video_url,
+                    'guide_video_source'    => $ejPlantilla->guide_video_source,
+                    'guide_video_file_path' => $ejPlantilla->guide_video_file_path,
+                    'guide_description'     => $ejPlantilla->guide_description,
+                    'guide_tips'            => $ejPlantilla->guide_tips,
+                    'guide_common_mistakes' => $ejPlantilla->guide_common_mistakes,
                 ]);
             }
         }

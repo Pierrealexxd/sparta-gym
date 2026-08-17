@@ -23,14 +23,21 @@ class Program extends Model
         'description', 'highlights', 'icon', 'accent_color',
         'duration_weeks', 'difficulty', 'sort_order',
         'is_active', 'is_public',
+        // FASE 3 de PLAN-GUIAS-EJERCICIO.md: recomendaciones visibles en
+        // "Mi Rutina" — nullable, un programa sin ellas no muestra la sección.
+        'nutrition_tips', 'recovery_tips', 'hydration_tips', 'supplements_tips',
     ];
 
     protected function casts(): array
     {
         return [
-            'highlights' => 'array',
-            'is_active'  => 'boolean',
-            'is_public'  => 'boolean',
+            'highlights'        => 'array',
+            'nutrition_tips'    => 'array',
+            'recovery_tips'     => 'array',
+            'hydration_tips'    => 'array',
+            'supplements_tips'  => 'array',
+            'is_active'         => 'boolean',
+            'is_public'         => 'boolean',
         ];
     }
 
