@@ -210,6 +210,221 @@ graphify-out
 - Si el repo se hace público, no exponer el `ca.pem` como problema no lo es
   (es un certificado público), pero las credenciales de BD sí.
 
+## Optimización de rendimiento (Front-end)
+
+### Problema original
+
+Un solo `app.js` cargaba todo el sitio: Chart.js (~120 KB), GSAP (~40 KB),
+jsQR (~10 KB), Alpine.js, y todo el CSS (101 KB) — sin importar si la página
+lo necesitaba. Un visitante de la landing bajaba gráficos del panel; un admin
+en el dashboard bajaba animaciones de la landing.
+
+### Solución aplicada
+
+**CSS split por contexto** — 3 entry points en `vite.config.js`:
+
+| Entry point | Archivo | Página | CSS que incluye |
+|---|---|---|---|
+| `panel-entry.css` | `resources/css/panel-entry.css` | `/panel/*` | tokens + base + components + panel |
+| `public-entry.css` | `resources/css/public-entry.css` | Landing, `/`, `/sedes` | tokens + base + components + landing |
+| `auth-entry.css` | `resources/css/auth-entry.css` | `/login`, `/registro` | tokens + base + components + auth |
+
+Cada layout Blade carga solo su CSS via `@vite`:
+- `layouts/panel.blade.php` → `panel-entry.css` + `app-panel.js`
+- `layouts/public.blade.php` → `public-entry.css` + `app-public.js`
+- `auth/login.blade.php`, `auth/registro.blade.php` → `auth-entry.css` + `app-public.js`
+
+**JS dinámico** — módulos pesados con `import()` bajo demanda:
+
+| Módulo | Peso | Se carga cuando... |
+|---|---|---|
+| Chart.js (graficos) | ~184 KB | hay `[data-grafico]` (dashboard, progreso) |
+| GSAP + ScrollTrigger (animations) | ~116 KB | hay `[data-revelar]` (animaciones landing) |
+| jsQR (escáner) | ~131 KB | el entrenador abre el escáner QR |
+| QR generator (qrcode) | ~26 KB | se muestra un carnet o código QR |
+| interacciones | ~0.8 KB | hay `.tarjeta--interactiva` |
+
+**Resultado:**
+
+| Página | JS antes | JS ahora (carga inmediata) | Ahorro |
+|---|---|---|---|
+| Panel (admin/entrenador/cliente) | ~565 KB | ~111 KB | **80%** |
+| Landing pública | ~222 KB | ~106 KB | **52%** |
+| Login / Registro | ~222 KB | ~106 KB | **52%** |
+
+### Regla para mantener la optimización
+
+Al añadir un módulo JS nuevo al panel:
+1. Si pesa > 5 KB → importarlo con `import()` dinámico, no estático.
+2. Los componentes Alpine que registran vía `alpine:init` (como `escaneo-qr.js`)
+   **deben** ser import estático porque necesitan estar listos antes de
+   `Alpine.start()`. Pero sus dependencias pesadas (como `jsQR`) van dinámicas
+   dentro del componente.
+
+---
+
+## Resetear la base de datos de Aiven (producción)
+
+### Cuándo hacerlo
+
+- Después de un `migrate:fresh --seed` local que deja la DB en un estado
+  distinto al de producción.
+- Cuando se quiera limpiar datos demo de producción (socios, asistencias, pagos).
+- Cuando se quiera empezar de cero con el admin como único usuario.
+
+### Opción A: Limpieza parcial (mantener contenido web)
+
+Borra solo datos operativos (ventas, asistencia, inventario, clientes) y deja
+intactos planes, ejercicios, FAQs, testimonials, galería, roles y permisos.
+
+**Desde la máquina local** (necesita las credenciales de Aiven):
+
+```php
+<?php
+// clean_aiven_partial.php — ejecutar con: php clean_aiven_partial.php
+$host = '<host-aiven>';
+$port = '<puerto-aiven>';
+$db   = 'defaultdb';
+$user = 'avnadmin';
+$pass = '<password>';
+$ca   = __DIR__ . '/docker/certs/aiven-ca.pem';
+
+$dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
+$pdo = new PDO($dsn, $user, $pass, [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::MYSQL_ATTR_SSL_CA => $ca,
+]);
+
+$pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+
+$tablas = [
+    // Ventas / pagos
+    'sale_items', 'sales', 'payments', 'cash_closings', 'payroll_payments', 'memberships',
+    // Clientes
+    'member_measurements', 'member_goals', 'meal_log_items', 'meal_logs',
+    'saved_meal_items', 'saved_meals',
+    // Asistencia
+    'attendance_edit_requests', 'staff_attendances', 'attendances',
+    // Entrenamiento
+    'routine_exercises', 'routine_days', 'routines', 'trainer_assignments',
+    // Inventario
+    'stock_movements', 'products',
+    // Mensajería
+    'messages', 'conversation_participants', 'conversations',
+    'notifications', 'sessions',
+];
+
+foreach ($tablas as $t) {
+    try { $pdo->exec("DELETE FROM `$t`"); echo "$t: OK\n"; }
+    catch (PDOException $e) {
+        if (str_contains($e->getMessage(), "doesn't exist")) echo "$t: SKIP\n";
+        else throw $e;
+    }
+}
+
+$pdo->exec('DELETE FROM trainers WHERE user_id != 1');
+$pdo->exec('DELETE FROM users WHERE id != 1');
+$pdo->exec('TRUNCATE TABLE members');
+$pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+
+echo "\n--- Verificación ---\n";
+foreach (['users','members','payments','sales','plans','faqs'] as $t) {
+    $r = $pdo->query("SELECT COUNT(*) FROM `$t`")->fetchColumn();
+    echo "$t: $r\n";
+}
+```
+
+> **Nota:** Algunas tablas nuevas (`stock_alerts`, `notifications`) pueden no
+> existir en producción si aún no se ha hecho deploy con esas migraciones.
+> El script las ignora automáticamente.
+
+### Opción B: Reset completo (desde consola de Aiven)
+
+1. Entrar a [console.aiven.io](https://console.aiven.io)
+2. Seleccionar el servicio MySQL → pestaña **"Console"**
+3. Pegar y ejecutar:
+
+```sql
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- Ventas / pagos
+TRUNCATE TABLE sale_items;
+TRUNCATE TABLE sales;
+TRUNCATE TABLE payments;
+TRUNCATE TABLE cash_closings;
+TRUNCATE TABLE payroll_payments;
+TRUNCATE TABLE memberships;
+
+-- Clientes
+TRUNCATE TABLE member_measurements;
+TRUNCATE TABLE member_goals;
+TRUNCATE TABLE meal_log_items;
+TRUNCATE TABLE meal_logs;
+TRUNCATE TABLE saved_meal_items;
+TRUNCATE TABLE saved_meals;
+
+-- Asistencia
+TRUNCATE TABLE attendance_edit_requests;
+TRUNCATE TABLE staff_attendances;
+TRUNCATE TABLE attendances;
+
+-- Entrenamiento
+TRUNCATE TABLE routine_exercises;
+TRUNCATE TABLE routine_days;
+TRUNCATE TABLE routines;
+TRUNCATE TABLE trainer_assignments;
+DELETE FROM trainers WHERE user_id != 1;
+
+-- Inventario
+TRUNCATE TABLE stock_movements;
+TRUNCATE TABLE products;
+
+-- Mensajería / notificaciones
+TRUNCATE TABLE messages;
+TRUNCATE TABLE conversation_participants;
+TRUNCATE TABLE conversations;
+TRUNCATE TABLE notifications;
+TRUNCATE TABLE sessions;
+
+-- Usuarios (solo admin)
+DELETE FROM users WHERE id != 1;
+TRUNCATE TABLE members;
+
+SET FOREIGN_KEY_CHECKS = 1;
+```
+
+### Opción C: Reset completo con datos demo (desde local)
+
+```powershell
+$env:DB_HOST="<host-aiven>"
+$env:DB_PORT="<puerto-aiven>"
+$env:DB_DATABASE="defaultdb"
+$env:DB_USERNAME="avnadmin"
+$env:DB_PASSWORD="<password>"
+$env:MYSQL_ATTR_SSL_CA="docker/certs/aiven-ca.pem"
+php artisan migrate:fresh --seed --force
+```
+
+### Verificar que funcionó
+
+```powershell
+# Verificar que solo queda el admin
+php artisan tinker --execute="echo App\Models\User::count() . ' users, ' . App\Models\Member::count() . ' members';"
+# Debería decir: 1 users, 0 members
+```
+
+O desde la consola de Aiven:
+
+```sql
+SELECT 'users' AS tbl, COUNT(*) AS cnt FROM users
+UNION ALL SELECT 'members', COUNT(*) FROM members
+UNION ALL SELECT 'payments', COUNT(*) FROM payments
+UNION ALL SELECT 'plans', COUNT(*) FROM plans;
+-- Debería dar: users=1, members=0, payments=0, plans=4
+```
+
+---
+
 ## Siguientes pasos cuando se quiera «de verdad»
 
 1. **Aiven**: subir de free a plan de pago (guardar backups, no se apaga).
