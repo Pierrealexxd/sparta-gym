@@ -8,9 +8,9 @@ RUN npm run build
 FROM php:8.3-cli-alpine
 WORKDIR /app
 
-RUN apk add --no-cache icu-dev oniguruma-dev freetype-dev libpng-dev libjpeg-turbo-dev \
+RUN apk add --no-cache icu-dev oniguruma-dev freetype-dev libpng-dev libjpeg-turbo-dev libzip-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo_mysql mbstring intl gd \
+    && docker-php-ext-install pdo_mysql mbstring intl gd zip \
     && docker-php-ext-enable opcache
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
