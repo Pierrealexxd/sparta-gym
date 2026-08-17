@@ -39,9 +39,16 @@ class Conversation extends Model
         return $this->hasOne(Message::class)->latestOfMany();
     }
 
+    /**
+     * sinFiltroDeGimnasio(): ser participante es la autorización real de un
+     * hilo — no debería depender además de que la sede activa de quien
+     * pregunta coincida con el gym_id guardado en esa fila puntual (bug real
+     * visto en producción: con una sede específica activa que no coincidía,
+     * esto daba falso negativo y "enviar" fallaba en silencio).
+     */
     public function esParticipante(int $userId): bool
     {
-        return $this->participants()->where('user_id', $userId)->exists();
+        return $this->participants()->sinFiltroDeGimnasio()->where('user_id', $userId)->exists();
     }
 
     /**

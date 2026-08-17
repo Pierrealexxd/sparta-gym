@@ -43,14 +43,31 @@ class MensajeController extends Controller
     }
 
     /** Mensajes de un hilo a partir de un id, marcando los míos como leídos. */
-    public function listaMensajes(Request $request, Conversation $conversacion): JsonResponse
+    public function listaMensajes(Request $request, int $conversacion): JsonResponse
     {
         $yo = $request->user();
+
+        // Corrección de bug real (producción, agosto 2026): con binding
+        // implícito de Eloquent (Conversation $conversacion), el global
+        // scope de BelongsToGym se aplicaba también acá — si la sede activa
+        // del admin no coincidía con el gym_id guardado en ESA conversación
+        // puntual, ni siquiera se encontraba (404 silencioso: el JS no
+        // tiene .catch(), así que el hilo se quedaba "abierto" en blanco,
+        // sin contacto ni mensajes, con el mensaje escrito sin poder
+        // enviarse). listaConversaciones() ya sorteaba esto con
+        // sinFiltroDeGimnasio() para el admin — acá faltaba, y además le
+        // corresponde a CUALQUIER rol: ser participante ya es la
+        // autorización real, la sede no debería sumar una restricción extra.
+        $conversacion = Conversation::sinFiltroDeGimnasio()->findOrFail($conversacion);
         abort_unless($conversacion->esParticipante($yo->id), 403);
 
         $desde = (int) $request->query('desde', 0);
 
+        // Mismo bug: Message también es BelongsToGym, así que esta lectura
+        // también quedaba filtrada por la sede activa de quien pregunta en
+        // vez de por la conversación real.
         $mensajes = $conversacion->messages()
+            ->sinFiltroDeGimnasio()
             ->where('id', '>', $desde)
             ->orderBy('id')
             ->get();
@@ -68,9 +85,15 @@ class MensajeController extends Controller
         ]);
     }
 
-    public function enviar(Request $request, Conversation $conversacion): JsonResponse
+    public function enviar(Request $request, int $conversacion): JsonResponse
     {
         $yo = $request->user();
+
+        // Mismo bug que en listaMensajes(): sin sinFiltroDeGimnasio(), el
+        // binding implícito exigía que la sede activa coincidiera con la
+        // guardada en la conversación — "hola" se quedaba escrito sin
+        // enviarse porque esta petición fallaba en silencio (JS sin .catch()).
+        $conversacion = Conversation::sinFiltroDeGimnasio()->findOrFail($conversacion);
         abort_unless($conversacion->esParticipante($yo->id), 403);
 
         $datos = $request->validate(['body' => ['required', 'string', 'max:2000']]);
@@ -220,11 +243,27 @@ class MensajeController extends Controller
      */
     private function listaConversaciones(User $yo): Collection
     {
+        // El sinFiltroDeGimnasio() de la consulta externa (solo admin, regla
+        // de negocio a propósito) NO se hereda dentro de whereHas/with/
+        // withCount: son subconsultas aparte sobre ConversationParticipant y
+        // Message, que también son BelongsToGym. Sin bypassearlas ahí
+        // también, un hilo podía desaparecer de la lista (o su contador de
+        // no leídos salir en 0) solo porque la sede activa del participante
+        // no coincidía con el gym_id guardado en esa fila puntual — mismo
+        // bug de fondo que rompía "abrir hilo" y "enviar" (ver
+        // listaMensajes/enviar). Ser participante es la autorización real;
+        // la sede activa solo decide QUÉ hilos entran en la lista para
+        // recepción/entrenador/cliente (el when() de arriba), no si un hilo
+        // que ya pasó ese filtro se arma bien.
         return Conversation::query()
             ->when($yo->esAdmin(), fn ($q) => $q->sinFiltroDeGimnasio())
-            ->whereHas('participants', fn ($q) => $q->where('user_id', $yo->id))
-            ->with(['participants.user', 'ultimoMensaje'])
-            ->withCount(['messages as no_leidas' => fn ($q) => $q->noLeidas($yo->id)])
+            ->whereHas('participants', fn ($q) => $q->sinFiltroDeGimnasio()->where('user_id', $yo->id))
+            ->with([
+                'participants' => fn ($q) => $q->sinFiltroDeGimnasio(),
+                'participants.user',
+                'ultimoMensaje' => fn ($q) => $q->sinFiltroDeGimnasio(),
+            ])
+            ->withCount(['messages as no_leidas' => fn ($q) => $q->sinFiltroDeGimnasio()->noLeidas($yo->id)])
             ->orderByDesc('updated_at')
             ->get();
     }
@@ -273,7 +312,11 @@ class MensajeController extends Controller
 
     private function serializarContacto(Conversation $conversacion, User $yo): array
     {
-        $otro = $conversacion->participants->firstWhere('user_id', '!=', $yo->id)?->user;
+        // Mismo bug: sin sinFiltroDeGimnasio(), esta relación se cargaba
+        // filtrada por la sede activa de quien pregunta y "contacto" salía
+        // vacío aunque el participante real existiera.
+        $otro = $conversacion->participants()->sinFiltroDeGimnasio()->get()
+            ->firstWhere('user_id', '!=', $yo->id)?->user;
 
         return $this->serializarUsuario($otro);
     }
@@ -298,6 +341,7 @@ class MensajeController extends Controller
     private function marcarLeidas(Conversation $conversacion, User $yo): void
     {
         $conversacion->messages()
+            ->sinFiltroDeGimnasio()
             ->where('sender_id', '!=', $yo->id)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
