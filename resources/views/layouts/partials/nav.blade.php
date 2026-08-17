@@ -1,6 +1,6 @@
 <header class="nav" data-nav>
     <a class="nav__marca" href="{{ route('landing') }}">
-        <span>Sparta</span><em>Gym</em>
+        <span>Sparta</span><em>Gym L.</em>
     </a>
 
     {{-- Velo oscuro detrás del cajón: cierra el menú al tocar afuera (ver
@@ -14,7 +14,7 @@
              eligiendo un enlace o con Escape; un aspa aparte al lado del
              logo sobraba. --}}
         <div class="nav__enlaces-cabecera">
-            <span class="nav__enlaces-marca"><span>Sparta</span><em>Gym</em></span>
+            <span class="nav__enlaces-marca"><span>Sparta</span><em>Gym L.</em></span>
         </div>
 
         <div class="nav__enlaces-lista">

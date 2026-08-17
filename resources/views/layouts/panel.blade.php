@@ -66,7 +66,7 @@
                     @if ($logo)
                         <img src="{{ asset('storage/' . $logo) }}" alt="" style="width:1.6em;height:1.6em;border-radius:var(--r-2);object-fit:cover;margin-right:var(--e-2)">
                     @endif
-                    <span>Sparta</span><em>Gym</em>
+                    <span>Sparta</span><em>Gym L.</em>
                 </a>
                 <button type="button" class="panel__comprimir"
                         @click="comprimido = !comprimido; localStorage.setItem('sidebarComprimido', comprimido ? '1' : '0')"

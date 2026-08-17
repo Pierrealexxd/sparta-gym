@@ -43,7 +43,7 @@
                             @if ($logoUrl)
                                 <img class="auth__logo" src="{{ $logoUrl }}" alt="">
                             @endif
-                            <span class="nav__marca"><span>Sparta</span><em>Gym</em></span>
+                            <span class="nav__marca"><span>Sparta</span><em>Gym L.</em></span>
                         </a>
                     </div>
 
