@@ -4,11 +4,12 @@
  * Cámara del entrenador para marcar asistencia con el QR de la sede.
  *
  * Flujo del modal (ver entrenador/asistencia/_escaneo-qr.blade.php):
- *   pidiendo → preparando → (turno | leyendo) → procesando → listo | error
+ *   pidiendo → verificando-ubicacion → ubicacion-bloqueada | preparando
+ *   → (turno | leyendo) → procesando → listo | error
  *
+ * La ubicación se pide ANTES de encender la cámara. Si el navegador no la
+ * tiene o el permiso fue denegado, se muestra instrucciones para activarla.
  * La decisión entrada/salida siempre la toma el backend (AsistenciaService).
- * Este módulo solo consulta el estado (para pedir turno o no) y manda
- * { token, turno } al POST. El gym_id nunca sale de aquí: lo define el QR.
  *
  * El stream se detiene en cuanto hay resultado o se cierra el modal — la
  * luz de la cámara no puede quedar encendida en segundo plano.
@@ -22,12 +23,13 @@ let jsQRCargado = null;
 document.addEventListener('alpine:init', () => {
     Alpine.data('escaneoQr', (config) => ({
         abierto: false,
-        estado: 'pidiendo',   // pidiendo | preparando | turno | leyendo | procesando | listo | error
+        estado: 'pidiendo',   // pidiendo | verificando-ubicacion | ubicacion-bloqueada | preparando | turno | leyendo | procesando | listo | error
         mensaje: '',
         enTurno: false,
         horaEntrada: null,
         turno: 'manana',
         resultado: null,
+        coords: null,
 
         rutaEstado: config.rutaEstado ?? '',
         rutaQr: config.rutaQr ?? '',
@@ -41,20 +43,88 @@ document.addEventListener('alpine:init', () => {
             this.resultado = null;
             this.mensaje = '';
             this.arrancando = false;
+            this.coords = null;
             this.abierto = true;
-            this.estado = 'preparando';
+            this.estado = 'verificando-ubicacion';
 
-            // La cámara se pide DENTRO del clic (gesto de usuario): en móvil,
-            // getUserMedia tras un await (el fetch del estado) no muestra el
-            // permiso y deja el modal clavado en "Preparando la cámara…". El
-            // turno se decide cuando llegue el estado, no antes.
-            this.arrancarCamara();
-            this.consultarEstado();
+            // Primero verificar/solicitar GPS. La cámara se pide después,
+            // solo si la ubicación está disponible. Esto evita que en iOS,
+            // donde el permiso denegado no se puede re-pedir, el entrenador
+            // escanee el QR y recién ahí descubra que no puede marcar.
+            this.verificarUbicacion();
         },
 
         cerrar() {
             this.detener();
             this.abierto = false;
+        },
+
+        /**
+         * Verifica el estado del permiso de ubicación ANTES de pedir_coords.
+         * Si el permiso ya fue denegado en Safari/iOS, getCurrentPosition
+         * falla silenciosamente — por eso usamos navigator.permissions.query
+         * cuando está disponible para detectar el caso y mostrar instrucciones.
+         */
+        async verificarUbicacion() {
+            if (!navigator.geolocation) {
+                this.estado = 'ubicacion-bloqueada';
+                this.mensaje = 'Tu dispositivo no tiene GPS. Necesitás ubicación para marcar asistencia.';
+                return;
+            }
+
+            // navigator.permissions no existe en todos los navegadores
+            // (p. ej. older Safari). Si no está, pedimos directamente.
+            if (navigator.permissions?.query) {
+                try {
+                    const resultado = await navigator.permissions.query({ name: 'geolocation' });
+                    if (resultado.state === 'denied') {
+                        this.estado = 'ubicacion-bloqueada';
+                        this.mensaje = '';
+                        return;
+                    }
+                    // 'granted' o 'prompt': pedir coords (mostrará diálogo si es prompt)
+                } catch {
+                    // query falló: continuar y pedir directamente
+                }
+            }
+
+            this.pedirUbicacion();
+        },
+
+        /**
+         * Pide la ubicación al navegador. Si el usuario la concede, se
+         * guarda en this.coords y se procede a la cámara. Si la niega,
+         * se muestra instrucciones para activarla en Ajustes.
+         */
+        pedirUbicacion() {
+            navigator.geolocation.getCurrentPosition(
+                (posicion) => {
+                    if (!this.abierto) return;
+                    this.coords = { lat: posicion.coords.latitude, lng: posicion.coords.longitude };
+                    this.estado = 'preparando';
+                    this.arrancarCamara();
+                    this.consultarEstado();
+                },
+                (error) => {
+                    if (!this.abierto) return;
+                    this.estado = 'ubicacion-bloqueada';
+                    if (error.code === error.PERMISSION_DENIED) {
+                        this.mensaje = '';
+                    } else if (error.code === error.POSITION_UNAVAILABLE) {
+                        this.mensaje = 'Ubicación no disponible. Verificá que el GPS esté activado.';
+                    } else {
+                        this.mensaje = 'No se pudo obtener tu ubicación. Intentá de nuevo.';
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+            );
+        },
+
+        /** Reintentar después de que el usuario fue a Ajustes a activar ubicación. */
+        reintentarUbicacion() {
+            this.estado = 'verificando-ubicacion';
+            this.mensaje = '';
+            this.verificarUbicacion();
         },
 
         async consultarEstado() {
@@ -183,25 +253,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Tras leer el QR, antes de mandar el POST, se pide la ubicación en
-         * tiempo real — el mismo gesto (la lectura) sirve de disparador para
-         * el diálogo de permiso del navegador. La ubicación GPS es
-         * OBLIGATORIA: sin ella la marcación no se registra. Si el empleado
-         * niega el permiso o el dispositivo no tiene GPS, se muestra error.
+         * Tras leer el QR, se envía la marcación con las coordenadas que ya
+         * se capturaron al abrir el modal (this.coords). La ubicación es
+         * OBLIGATORIA: si no se pudo obtener, este método no se llama.
          */
         async enviar(token) {
             this.detener();
-            this.estado = 'ubicando';
-
-            let coords;
-            try {
-                coords = await this.obtenerUbicacion();
-            } catch (error) {
-                this.estado = 'error';
-                this.mensaje = error.message;
-                return;
-            }
-
             this.estado = 'procesando';
 
             try {
@@ -212,7 +269,7 @@ document.addEventListener('alpine:init', () => {
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
                     },
-                    body: JSON.stringify({ token, turno: this.turno, lat: coords.lat, lng: coords.lng }),
+                    body: JSON.stringify({ token, turno: this.turno, lat: this.coords.lat, lng: this.coords.lng }),
                 });
 
                 if (!res.ok) {
@@ -236,32 +293,6 @@ document.addEventListener('alpine:init', () => {
                 this.estado = 'error';
                 this.mensaje = 'No se pudo conectar con el servidor. Revisá tu conexión.';
             }
-        },
-
-        /**
-         * Promesa que RECHAZA si no hay GPS o el permiso es denegado.
-         * La marcación no puede registrarse sin ubicación.
-         */
-        obtenerUbicacion() {
-            return new Promise((resolve, reject) => {
-                if (!navigator.geolocation) {
-                    reject(new Error('Tu dispositivo no tiene GPS. La marcación requiere ubicación.'));
-                    return;
-                }
-                navigator.geolocation.getCurrentPosition(
-                    (posicion) => resolve({ lat: posicion.coords.latitude, lng: posicion.coords.longitude }),
-                    (error) => {
-                        if (error.code === error.PERMISSION_DENIED) {
-                            reject(new Error('Permiso de ubicación denegado. Concedelo en la configuración de tu navegador para marcar asistencia.'));
-                        } else if (error.code === error.POSITION_UNAVAILABLE) {
-                            reject(new Error('Ubicación no disponible. Verificá que el GPS esté activado.'));
-                        } else {
-                            reject(new Error('No se pudo obtener tu ubicación. Intentá de nuevo.'));
-                        }
-                    },
-                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
-                );
-            });
         },
 
         recargar() {

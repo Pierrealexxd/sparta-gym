@@ -18,6 +18,39 @@
             </button>
         </div>
 
+        {{-- Verificando permiso de ubicación --}}
+        <template x-if="estado === 'verificando-ubicacion'">
+            <p style="color:var(--ceniza)">Verificando ubicación…</p>
+        </template>
+
+        {{-- Ubicación bloqueada: permiso denegado o GPS no disponible --}}
+        <template x-if="estado === 'ubicacion-bloqueada'">
+            <div>
+                <p style="color:var(--hueso);font-size:var(--t-sm);margin-bottom:var(--e-3)">
+                    La ubicación es obligatoria para marcar asistencia.
+                </p>
+                <template x-if="!mensaje">
+                    <div style="color:var(--ceniza);font-size:var(--t-sm);margin-bottom:var(--e-3)">
+                        <p style="margin-bottom:var(--e-2)"><b style="color:var(--hueso)">En iPhone:</b></p>
+                        <ol style="padding-left:1.2em;margin:0">
+                            <li>Abrí <b>Ajustes</b></li>
+                            <li>Id a <b>Privacidad y seguridad</b></li>
+                            <li>Id a <b>Servicios de ubicación</b></li>
+                            <li>Buscá <b>Safari</b> (o tu navegador)</li>
+                            <li>Seleccioná <b>"Al usar la app"</b> o <b>"Siempre"</b></li>
+                        </ol>
+                    </div>
+                </template>
+                <template x-if="mensaje">
+                    <p style="color:var(--sangre-viva);font-size:var(--t-sm);margin-bottom:var(--e-3)" x-text="mensaje"></p>
+                </template>
+                <div style="display:flex;gap:var(--e-2)">
+                    <button class="btn btn--fuego" type="button" @click="reintentarUbicacion()" style="flex:1">Reintentar</button>
+                    <button class="btn btn--vidrio" type="button" @click="cerrar()" style="flex:1">Cerrar</button>
+                </div>
+            </div>
+        </template>
+
         {{-- Estado inicial: consultando el fichaje de hoy --}}
         <template x-if="estado === 'pidiendo' || estado === 'preparando'">
             <p style="color:var(--ceniza)">Preparando la cámara…</p>
@@ -61,12 +94,6 @@
                     Apuntá al QR impreso en la sede. La marcación manual sigue disponible si la cámara falla.
                 </p>
             </div>
-        </template>
-
-        {{-- Ubicación en tiempo real: obligatoria para marcar. Sin GPS o sin
-             permiso, la marcación no se registra y se muestra error. --}}
-        <template x-if="estado === 'ubicando'">
-            <p style="color:var(--ceniza)">Obteniendo tu ubicación…</p>
         </template>
 
         {{-- Registrando la marcación --}}
