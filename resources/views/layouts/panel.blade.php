@@ -213,10 +213,12 @@
                      avisar antes de que el admin llene un formulario entero
                      y recién ahí se entere. --}}
                 @if (auth()->user()->tienePermiso('sedes.ver-todas') && \App\Support\GymContext::id() === null)
-                    <div class="aviso aviso--info" role="status">
-                        <b>Viendo "Todas las sedes".</b>
-                        Para crear clientes, entrenadores, planes o productos, cambia primero a una sede específica en el menú lateral (📍 arriba).
-                    </div>
+                    @if (session('sede_todas_aviso'))
+                        <div class="toast toast--baja" x-data x-init="$nextTick(() => { setTimeout(() => $el.remove(), 5000) })" role="status">
+                            <b>Viendo "Todas las sedes".</b>
+                            Para crear registros, cambia a una sede específica.
+                        </div>
+                    @endif
                 @endif
 
                 <section class="membrete" data-revelar>

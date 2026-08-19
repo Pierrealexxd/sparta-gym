@@ -4,15 +4,18 @@
 @section('subtitulo', $clientes->total() . ' registrados en total')
 
 @section('acciones')
+    @php $todas = \App\Support\GymContext::id() === null; @endphp
     <div style="display:flex;gap:var(--e-3)">
         {{-- Abre el modal de cliente nuevo (ver abajo), mismo patrón que
              "Nueva matrícula" — antes era su propia pantalla
              (admin.clientes.create, ya no existe como ruta). --}}
-        <button class="btn btn--vidrio" type="button" @click="window.dispatchEvent(new CustomEvent('abrir-cliente'))">
+        <button class="btn btn--vidrio" type="button"
+            @if($todas) disabled data-title="Elige una sede primero" @else @click="window.dispatchEvent(new CustomEvent('abrir-cliente'))" @endif>
             <x-icono nombre="agregar" /> Nuevo cliente
         </button>
         @if (auth()->user()->tienePermiso('clientes.crear'))
-            <button class="btn btn--fuego" type="button" @click="window.dispatchEvent(new CustomEvent('abrir-matricula'))">
+            <button class="btn btn--fuego" type="button"
+                @if($todas) disabled data-title="Elige una sede primero" @else @click="window.dispatchEvent(new CustomEvent('abrir-matricula'))" @endif>
                 <x-icono nombre="agregar" /> Nueva matrícula
             </button>
         @endif

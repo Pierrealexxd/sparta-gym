@@ -225,7 +225,19 @@ export function iniciarInterfazPublica() {
 }
 
 /** Panel (admin/entrenador/cliente): nada de lo que toca la landing. */
+/** Inyecta un <span class="tooltip"> dentro de cada btn que tenga data-title. */
+function tooltipsBotones() {
+    document.querySelectorAll('.btn[data-title]').forEach((btn) => {
+        if (btn.querySelector('.tooltip')) return;
+        const span = document.createElement('span');
+        span.className = 'tooltip';
+        span.textContent = btn.dataset.title;
+        btn.appendChild(span);
+    });
+}
+
 export function iniciarInterfazPanel() {
     tooltipsPanel();
+    tooltipsBotones();
     temaPanel();
 }

@@ -4,8 +4,10 @@
 @section('subtitulo', $productos->total() . ' productos')
 
 @section('acciones')
+    @php $todas = \App\Support\GymContext::id() === null; @endphp
     @if (auth()->user()->tienePermiso('inventario.gestionar'))
-        <button class="btn btn--fuego" type="button" @click="window.dispatchEvent(new CustomEvent('abrir-inventario'))">
+        <button class="btn btn--fuego" type="button"
+            @if($todas) disabled data-title="Elige una sede primero" @else @click="window.dispatchEvent(new CustomEvent('abrir-inventario'))" @endif>
             <x-icono nombre="agregar" /> Nuevo producto
         </button>
     @endif

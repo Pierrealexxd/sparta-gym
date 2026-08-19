@@ -4,12 +4,14 @@
 @section('subtitulo', $planes->total() . ' planes')
 
 @section('acciones')
+    @php $todas = \App\Support\GymContext::id() === null; @endphp
     <div style="display:flex;gap:var(--e-3)">
         <button class="btn btn--vidrio" type="button"
                 @click="window.dispatchEvent(new CustomEvent('abrir-preview', { detail: { seccion: 'planes' } }))">
             <x-icono nombre="ojo" /> Previsualizar
         </button>
-        <button class="btn btn--fuego" type="button" @click="window.dispatchEvent(new CustomEvent('abrir-plan'))">
+        <button class="btn btn--fuego" type="button"
+            @if($todas) disabled data-title="Elige una sede primero" @else @click="window.dispatchEvent(new CustomEvent('abrir-plan'))" @endif>
             <x-icono nombre="agregar" /> Nuevo plan
         </button>
     </div>

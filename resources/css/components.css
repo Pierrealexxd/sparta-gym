@@ -148,6 +148,53 @@
 .btn--grande { padding: 1.15rem 2.6rem; font-size: var(--t-base); }
 .btn--bloque { width: 100%; }
 
+/* Botones deshabilitados (modo "Todas las sedes"): el cursor se bloquea,
+   la opacidad baja y el tooltip se muestra al pasar el cursor. */
+.btn:disabled,
+.btn[aria-disabled="true"] {
+    opacity: .4;
+    cursor: not-allowed;
+    pointer-events: auto;
+}
+.btn:disabled:hover,
+.btn[aria-disabled="true"]:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Tooltip inline para botones deshabilitados: se lee de data-title via JS
+   (tooltipsBotones en ui.js). Position:relative en el btn ya existe. */
+.tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: var(--e-2) var(--e-3);
+    background: var(--obsidiana);
+    color: var(--hueso);
+    font-size: var(--t-xs);
+    font-family: var(--f-texto);
+    white-space: nowrap;
+    border-radius: var(--r-sm);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s ease;
+    z-index: 10;
+}
+.tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--obsidiana);
+}
+.btn:disabled:hover .tooltip,
+.btn[aria-disabled="true"]:hover .tooltip {
+    opacity: 1;
+}
+
 /* --- WhatsApp: color de marca externo, ver --whatsapp en tokens.css --- */
 .btn--whatsapp { background: var(--whatsapp); color: #fff; }
 .btn--whatsapp:hover { background: var(--whatsapp-hover); }

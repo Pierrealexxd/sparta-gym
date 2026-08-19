@@ -4,7 +4,9 @@
 @section('subtitulo', $entrenadores->total() . ' en total')
 
 @section('acciones')
-    <button class="btn btn--fuego" type="button" @click="window.dispatchEvent(new CustomEvent('abrir-entrenador'))">
+    @php $todas = \App\Support\GymContext::id() === null; @endphp
+    <button class="btn btn--fuego" type="button"
+        @if($todas) disabled data-title="Elige una sede primero" @else @click="window.dispatchEvent(new CustomEvent('abrir-entrenador'))" @endif>
         <x-icono nombre="agregar" /> Nuevo entrenador
     </button>
 @endsection

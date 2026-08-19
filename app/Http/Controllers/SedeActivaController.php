@@ -16,6 +16,7 @@ class SedeActivaController extends Controller
         if ($seleccion === 'todas') {
             if ($request->user()->tienePermiso('sedes.ver-todas')) {
                 $request->session()->put('sede_activa_id', 'todas');
+                $request->session()->flash('sede_todas_aviso', true);
             }
 
             return back();

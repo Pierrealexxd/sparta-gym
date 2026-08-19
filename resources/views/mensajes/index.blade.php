@@ -34,7 +34,7 @@
                 <span class="chat__titulo-lista">Conversaciones</span>
                 <button type="button" class="btn btn--fuego chat__nuevo"
                         @click="nuevoAbierto = true; filtroRol = ''; busqueda = ''; cargarDirectorio(); $nextTick(() => $refs.busqueda?.focus())"
-                        aria-label="Nuevo mensaje" title="Nuevo mensaje" aria-haspopup="dialog" :aria-expanded="nuevoAbierto">
+                        aria-label="Nuevo mensaje" data-title="Nuevo mensaje" aria-haspopup="dialog" :aria-expanded="nuevoAbierto">
                     <x-icono nombre="agregar" />
                 </button>
             </div>
