@@ -63,8 +63,8 @@
             </div>
         </template>
 
-        {{-- Ubicación en tiempo real: si no hay permiso o el navegador no la
-             tiene, no bloquea — sigue igual a "procesando" sin coordenadas. --}}
+        {{-- Ubicación en tiempo real: obligatoria para marcar. Sin GPS o sin
+             permiso, la marcación no se registra y se muestra error. --}}
         <template x-if="estado === 'ubicando'">
             <p style="color:var(--ceniza)">Obteniendo tu ubicación…</p>
         </template>

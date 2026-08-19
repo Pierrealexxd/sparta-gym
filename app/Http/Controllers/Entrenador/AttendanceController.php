@@ -233,11 +233,11 @@ class AttendanceController extends Controller
             throw ValidationException::withMessages(['qr' => 'Código QR no válido.']);
         }
 
-        // lat/lng son opcionales a propósito: sin permiso o sin GPS, el
-        // fichaje igual sigue (ver decisión en pierre.md), solo quedan NULL.
+        // lat/lng son obligatorios al marcar por QR: sin ubicación GPS la
+        // marcación no se registra (ver escaneo-qr.js, obtenerUbicacion).
         $request->validate([
-            'lat' => ['nullable', 'numeric', 'between:-90,90'],
-            'lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'lat' => ['required', 'numeric', 'between:-90,90'],
+            'lng' => ['required', 'numeric', 'between:-180,180'],
         ]);
 
         // Sin filtro de sede a propósito: el QR define la sucursal, la sesión no.
@@ -261,8 +261,8 @@ class AttendanceController extends Controller
                 $request->input('turno', 'manana'),
                 $qr->gym_id,
                 true,
-                $request->filled('lat') ? (float) $request->input('lat') : null,
-                $request->filled('lng') ? (float) $request->input('lng') : null,
+                (float) $request->input('lat'),
+                (float) $request->input('lng'),
             );
         } catch (ValidationException $e) {
             throw ValidationException::withMessages([
@@ -310,6 +310,38 @@ class AttendanceController extends Controller
         $this->asistencias->solicitarCorreccion($marcacion, $request->user(), $request->all());
 
         return back()->with('exito', 'Corrección enviada. Queda pendiente de aprobación.');
+    }
+
+    /**
+     * Detalle de una marcación propia, para el modal que consume la vista
+     * "Mi marcación" (fetch → JSON, no navegación de página completa).
+     * Solo puede ver las suyas: aborta 403 si el registro no le pertenece.
+     */
+    public function detalle(StaffAttendance $marcacion): JsonResponse
+    {
+        abort_unless($marcacion->user_id === request()->user()->id, 403);
+
+        $marcacion->load('gym');
+
+        $lat = $marcacion->location_lat !== null ? (float) $marcacion->location_lat : null;
+        $lng = $marcacion->location_lng !== null ? (float) $marcacion->location_lng : null;
+
+        return response()->json([
+            'id'              => $marcacion->id,
+            'entrenador'      => $marcacion->user?->name ?? '—',
+            'dni'             => $marcacion->user?->dni,
+            'sede'            => $marcacion->gym?->name ?? '—',
+            'turno'           => $marcacion->turno_legible,
+            'metodo'          => $marcacion->method_legible,
+            'entrada'         => $marcacion->clocked_in_at->format('d/m/Y H:i'),
+            'salida'          => $marcacion->clocked_out_at?->format('d/m/Y H:i'),
+            'duracion'        => $marcacion->clocked_out_at
+                ? $marcacion->clocked_in_at->diffInMinutes($marcacion->clocked_out_at) . ' min'
+                : null,
+            'lat'             => $lat,
+            'lng'             => $lng,
+            'tiene_ubicacion' => $lat !== null && $lng !== null,
+        ]);
     }
 
     /** Registrar la entrada de un cliente que tengo asignado (method=manual). */

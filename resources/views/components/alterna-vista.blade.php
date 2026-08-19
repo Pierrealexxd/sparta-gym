@@ -7,7 +7,7 @@
      sin tener que elegir cada vez que entra. --}}
 <div x-data="{ vista: localStorage.getItem('vista:{{ $clave }}') || '{{ $defecto }}' }"
      x-effect="localStorage.setItem('vista:{{ $clave }}', vista)">
-    <nav class="pestanas__nav" style="margin-bottom:var(--e-5)" aria-label="Elegir diseño">
+    <nav class="pestanas__nav pestanas__nav--ancha" style="margin-bottom:var(--e-5)" aria-label="Elegir diseño">
         <button type="button" class="pestanas__enlace" :aria-current="vista === 'lista' ? 'true' : 'false'" @click="vista = 'lista'">
             <x-icono nombre="lista" style="width:1em;height:1em;vertical-align:-2px" /> Lista
         </button>

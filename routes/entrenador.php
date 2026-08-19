@@ -88,6 +88,9 @@ Route::prefix('entrenador')->name('entrenador.')->middleware('rol:entrenador')->
         ->name('asistencia.eliminar')->middleware('permiso:asistencia.registrar');
     Route::post('asistencia/marcacion/{marcacion}/solicitar-edicion', [AttendanceController::class, 'solicitarEdicion'])
         ->name('asistencia.solicitar-edicion')->middleware('permiso:asistencia.registrar');
+    Route::get('asistencia/marcacion/{marcacion}/detalle', [AttendanceController::class, 'detalle'])
+        ->name('asistencia.detalle')->middleware('permiso:asistencia.ver')
+        ->whereNumber('marcacion');
 
     // Venta de mostrador (agua, bebidas, ropa): descuenta stock, no lo
     // gestiona — dar de alta productos o ajustar stock a mano sigue siendo

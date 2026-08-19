@@ -73,7 +73,9 @@
                     <tbody>
                         @forelse ($marcacionesPag as $m)
                             @php $pendiente = $m->editRequests->first(); @endphp
-                            <tr x-data="{ editando: false }">
+                            <tr x-data="{ editando: false }"
+                                @click="if (!editando) $dispatch('abrir-detalle-mi', { url: '{{ route('entrenador.asistencia.detalle', $m) }}' })"
+                                style="cursor:pointer">
                                 <td class="es-fuerte" data-etiqueta="Entrada">{{ $m->clocked_in_at->format('d/m/y H:i') }}</td>
                                 <td data-etiqueta="Salida">{{ $m->clocked_out_at?->format('H:i') ?? 'En curso' }}</td>
                                 <td data-etiqueta="Turno">{{ $m->turno_legible }}</td>
@@ -81,8 +83,9 @@
                                     @if ($pendiente)
                                         <span class="estado" style="color:var(--bronce)">{{ $pendiente->es_eliminacion ? 'Eliminación pendiente de aprobar' : 'Edición pendiente de aprobar' }}</span>
                                     @else
-                                        <button class="btn btn--desnudo" type="button" @click="editando = !editando">Editar</button>
+                                        <button class="btn btn--desnudo" type="button" @click.stop="editando = !editando">Editar</button>
                                         <form method="POST" action="{{ route('entrenador.asistencia.eliminar', $m) }}"
+                                              @click.stop
                                               onsubmit="return confirm('¿Solicitar la eliminación de este registro? Queda pendiente de aprobación del admin.')">
                                             @csrf @method('DELETE')
                                             <button class="btn btn--desnudo" type="submit" style="color:var(--sangre-viva)">Eliminar</button>
@@ -127,7 +130,9 @@
                     <div x-show="diaAbierto === '{{ $fecha }}'" x-cloak class="calendario__lista">
                         @foreach ($lista->sortByDesc('clocked_in_at') as $m)
                             @php $pendiente = $m->editRequests->first(); @endphp
-                            <article class="calendario__rutina">
+                            <article class="calendario__rutina"
+                                     @click="$dispatch('abrir-detalle-mi', { url: '{{ route('entrenador.asistencia.detalle', $m) }}' })"
+                                     style="cursor:pointer">
                                 <div>
                                     <b class="es-fuerte" style="color:var(--hueso)">
                                         {{ $m->turno_legible }}
@@ -151,4 +156,5 @@
     </x-alterna-vista>
 
     @include('entrenador.asistencia._escaneo-qr')
+    @include('entrenador.asistencia._detalle-marcacion')
 @endsection

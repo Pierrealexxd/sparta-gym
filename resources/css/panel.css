@@ -413,6 +413,24 @@
    a sus botones a una sola línea que desborde el membrete. */
 .membrete__acciones > div { flex-wrap: wrap; min-width: 0; }
 
+/* Membrete en móvil: los botones pasan de "etiqueta larga" a círculo de
+   40×40px que muestra sólo el icono — el texto es nodo desnudo (no <span>),
+   así que font-size:0 lo oculta y el SVG se centra con position:absolute.
+   overflow:hidden recorta el barrido de .btn--fuego::after. */
+@media (max-width: 960px) {
+    .membrete { align-items: center; }
+    .membrete__acciones .btn {
+        width: 40px; height: 40px; padding: 0;
+        font-size: 0; justify-content: center;
+        position: relative; overflow: hidden;
+    }
+    .membrete__acciones .btn svg {
+        width: 20px !important; height: 20px !important;
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+    }
+}
+
 /* ---------- KPIs ---------- */
 
 .kpis { display: grid; gap: var(--e-4); grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
@@ -969,6 +987,11 @@
     white-space: nowrap;
 }
 .pestanas__enlace[aria-current="true"] { color: var(--hueso); border-color: var(--sangre); }
+
+/* Variante ancha: cada pestaña ocupa el mismo ancho (50/50 con 2, tercios
+   con 3, etc.). Solo para barras de 2 pestañas que deben llenar el ancho. */
+.pestanas__nav--ancha { gap: 0; }
+.pestanas__nav--ancha .pestanas__enlace { flex: 1; text-align: center; }
 
 /* Contenido de una pestaña con Alpine (x-show): el gap NO puede ir en el
    mismo atributo style="display:grid;gap:..." que x-show toca. Alpine

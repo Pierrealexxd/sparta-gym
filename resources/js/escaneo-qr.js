@@ -185,16 +185,22 @@ document.addEventListener('alpine:init', () => {
         /**
          * Tras leer el QR, antes de mandar el POST, se pide la ubicación en
          * tiempo real — el mismo gesto (la lectura) sirve de disparador para
-         * el diálogo de permiso del navegador. Si el empleado la niega o no
-         * está disponible, la marcación igual sigue: las coordenadas quedan
-         * NULL en el registro, no bloquean el fichaje (ver AsistenciaService
-         * y decisión en pierre.md sobre no depender de la precisión del GPS).
+         * el diálogo de permiso del navegador. La ubicación GPS es
+         * OBLIGATORIA: sin ella la marcación no se registra. Si el empleado
+         * niega el permiso o el dispositivo no tiene GPS, se muestra error.
          */
         async enviar(token) {
             this.detener();
             this.estado = 'ubicando';
 
-            const coords = await this.obtenerUbicacion();
+            let coords;
+            try {
+                coords = await this.obtenerUbicacion();
+            } catch (error) {
+                this.estado = 'error';
+                this.mensaje = error.message;
+                return;
+            }
 
             this.estado = 'procesando';
 
@@ -206,7 +212,7 @@ document.addEventListener('alpine:init', () => {
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
                     },
-                    body: JSON.stringify({ token, turno: this.turno, lat: coords?.lat ?? null, lng: coords?.lng ?? null }),
+                    body: JSON.stringify({ token, turno: this.turno, lat: coords.lat, lng: coords.lng }),
                 });
 
                 if (!res.ok) {
@@ -232,16 +238,27 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Promesa que nunca rechaza: sin permiso/GPS, resuelve null y sigue. */
+        /**
+         * Promesa que RECHAZA si no hay GPS o el permiso es denegado.
+         * La marcación no puede registrarse sin ubicación.
+         */
         obtenerUbicacion() {
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 if (!navigator.geolocation) {
-                    resolve(null);
+                    reject(new Error('Tu dispositivo no tiene GPS. La marcación requiere ubicación.'));
                     return;
                 }
                 navigator.geolocation.getCurrentPosition(
                     (posicion) => resolve({ lat: posicion.coords.latitude, lng: posicion.coords.longitude }),
-                    () => resolve(null),
+                    (error) => {
+                        if (error.code === error.PERMISSION_DENIED) {
+                            reject(new Error('Permiso de ubicación denegado. Concedelo en la configuración de tu navegador para marcar asistencia.'));
+                        } else if (error.code === error.POSITION_UNAVAILABLE) {
+                            reject(new Error('Ubicación no disponible. Verificá que el GPS esté activado.'));
+                        } else {
+                            reject(new Error('No se pudo obtener tu ubicación. Intentá de nuevo.'));
+                        }
+                    },
                     { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
                 );
             });

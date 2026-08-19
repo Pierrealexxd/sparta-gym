@@ -10,7 +10,7 @@
 @section('contenido')
     @include('admin.asistencia._pestanas')
 
-    <nav class="pestanas__nav" style="margin-bottom:var(--e-5)">
+    <nav class="pestanas__nav pestanas__nav--ancha" style="margin-bottom:var(--e-5)">
         <a class="pestanas__enlace" href="{{ route('admin.asistencia.solicitudes.index') }}"
            aria-current="{{ $estado === 'pendientes' ? 'true' : 'false' }}">Pendientes</a>
         <a class="pestanas__enlace" href="{{ route('admin.asistencia.solicitudes.index', ['estado' => 'historial']) }}"
