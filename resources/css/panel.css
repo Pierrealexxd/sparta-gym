@@ -2298,3 +2298,61 @@
         border-radius: 0;
     }
 }
+
+/* ============================================================
+   FORMULARIO DE CONTACTO · mapa y ubicaciones responsivas
+   ============================================================ */
+
+/* Barra de búsqueda del mapa: en móvil se apila (input full, botón abajo) */
+.contacto-mapabuscador {
+    display: flex;
+    gap: var(--e-3);
+    margin-bottom: var(--e-3);
+}
+@media (max-width: 520px) {
+    .contacto-mapabuscador {
+        flex-direction: column;
+    }
+    .contacto-mapabuscador .btn { width: 100%; justify-content: center; }
+}
+
+/* Altura del mapa principal se reduce en móvil */
+@media (max-width: 520px) {
+    .contacto-mapa-contenedor { height: 220px !important; }
+}
+
+/* Tarjetas de ubicaciones: el flex de "Seleccionar en mapa" + coordenadas se apila */
+.contacto-ubicacion-acciones {
+    display: flex;
+    align-items: center;
+    gap: var(--e-3);
+    margin-top: var(--e-2);
+    flex-wrap: wrap;
+}
+@media (max-width: 520px) {
+    .contacto-ubicacion-acciones {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .contacto-ubicacion-acciones .btn { width: 100%; justify-content: center; }
+}
+
+/* Modal del mapa: casi pantalla completa en móvil */
+@media (max-width: 640px) {
+    .contacto-mapa-modal .modal-info__caja {
+        width: 100%;
+        max-width: none;
+        max-height: 92dvh;
+        border-radius: var(--r-lg) var(--r-lg) 0 0;
+        margin: 0;
+    }
+    .contacto-mapa-modal .modal-info {
+        align-items: end;
+        padding: 0;
+    }
+}
+@media (max-width: 520px) {
+    .contacto-mapa-modal .modal-info__cuerpo [x-ref="mapaModal"] {
+        height: 240px !important;
+    }
+}

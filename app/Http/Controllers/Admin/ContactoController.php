@@ -30,11 +30,13 @@ class ContactoController extends Controller
 
         $datos = $this->validarDatos($request);
 
-        // La cabecera de la sección (eyebrow/título/lead) vive en el JSON de
-        // settings; el resto de campos son columnas propias del gimnasio.
+        // La cabecera de la sección (eyebrow/título/lead) y las ubicaciones
+        // viven en el JSON de settings; el resto de campos son columnas
+        // propias del gimnasio.
         $settings = $gym->settings ?? [];
         $settings['contacto'] = $datos['contacto'] ?? [];
-        unset($datos['contacto']);
+        $settings['locations'] = $datos['locations'] ?? [];
+        unset($datos['contacto'], $datos['locations']);
 
         $gym->update([...$datos, 'settings' => $settings]);
 
@@ -61,11 +63,25 @@ class ContactoController extends Controller
 
             'latitude'  => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+
+            'locations'               => ['nullable', 'array'],
+            'locations.*.name'        => ['nullable', 'string', 'max:100'],
+            'locations.*.address'     => ['nullable', 'string', 'max:200'],
+            'locations.*.city'        => ['nullable', 'string', 'max:80'],
+            'locations.*.phone'       => ['nullable', 'string', 'max:40'],
+            'locations.*.latitude'    => ['nullable', 'numeric', 'between:-90,90'],
+            'locations.*.longitude'   => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         // Filas vacías (dejadas en blanco al quitar una franja) no se guardan.
         $datos['schedule'] = collect($datos['schedule'] ?? [])
             ->filter(fn ($f) => filled($f['dia'] ?? null))
+            ->values()
+            ->all();
+
+        // Ubicaciones sin nombre ni dirección se descartan.
+        $datos['locations'] = collect($datos['locations'] ?? [])
+            ->filter(fn ($l) => filled($l['name'] ?? null) || filled($l['address'] ?? null))
             ->values()
             ->all();
 

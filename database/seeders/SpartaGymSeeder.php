@@ -39,9 +39,9 @@ class SpartaGymSeeder extends Seeder
                 'currency'    => 'PEN',
                 'timezone'    => 'America/Lima',
                 'schedule'    => [
-                    ['dia' => 'Lunes a viernes', 'abre' => '05:00', 'cierra' => '23:00'],
-                    ['dia' => 'Sábado',          'abre' => '06:00', 'cierra' => '20:00'],
-                    ['dia' => 'Domingo',         'abre' => '07:00', 'cierra' => '14:00'],
+                    ['dia' => 'Lunes a sábado', 'abre' => '08:00', 'cierra' => '13:00'],
+                    ['dia' => 'Lunes a sábado', 'abre' => '16:00', 'cierra' => '22:00'],
+                    ['dia' => 'Domingo',        'abre' => '09:00', 'cierra' => '13:00'],
                 ],
                 'socials' => [
                     'instagram' => 'https://instagram.com/spartagym',
@@ -67,17 +67,17 @@ class SpartaGymSeeder extends Seeder
     {
         $planes = [
             [
-                'name'     => 'Pase de un día',
+                'name'     => 'Rutina diaria',
                 'tagline'  => 'Pruébalo antes de decidir.',
-                'price'    => 15,
+                'price'    => 5,
                 'duration_days' => 1,
                 'features' => ['Acceso completo por un día', 'Sin matrícula', 'Sin compromiso'],
                 'is_featured' => false,
             ],
             [
-                'name'     => 'Mensual',
+                'name'     => 'Mensualidad',
                 'tagline'  => 'El punto de partida.',
-                'price'    => 90,
+                'price'    => 70,
                 'duration_days' => 30,
                 'features' => [
                     'Acceso ilimitado en horario completo',

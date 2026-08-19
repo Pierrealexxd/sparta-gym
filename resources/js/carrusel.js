@@ -68,7 +68,8 @@ function construirCarrusel(pista) {
     }
 
     function activo() {
-        return esMovil.matches && !menosMovimiento.matches;
+        const esCarruselTotal = pista.classList.contains('ubicaciones__pista--carrusel');
+        return (esMovil.matches || esCarruselTotal) && !menosMovimiento.matches;
     }
 
     function iniciar() {

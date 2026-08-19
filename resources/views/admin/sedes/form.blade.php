@@ -70,6 +70,32 @@
             </button>
         </div>
 
+        {{-- Ubicación: mapa interactivo --}}
+        <h3 style="font-family:var(--f-display);font-size:var(--t-lg);text-transform:uppercase;margin:var(--e-4) 0 var(--e-3)">Ubicación</h3>
+
+        <div x-data="mapaPick({
+                latitud: {{ old('latitude', $sede->latitude) ?: 'null' }},
+                longitud: {{ old('longitude', $sede->longitude) ?: 'null' }}
+             })" x-init="$nextTick(() => iniciar())">
+            <input type="hidden" name="latitude" :value="lat">
+            <input type="hidden" name="longitude" :value="lng">
+
+            <div style="display:flex;gap:var(--e-3);margin-bottom:var(--e-3)">
+                <input type="text" x-model="busqueda" @keydown.enter.prevent="buscar"
+                       class="campo__control" placeholder="Buscar dirección..." style="flex:1">
+                <button class="btn btn--vidrio" type="button" @click="buscar">Buscar</button>
+            </div>
+
+            <div x-ref="contenedor" style="height:280px;border-radius:var(--r-md);border:1px solid var(--acero);z-index:0"></div>
+
+            <p style="font-size:var(--t-xs);color:var(--ceniza);margin-top:var(--e-2)">
+                Lat: <span x-text="lat || '—'"></span> · Lng: <span x-text="lng || '—'"></span>.
+                Haz clic en el mapa o arrastra el marcador para ubicar.
+            </p>
+            @error('latitude')<span class="campo__error">{{ $message }}</span>@enderror
+            @error('longitude')<span class="campo__error">{{ $message }}</span>@enderror
+        </div>
+
         <div class="formulario-panel__fila">
             <label class="campo"><span class="campo__etiqueta">Instagram</span>
                 <input class="campo__control" type="text" name="socials[instagram]" placeholder="https://instagram.com/…" value="{{ old('socials.instagram', $sede->socials['instagram'] ?? '') }}"></label>
@@ -94,3 +120,76 @@
         </div>
     </form>
 @endsection
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9/dist/leaflet.css" />
+
+@push('scripts')
+<script src="https://unpkg.com/leaflet@1.9/dist/leaflet.js"></script>
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('mapaPick', ({ latitud, longitud }) => ({
+        lat: latitud,
+        lng: longitud,
+        busqueda: '',
+        mapa: null,
+        marker: null,
+
+        iniciar() {
+            if (!this.$refs.contenedor) return;
+            const centro = (this.lat && this.lng) ? [this.lat, this.lng] : [-5.194490, -80.632820];
+            const zoom = (this.lat && this.lng) ? 14 : 12;
+
+            this.mapa = L.map(this.$refs.contenedor).setView(centro, zoom);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(this.mapa);
+
+            if (this.lat && this.lng) {
+                this.marker = L.marker(centro, { draggable: true }).addTo(this.mapa);
+            }
+
+            this.mapa.on('click', (e) => {
+                this.lat = Math.round(e.latlng.lat * 1e7) / 1e7;
+                this.lng = Math.round(e.latlng.lng * 1e7) / 1e7;
+                if (this.marker) {
+                    this.marker.setLatLng(e.latlng);
+                } else {
+                    this.marker = L.marker(e.latlng, { draggable: true }).addTo(this.mapa);
+                }
+            });
+
+            if (this.marker) {
+                this.marker.on('dragend', (e) => {
+                    this.lat = Math.round(e.target.getLatLng().lat * 1e7) / 1e7;
+                    this.lng = Math.round(e.target.getLatLng().lng * 1e7) / 1e7;
+                });
+            }
+
+            setTimeout(() => this.mapa.invalidateSize(), 200);
+        },
+
+        async buscar() {
+            if (!this.busqueda) return;
+            try {
+                const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(this.busqueda));
+                const data = await res.json();
+                if (data.length) {
+                    this.lat = parseFloat(data[0].lat);
+                    this.lng = parseFloat(data[0].lon);
+                    this.mapa.setView([this.lat, this.lng], 15);
+                    if (this.marker) {
+                        this.marker.setLatLng([this.lat, this.lng]);
+                    } else {
+                        this.marker = L.marker([this.lat, this.lng], { draggable: true }).addTo(this.mapa);
+                        this.marker.on('dragend', (e) => {
+                            this.lat = Math.round(e.target.getLatLng().lat * 1e7) / 1e7;
+                            this.lng = Math.round(e.target.getLatLng().lng * 1e7) / 1e7;
+                        });
+                    }
+                }
+            } catch (_) {}
+        }
+    }));
+});
+</script>
+@endpush

@@ -1,7 +1,30 @@
+@php
+    $contacto = $gym->settings['contacto'] ?? [];
+
+    // Unificar la sede principal con las adicionales para el carrusel.
+    $todas = array_merge(
+        [[
+            'name'      => $gym->name,
+            'address'   => $gym->address,
+            'city'      => $gym->city,
+            'phone'     => $gym->phone,
+            'latitude'  => $gym->latitude,
+            'longitude' => $gym->longitude,
+        ]],
+        $ubicaciones ?? []
+    );
+
+    // Filtrar las que no tienen dirección ni coordenadas.
+    $todas = array_values(array_filter($todas, fn ($u) =>
+        filled($u['address'] ?? null) || (filled($u['latitude'] ?? null) && filled($u['longitude'] ?? null))
+    ));
+
+    $multisede = count($todas) > 1;
+@endphp
+
 <section class="seccion" id="contacto">
     <div class="contenedor">
         <div class="seccion__cabecera" data-revelar>
-            @php $contacto = $gym->settings['contacto'] ?? []; @endphp
             <span class="eyebrow">{{ $contacto['eyebrow'] ?? 'Contacto' }}</span>
             <h2>{{ $contacto['titulo'] ?? 'Ven a verlo' }}</h2>
             <p class="lead">{{ $contacto['lead'] ?? 'Pásate cuando quieras. La primera visita incluye una vuelta por la sala.' }}</p>
@@ -9,13 +32,15 @@
 
         <div class="contacto">
             <div class="contacto__datos" data-revelar data-revelar-grupo>
-                <div class="dato">
-                    <span class="dato__icono"><x-icono nombre="ubicacion" /></span>
-                    <div>
-                        <b>Dirección</b>
-                        <span>{{ $gym->address }}, {{ $gym->city }}</span>
+                @if (!$multisede && ($gym->address || $gym->city))
+                    <div class="dato">
+                        <span class="dato__icono"><x-icono nombre="ubicacion" /></span>
+                        <div>
+                            <b>Dirección</b>
+                            <span>{{ $gym->address }}{{ $gym->city ? ', ' . $gym->city : '' }}</span>
+                        </div>
                     </div>
-                </div>
+                @endif
 
                 @if ($gym->phone)
                     <div class="dato">
@@ -114,8 +139,7 @@
                     @error('message') <span class="campo__error">{{ $message }}</span> @enderror
                 </label>
 
-                {{-- Trampa para robots: invisible y fuera del orden de tabulación.
-                     Una persona nunca la rellena; un bot automático, casi siempre. --}}
+                {{-- Trampa para robots --}}
                 <div aria-hidden="true" style="position:absolute;left:-9999px">
                     <label>No rellenar
                         <input type="text" name="website" tabindex="-1" autocomplete="off">
@@ -128,14 +152,61 @@
             </form>
         </div>
 
-        {{-- Mapa: se carga en diferido para no penalizar la primera pintada --}}
-        @if ($gym->latitude && $gym->longitude)
+        {{-- Sedes: carrusel si hay más de una, mapa simple si solo hay una --}}
+        @if (count($todas) === 1 && ($todas[0]['latitude'] ?? null) && ($todas[0]['longitude'] ?? null))
             <div class="mapa" style="margin-top: var(--e-8)" data-revelar>
                 <iframe
-                    src="https://www.openstreetmap.org/export/embed.html?bbox={{ $gym->longitude - 0.01 }}%2C{{ $gym->latitude - 0.008 }}%2C{{ $gym->longitude + 0.01 }}%2C{{ $gym->latitude + 0.008 }}&amp;layer=mapnik&amp;marker={{ $gym->latitude }}%2C{{ $gym->longitude }}"
+                    src="https://www.openstreetmap.org/export/embed.html?bbox={{ $todas[0]['longitude'] - 0.01 }}%2C{{ $todas[0]['latitude'] - 0.008 }}%2C{{ $todas[0]['longitude'] + 0.01 }}%2C{{ $todas[0]['latitude'] + 0.008 }}&amp;layer=mapnik&amp;marker={{ $todas[0]['latitude'] }}%2C{{ $todas[0]['longitude'] }}"
                     loading="lazy"
                     referrerpolicy="no-referrer-when-downgrade"
-                    title="Ubicación de {{ $gym->name }}"></iframe>
+                    title="Ubicación de {{ $todas[0]['name'] ?? $gym->name }}"></iframe>
+            </div>
+        @elseif ($multisede)
+            <div class="ubicaciones" style="margin-top: var(--e-8)" data-revelar data-carrusel="3500">
+                <div class="ubicaciones__pista ubicaciones__pista--carrusel">
+                    @foreach ($todas as $i => $ubi)
+                        <article class="ubicacion tarjeta" style="scroll-snap-align:start">
+                            <div class="ubicacion__encabezado">
+                                <span class="ubicacion__etiqueta">{{ $ubi['name'] ?? 'Sede' }}</span>
+                                @if ($ubi['city'] ?? null)
+                                    <span class="ubicacion__ciudad">{{ $ubi['city'] }}</span>
+                                @endif
+                            </div>
+
+                            <div class="ubicacion__datos">
+                                @if ($ubi['address'] ?? null)
+                                    <div class="ubicacion__dato">
+                                        <x-icono nombre="ubicacion" />
+                                        <span>{{ $ubi['address'] }}{{ $ubi['city'] ? ', ' . $ubi['city'] : '' }}</span>
+                                    </div>
+                                @endif
+                                @if ($ubi['phone'] ?? null)
+                                    <div class="ubicacion__dato">
+                                        <x-icono nombre="telefono" />
+                                        <a href="tel:{{ preg_replace('/\s+/', '', $ubi['phone']) }}">{{ $ubi['phone'] }}</a>
+                                    </div>
+                                @endif
+                            </div>
+
+                            @if (($ubi['latitude'] ?? null) && ($ubi['longitude'] ?? null))
+                                <div class="ubicacion__mapa">
+                                    <iframe
+                                        src="https://www.openstreetmap.org/export/embed.html?bbox={{ $ubi['longitude'] - 0.01 }}%2C{{ $ubi['latitude'] - 0.008 }}%2C{{ $ubi['longitude'] + 0.01 }}%2C{{ $ubi['latitude'] + 0.008 }}&amp;layer=mapnik&amp;marker={{ $ubi['latitude'] }}%2C{{ $ubi['longitude'] }}"
+                                        loading="lazy"
+                                        referrerpolicy="no-referrer-when-downgrade"
+                                        title="Ubicación de {{ $ubi['name'] ?? 'Sede' }}"></iframe>
+                                </div>
+                            @endif
+                        </article>
+                    @endforeach
+                </div>
+
+                {{-- Puntos de paginación --}}
+                <div class="ubicaciones__puntos" data-carrusel-puntos>
+                    @foreach ($todas as $i => $_)
+                        <button class="punto {{ $i === 0 ? 'is-activo' : '' }}" data-carrusel-punto aria-label="Sede {{ $i + 1 }}"></button>
+                    @endforeach
+                </div>
             </div>
         @endif
     </div>

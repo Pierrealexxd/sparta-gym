@@ -1025,10 +1025,135 @@
     border: 1px solid var(--acero);
     border-radius: var(--r-lg);
     overflow: hidden;
-    /* El mapa llega en colores claros; esto lo alinea con la marca. */
-    filter: grayscale(1) invert(.92) contrast(.85) hue-rotate(180deg);
+    filter: brightness(.88) saturate(1.1);
 }
 .mapa iframe { width: 100%; height: 100%; border: 0; }
+
+/* ============================================================
+   UBICACIONES (carrusel de sedes)
+   ============================================================ */
+
+.ubicaciones__pista {
+    display: grid;
+    gap: var(--e-4);
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    align-items: stretch;
+}
+
+.ubicacion {
+    display: grid;
+    gap: var(--e-4);
+    border-radius: var(--r-xl);
+}
+
+.ubicacion__encabezado {
+    display: flex;
+    align-items: center;
+    gap: var(--e-3);
+}
+
+.ubicacion__etiqueta {
+    font-family: var(--f-display);
+    font-size: var(--t-xl);
+    text-transform: uppercase;
+    letter-spacing: .02em;
+}
+
+.ubicacion__ciudad {
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--brasa);
+    padding: .2em .7em;
+    border: 1px solid rgba(214, 32, 43, .35);
+    border-radius: var(--r-full);
+}
+
+.ubicacion__datos { display: grid; gap: var(--e-3); }
+
+.ubicacion__dato {
+    display: flex;
+    align-items: center;
+    gap: var(--e-2);
+    font-size: var(--t-sm);
+    color: var(--ceniza);
+}
+.ubicacion__dato svg { width: 16px; height: 16px; color: var(--brasa); flex: none; }
+.ubicacion__dato a { color: var(--hueso); }
+.ubicacion__dato a:hover { color: var(--brasa); }
+
+.ubicacion__mapa {
+    height: clamp(260px, 38vh, 400px);
+    border: 1px solid var(--acero);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    filter: brightness(.88) saturate(1.1);
+}
+.ubicacion__mapa iframe { width: 100%; height: 100%; border: 0; }
+
+/* Puntos de paginación (reutiliza la estructura existente de carrusel.js) */
+.ubicaciones__puntos {
+    display: flex;
+    justify-content: center;
+    gap: var(--e-2);
+    margin-top: var(--e-4);
+}
+
+.punto {
+    width: 8px; height: 8px;
+    border: none;
+    border-radius: 50%;
+    background: var(--acero);
+    padding: 0;
+    cursor: pointer;
+    transition: background var(--v-rapido) var(--curva), transform var(--v-rapido) var(--curva);
+}
+.punto.is-activo {
+    background: var(--brasa);
+    transform: scale(1.3);
+}
+
+/* Carrusel en móvil: mismo patrón que planes/testimonios */
+@media (max-width: 740px) {
+    .ubicaciones__pista {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: var(--e-4);
+        margin: 0 calc(-1 * var(--e-4));
+        padding: var(--e-5) var(--e-4) var(--e-2);
+    }
+    .ubicaciones__pista::-webkit-scrollbar { display: none; }
+    .ubicacion { flex: 0 0 88%; scroll-snap-align: center; }
+}
+
+/* Carrusel activo en todas las resoluciones (sedes) */
+.ubicaciones__pista--carrusel {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: var(--e-4);
+    padding: 0 var(--e-4);
+}
+.ubicaciones__pista--carrusel::-webkit-scrollbar { display: none; }
+.ubicaciones__pista--carrusel .ubicacion {
+    flex: 0 0 calc(100% - var(--e-8));
+    scroll-snap-align: center;
+}
+@media (max-width: 740px) {
+    .ubicaciones__pista--carrusel {
+        margin: 0 calc(-1 * var(--e-4));
+        padding: var(--e-5) var(--e-4) var(--e-2);
+    }
+    .ubicaciones__pista--carrusel .ubicacion {
+        flex: 0 0 88%;
+    }
+}
 
 /* ============================================================
    PIE

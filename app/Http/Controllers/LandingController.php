@@ -37,13 +37,11 @@ class LandingController extends Controller
             'ejercicios'    => Exercise::disponibles()->orderBy('name')->get(),
             'categorias'    => Exercise::disponibles()->select('category')->distinct()->orderBy('category')->pluck('category'),
             'programs'      => Program::publicos()->get(),
-            // Rutina tipo de cada programa (Fase 2): 4 ejercicios representativos
-            // de sus categorías, no toda la biblioteca — la sección de más
-            // arriba ya cubre el catálogo completo.
             'ejemplosPrograma' => [
                 'ganar_masa'   => Exercise::disponibles()->where('category', 'fuerza')->orderBy('name')->take(4)->get(),
                 'perder_grasa' => Exercise::disponibles()->whereIn('category', ['cardio', 'funcional'])->orderBy('name')->take(4)->get(),
             ],
+            'ubicaciones' => $gym->settings['locations'] ?? [],
         ]);
     }
 
@@ -108,7 +106,7 @@ class LandingController extends Controller
             'clientes'     => Member::activos()->count(),
             'entrenadores' => Trainer::activos()->count(),
             'sesiones'     => Attendance::count(),
-            'anios'        => max(1, now()->year - 2019),
+            'anios'        => max(1, now()->year - 2017),
         ]);
     }
 

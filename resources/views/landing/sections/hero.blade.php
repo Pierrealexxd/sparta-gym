@@ -19,7 +19,7 @@
     </div>
 
     <div class="hero__contenido">
-        <span class="eyebrow" data-hero-eyebrow>{{ $gym->city }} · Desde 2019</span>
+        <span class="eyebrow" data-hero-eyebrow>{{ $gym->city }} · Desde 2017</span>
         <h1 class="hero__moto" data-hero-titulo>
             <span>Hierro.</span>
             <span>Sudor.</span>
