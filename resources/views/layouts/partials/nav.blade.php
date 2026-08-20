@@ -34,6 +34,14 @@
                 <x-icono nombre="perfil" />
                 {{ auth()->check() ? 'Mi panel' : 'Login' }}
             </a>
+            @auth
+                <form method="POST" action="{{ route('salir') }}">
+                    @csrf
+                    <button class="nav__enlace nav__enlace--salir" type="submit">
+                        <x-icono nombre="entrada" style="transform:rotate(180deg)" /> Cerrar sesión
+                    </button>
+                </form>
+            @endauth
             @guest
                 <a class="btn btn--fuego nav__enlace--inscribirme" href="#planes">Inscribirme</a>
             @endguest
@@ -42,6 +50,21 @@
 
     <div class="nav__acciones">
         @auth
+            <div class="nav__cuenta">
+                <a class="nav__cuenta-icono" href="#"
+                   tabindex="0" aria-label="Menú de cuenta">
+                    <x-icono nombre="perfil" />
+                </a>
+                <div class="nav__cuenta-popover">
+                    <span class="nav__cuenta-nombre">{{ auth()->user()->name }}</span>
+                    <form method="POST" action="{{ route('salir') }}">
+                        @csrf
+                        <button class="nav__cuenta-enlace nav__cuenta-enlace--salir" type="submit">
+                            <x-icono nombre="entrada" style="transform:rotate(180deg)" /> Cerrar sesión
+                        </button>
+                    </form>
+                </div>
+            </div>
             <a class="btn btn--fuego" href="{{ route(auth()->user()->rutaDeInicio()) }}">Mi panel</a>
         @else
             <a class="btn btn--vidrio" href="{{ route('login') }}">Login</a>

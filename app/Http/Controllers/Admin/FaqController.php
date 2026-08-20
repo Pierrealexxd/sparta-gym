@@ -15,7 +15,7 @@ class FaqController extends Controller
         $termino = $request->get('q');
 
         return view('admin.contenido.faqs.index', [
-            'faqs' => Faq::query()
+            'faqs' => Faq::delGym()
                 ->when($termino, fn ($q) => $q->where(function ($sub) use ($termino) {
                     $t = '%' . trim($termino) . '%';
                     $sub->where('question', 'like', $t)

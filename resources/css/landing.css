@@ -114,6 +114,111 @@
 
 .nav__acciones { display: flex; align-items: center; gap: var(--e-3); }
 
+/* El icono de cuenta + popover solo existe en móvil (dentro del drawer).
+   En escritorio se oculta: "Mi panel" es suficiente. */
+.nav__cuenta { display: none; }
+
+/* Icono de usuario: fondo fuego como el botón "Mi panel", tamaño
+   equivalente para que ambos elementos se vean parejos. */
+.nav__cuenta-icono {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px;
+    border: none;
+    border-radius: var(--r-full);
+    background: var(--fuego);
+    color: #fff;
+    transition: box-shadow var(--v-medio) var(--curva), transform var(--v-rapido) var(--curva);
+}
+.nav__cuenta-icono svg { width: 1.15em; height: 1.15em; }
+.nav__cuenta-icono:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 46px rgba(214, 32, 43, .45);
+}
+
+/* Popover: vidrio oscuro con la misma textura del sidebar del panel.
+   Solo se despliega al hover sobre el ICONO, no sobre "Mi panel".
+   Un delay corto al ocultar da tiempo de mover el cursor al popover. */
+.nav__cuenta-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    transform: translateX(-20%) translateY(-4px);
+    min-width: 180px;
+    padding: var(--e-2) 0;
+    border: 1px solid var(--acero);
+    border-radius: var(--r-md);
+    background: rgba(10, 10, 11, .92);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    box-shadow: var(--s-xl);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .18s ease .22s,
+                visibility .18s ease .22s,
+                transform .18s ease .22s;
+    pointer-events: none;
+    z-index: calc(var(--z-nav) + 1);
+}
+/* Triángulo conector entre icono y popover. */
+.nav__cuenta-popover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 20%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-bottom-color: var(--acero);
+}
+.nav__cuenta-icono:hover + .nav__cuenta-popover,
+.nav__cuenta:focus-within > .nav__cuenta-popover,
+.nav__cuenta-popover:hover {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-20%) translateY(0);
+    pointer-events: auto;
+    transition-delay: 0s;
+}
+
+/* Nombre del usuario como encabezado del popover. */
+.nav__cuenta-nombre {
+    display: block;
+    padding: var(--e-1) var(--e-3) var(--e-2);
+    font-family: var(--f-sans);
+    font-size: var(--t-xs);
+    font-weight: 600;
+    color: var(--hueso);
+    border-bottom: 1px solid rgba(255, 255, 255, .06);
+    margin-bottom: var(--e-1);
+}
+
+/* Enlaces dentro del popover: reutilizan el estilo de enlace del nav pero
+   apilados verticalmente, con hover sutil. */
+.nav__cuenta-enlace {
+    display: flex;
+    align-items: center;
+    gap: var(--e-2);
+    width: 100%;
+    padding: var(--e-2) var(--e-3);
+    font-family: var(--f-sans);
+    font-size: var(--t-sm);
+    color: var(--ceniza);
+    background: none;
+    border: none;
+    border-radius: 0;
+    text-align: left;
+    cursor: pointer;
+    transition: color var(--v-rapido), background var(--v-rapido);
+}
+.nav__cuenta-enlace svg { width: 1em; height: 1em; flex: none; }
+.nav__cuenta-enlace:hover {
+    color: var(--hueso);
+    background: rgba(255, 255, 255, .06);
+}
+.nav__cuenta-enlace--salir:hover {
+    color: var(--sangre-viva);
+    background: rgba(214, 32, 43, .08);
+}
+
 /* Botón hamburguesa: tres barras que se convierten en aspa */
 .nav__menu { display: none; width: 44px; height: 44px; place-items: center; transition: opacity var(--v-rapido) var(--curva); }
 .nav__menu span {
@@ -261,6 +366,12 @@
     }
     .nav__enlace--cuenta { justify-content: center; color: var(--bronce); font-size: var(--t-sm); }
     .nav__enlace--cuenta svg { color: var(--bronce); }
+    /* Botón de cerrar sesión en el cajón móvil: mismo estilo que los demás
+       enlaces del drawer, pero con el texto en un tono más apagado para
+       no competir con "Mi panel". */
+    .nav__enlace--salir { justify-content: center; color: var(--ceniza); font-size: var(--t-sm); }
+    .nav__enlace--salir svg { color: var(--ceniza); }
+    .nav__enlace--salir:hover, .nav__enlace--salir:active { color: var(--sangre-viva); background: rgba(214, 32, 43, .08); }
     /* El CTA principal se ve como botón también adentro del cajón — no
        como un enlace de texto más, para que siga siendo lo más fácil de
        tocar de la lista. Padding lateral propio, más corto que el de .btn
@@ -277,7 +388,8 @@
        aspa (y desbordando a 320px), todas las acciones viven dentro del
        cajón — arriba solo queda el hamburguesa. */
     .nav__acciones .btn--vidrio,
-    .nav__acciones .btn--fuego { display: none; }
+    .nav__acciones .btn--fuego,
+    .nav__acciones .nav__cuenta { display: none; }
 }
 
 /* ============================================================
@@ -1133,6 +1245,7 @@
 /* Carrusel activo en todas las resoluciones (sedes) */
 .ubicaciones__pista--carrusel {
     display: flex;
+    flex-wrap: nowrap;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
@@ -1143,6 +1256,7 @@
 .ubicaciones__pista--carrusel::-webkit-scrollbar { display: none; }
 .ubicaciones__pista--carrusel .ubicacion {
     flex: 0 0 calc(100% - var(--e-8));
+    min-width: 0;
     scroll-snap-align: center;
 }
 @media (max-width: 740px) {

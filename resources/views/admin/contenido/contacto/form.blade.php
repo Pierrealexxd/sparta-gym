@@ -17,7 +17,7 @@
 @section('contenido')
     @include('admin.contenido._pestanas')
 
-    <form class="tarjeta formulario-panel" method="POST" action="{{ route('admin.contenido.contacto.guardar') }}">
+    <form class="tarjeta formulario-panel" method="POST" action="{{ route('admin.contenido.contacto.guardar', $gym->id) }}">
         @csrf
 
         <h3 class="contacto-admin__titulo">Cabecera de la sección</h3>
@@ -191,7 +191,7 @@
                 }
              }">
             <template x-for="(u, i) in ubicaciones" :key="i">
-                <div class="fila-borrable" style="border:1px solid var(--acero);border-radius:var(--r-md);padding:var(--e-4);margin-bottom:var(--e-3)">
+                <div class="contacto-ubicacion">
                     <input type="hidden" :name="`locations[${i}][name]`" :value="u.name">
                     <input type="hidden" :name="`locations[${i}][address]`" :value="u.address">
                     <input type="hidden" :name="`locations[${i}][city]`" :value="u.city">
@@ -221,8 +221,7 @@
                         </span>
                     </div>
 
-                    <button class="btn btn--desnudo" type="button" @click="ubicaciones.splice(i, 1)" aria-label="Quitar ubicación"
-                            style="position:absolute;top:var(--e-2);right:var(--e-2)">
+                    <button class="btn btn--desnudo" type="button" @click="ubicaciones.splice(i, 1)" aria-label="Quitar ubicación">
                         <x-icono nombre="papelera" />
                     </button>
                 </div>
@@ -253,7 +252,7 @@
         </div>
 
         <div class="formulario-panel__acciones">
-            <a class="btn btn--vidrio" href="{{ route('admin.contenido.contacto') }}">Cancelar</a>
+            <a class="btn btn--vidrio" href="{{ route('admin.contenido.contacto', $gym->id) }}">Cancelar</a>
             <button class="btn btn--fuego" type="submit">Guardar</button>
         </div>
     </form>

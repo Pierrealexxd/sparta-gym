@@ -162,8 +162,8 @@
                     title="Ubicación de {{ $todas[0]['name'] ?? $gym->name }}"></iframe>
             </div>
         @elseif ($multisede)
-            <div class="ubicaciones" style="margin-top: var(--e-8)" data-revelar data-carrusel="3500">
-                <div class="ubicaciones__pista ubicaciones__pista--carrusel">
+            <div class="ubicaciones" style="margin-top: var(--e-8)" data-revelar>
+                <div class="ubicaciones__pista ubicaciones__pista--carrusel" data-carrusel="3500">
                     @foreach ($todas as $i => $ubi)
                         <article class="ubicacion tarjeta" style="scroll-snap-align:start">
                             <div class="ubicacion__encabezado">

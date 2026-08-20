@@ -168,9 +168,9 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
 
         // Contacto de la página pública: formulario de una sola instancia que
         // edita el gimnasio activo (el que sirve la landing). Sin recurso CRUD.
-        Route::get('contenido/contacto', [ContactoController::class, 'editar'])
+        Route::get('contenido/contacto/{gymId?}', [ContactoController::class, 'editar'])
             ->name('contenido.contacto');
-        Route::post('contenido/contacto', [ContactoController::class, 'guardar'])
+        Route::post('contenido/contacto/{gymId?}', [ContactoController::class, 'guardar'])
             ->name('contenido.contacto.guardar');
 
         // Programas (PLAN-PROGRAMAS.md): CRUD como modal, igual que FAQs y

@@ -27,7 +27,7 @@
                     <td data-etiqueta="Turno">{{ $m->turno_legible }}</td>
                     <td data-etiqueta="Método"><span class="estado">{{ $m->method_legible }}</span></td>
                     @if ($modoTodas)
-                        <td data-etiqueta="Sede" style="color:var(--ceniza)">{{ $m->gym?->name ?? '—' }}</td>
+                        <td data-etiqueta="Sede"><span class="etiqueta">{{ $m->gym?->name ?? '—' }}</span></td>
                     @endif
                     <td data-etiqueta="GPS">
                         @if ($m->location_lat)

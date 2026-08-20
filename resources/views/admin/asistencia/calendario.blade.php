@@ -34,7 +34,9 @@
                 @foreach ($porDia as $fecha => $lista)
                     <div x-show="diaAbierto === '{{ $fecha }}'" x-cloak class="calendario__lista">
                         @foreach ($lista->sortByDesc('clocked_in_at') as $m)
-                            <article class="calendario__rutina">
+                            <article class="calendario__rutina tarjeta--interactiva"
+                                     style="cursor:pointer"
+                                     @click="$dispatch('abrir-detalle', { url: '{{ route('admin.asistencia.detalle', $m) }}' })">
                                 <div>
                                     <b class="es-fuerte" style="color:var(--hueso)">{{ $m->user?->name ?? '—' }}</b>
                                     <span class="calendario__meta">
@@ -42,7 +44,7 @@
                                         · <span class="estado">{{ $m->method_legible }}</span>
                                         {{ $m->clocked_out_at ? '· Salió ' . $m->clocked_out_at->format('H:i') : '· En turno' }}
                                         @if ($m->location_lat) · <span class="estado" title="Marcado con ubicación">📍</span> @endif
-                                        @if ($modoTodas) · <span class="estado">{{ $m->gym?->name ?? '—' }}</span> @endif
+                                        @if ($modoTodas) · <span class="etiqueta">{{ $m->gym?->name ?? '—' }}</span> @endif
                                     </span>
                                 </div>
                                 <time class="calendario__hora">{{ $m->clocked_in_at->format('H:i') }}</time>

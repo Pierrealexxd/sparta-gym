@@ -23,8 +23,8 @@ class TestimonialController extends Controller
         $termino = $request->get('q');
 
         return view('admin.contenido.testimonios.index', [
-            'pendientes'  => Testimonial::pendientes()->whereNotNull('member_id')->with('member')->get(),
-            'testimonios' => Testimonial::where(fn ($q) => $q->where('is_published', true)->orWhereNull('member_id'))
+            'pendientes'  => Testimonial::delGym()->pendientes()->whereNotNull('member_id')->with('member')->get(),
+            'testimonios' => Testimonial::delGym()->where(fn ($q) => $q->where('is_published', true)->orWhereNull('member_id'))
                 ->when($termino, fn ($q) => $q->where(function ($sub) use ($termino) {
                     $t = '%' . trim($termino) . '%';
                     $sub->where('author', 'like', $t)

@@ -15,18 +15,16 @@ use Illuminate\Http\Request;
  */
 class ContactoController extends Controller
 {
-    public function editar(): View
+    public function editar(Request $request, ?int $gymId = null): View
     {
-        $gym = GymContext::current();
-        abort_unless($gym, 404);
+        $gym = $this->resolverGym($gymId);
 
         return view('admin.contenido.contacto.form', ['gym' => $gym]);
     }
 
-    public function guardar(Request $request): RedirectResponse
+    public function guardar(Request $request, ?int $gymId = null): RedirectResponse
     {
-        $gym = GymContext::current();
-        abort_unless($gym, 404);
+        $gym = $this->resolverGym($gymId);
 
         $datos = $this->validarDatos($request);
 
@@ -40,7 +38,18 @@ class ContactoController extends Controller
 
         $gym->update([...$datos, 'settings' => $settings]);
 
-        return redirect()->route('admin.contenido.contacto')->with('exito', 'Contacto actualizado.');
+        return redirect()->route('admin.contenido.contacto', $gym->id)
+            ->with('exito', 'Contacto actualizado.');
+    }
+
+    private function resolverGym(?int $gymId): \App\Models\Gym
+    {
+        if ($gymId) {
+            return \App\Models\Gym::findOrFail($gymId);
+        }
+
+        return GymContext::current()
+            ?? \App\Models\Gym::where('slug', config('sparta.gym_slug'))->firstOrFail();
     }
 
     private function validarDatos(Request $request): array
