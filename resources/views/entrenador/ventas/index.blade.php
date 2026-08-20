@@ -68,9 +68,9 @@
             @endif
         </article>
 
-        <div class="tabla-envoltorio" data-revelar>
+            <div class="tabla-envoltorio" data-revelar>
             <table class="tabla tabla--tarjetas">
-                <thead><tr><th>N°</th><th>Fecha</th><th>Productos</th><th class="tabla__oculta-movil">Método</th><th>Total</th></tr></thead>
+                <thead><tr><th>N°</th><th>Fecha</th><th>Productos</th><th class="tabla__oculta-movil">Método</th><th>Total</th><th></th></tr></thead>
                 <tbody>
                     @forelse ($ventas as $venta)
                         <tr>
@@ -79,15 +79,28 @@
                             <td data-etiqueta="Productos">{{ $venta->items->map(fn ($i) => $i->quantity . '× ' . $i->product_name)->join(', ') }}</td>
                             <td class="tabla__oculta-movil" data-etiqueta="Método">{{ config("sparta.metodos_pago.$venta->method", $venta->method) }}</td>
                             <td data-etiqueta="Total">S/ {{ number_format($venta->total, 2) }}</td>
+                            <td data-etiqueta="nada">
+                                @if ($venta->status === 'completada' && $venta->sold_by === auth()->id())
+                                    <button class="btn btn--desnudo" type="button"
+                                            @click="$store.confirmar.abrir({
+                                                accion: '{{ route('entrenador.ventas.anular', $venta) }}',
+                                                metodo: 'POST',
+                                                titulo: 'Anular venta',
+                                                mensaje: '¿Anular esta venta? El stock vendido se repone.',
+                                                etiqueta: 'Anular'
+                                            })">Anular</button>
+                                @endif
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="tabla__vacio" data-etiqueta=""><x-estado-vacio icono="caja" texto="Sin ventas en este rango." /></td></tr>
+                        <tr><td colspan="6" class="tabla__vacio" data-etiqueta=""><x-estado-vacio icono="caja" texto="Sin ventas en este rango." /></td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
 
         <div class="paginacion">{{ $ventas->links() }}</div>
+        <x-modal-confirmar />
     @endif
 
     {{-- ---------- Inscripciones ---------- --}}

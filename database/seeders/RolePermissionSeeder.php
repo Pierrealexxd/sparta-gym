@@ -23,6 +23,7 @@ class RolePermissionSeeder extends Seeder
         'Membresías' => [
             'membresias.ver'      => 'Ver membresías',
             'membresias.gestionar'=> 'Crear y renovar membresías',
+            'inscripciones.editar' => 'Editar inscripciones',
             'planes.gestionar'    => 'Gestionar planes',
         ],
         'Pagos' => [
@@ -92,6 +93,8 @@ class RolePermissionSeeder extends Seeder
             'ejercicios.gestionar', 'medidas.registrar',
             'reportes.ver',
             'ventas.registrar',
+            'ventas.editar',
+            'inscripciones.editar',
         ],
         'cliente' => [
             'rutinas.ver',

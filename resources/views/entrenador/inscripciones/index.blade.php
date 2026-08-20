@@ -50,11 +50,21 @@
                         <td data-etiqueta="Plan">{{ $m->plan_name }}</td>
                         <td data-etiqueta="Fecha">{{ $m->created_at->format('d M Y') }}</td>
                         <td data-etiqueta="Estado"><span class="estado estado--{{ $m->status === 'activa' ? 'activo' : 'inactivo' }}">{{ ucfirst($m->status) }}</span></td>
-                        <td data-etiqueta="nada">
+                        <td data-etiqueta="nada" style="display:flex;gap:var(--e-2)">
+                            <button class="btn btn--desnudo" type="button"
+                                    @click="$dispatch('abrir-editar', {
+                                        id: {{ $m->id }},
+                                        planId: {{ $m->plan_id }},
+                                        planName: '{{ addslashes($m->plan_name) }}',
+                                        startsAt: '{{ $m->starts_at->format('Y-m-d') }}',
+                                        endsAt: '{{ $m->ends_at?->format('Y-m-d') ?? '' }}',
+                                        discount: {{ $m->discount ?? 0 }},
+                                        price: {{ $m->price }},
+                                        cliente: '{{ addslashes($m->member?->full_name ?? '—') }}',
+                                        url: '{{ route('entrenador.inscripciones.update', $m) }}'
+                                    })">Editar</button>
                             @if ($m->member && $aCargo->contains($m->member->id))
                                 <a class="btn btn--desnudo" href="{{ route('entrenador.clientes.show', $m->member) }}">Ver</a>
-                            @else
-                                <span style="color:var(--humo)">—</span>
                             @endif
                         </td>
                     </tr>
@@ -213,6 +223,61 @@
             </div>
         </div>
     </div>
+
+    {{-- ---------- MODAL EDITAR INSCRIPCIÓN ---------- --}}
+    <div x-data="editarInscripcion()" x-on:abrir-editar.window="abrir($event.detail)"
+         @keydown.escape.window="abierto = false">
+        <div class="modal__fondo" x-show="abierto" x-cloak>
+            <div class="tarjeta modal__caja" @click.outside="abierto = false">
+                <div class="modal__cabecera">
+                    <h3 style="font-size:var(--t-lg)">Editar inscripción</h3>
+                    <button class="modal__cerrar" type="button" @click="abierto = false" aria-label="Cerrar"><x-icono nombre="cerrar" /></button>
+                </div>
+
+                <div style="margin-bottom:var(--e-5)">
+                    <span style="color:var(--humo)">Cliente:</span>
+                    <b x-text="cliente"></b>
+                </div>
+
+                <form :action="url" method="POST" class="formulario-panel">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="formulario-panel__fila">
+                        <label class="campo"><span class="campo__etiqueta">Plan</span>
+                            <select class="campo__control" name="plan_id" x-model.number="planId" @change="recalcularFin()" required>
+                                @foreach ($planes as $plan)
+                                    <option value="{{ $plan->id }}">{{ $plan->name }} — S/ {{ number_format($plan->price, 0) }} ({{ $plan->duracion_legible }})</option>
+                                @endforeach
+                            </select>
+                        </label>
+                    </div>
+
+                    <div class="formulario-panel__fila">
+                        <label class="campo"><span class="campo__etiqueta">Inicio</span>
+                            <input class="campo__control" type="date" name="starts_at" x-model="startsAt" @change="recalcularFin()" required></label>
+                        <label class="campo"><span class="campo__etiqueta">Fin</span>
+                            <input class="campo__control" type="date" name="ends_at" x-model="endsAt"></label>
+                    </div>
+
+                    <div class="formulario-panel__fila">
+                        <label class="campo"><span class="campo__etiqueta">Precio base (S/)</span>
+                            <input class="campo__control" type="number" step="0.01" name="price" :value="precioBase" readonly style="background:var(--metal)"></label>
+                        <label class="campo"><span class="campo__etiqueta">Descuento (S/)</span>
+                            <input class="campo__control" type="number" step="0.01" name="discount" x-model.number="discount" min="0"></label>
+                    </div>
+
+                    <p style="font-family:var(--f-mono);font-size:var(--t-lg);text-align:right;margin:var(--e-4) 0">
+                        Total: S/ <span x-text="total"></span>
+                    </p>
+
+                    <div class="formulario-panel__acciones">
+                        <button class="btn btn--fuego btn--bloque" type="submit">Guardar cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
@@ -224,7 +289,7 @@ function inscripcion() {
         planId: null, startsAt: new Date().toISOString().slice(0, 10), discount: 0,
         registrarPago: true, method: 'efectivo', reference: '',
         crearLogin: false, accessEmail: '',
-        planes: @json($planes->map(fn ($p) => ['id' => $p->id, 'name' => $p->name, 'price' => (float) $p->price])),
+        planes: {{ \Illuminate\Support\Js::from($planes->map(fn ($p) => ['id' => $p->id, 'name' => $p->name, 'price' => (float) $p->price])) }},
 
         // Selector de cliente existente — elegir uno rellena el paso 1 solo.
         buscarQ: '', resultados: [], clienteExistenteId: null,
@@ -266,6 +331,44 @@ function inscripcion() {
             const plan = this.planes.find(p => p.id == this.planId);
             const precio = plan ? plan.price : 0;
             return (precio - (Number(this.discount) || 0)).toFixed(2);
+        },
+    };
+}
+
+function editarInscripcion() {
+    return {
+        abierto: false,
+        id: null, url: '', cliente: '',
+        planId: null, startsAt: '', endsAt: '', discount: 0, price: 0,
+        planes: {{ \Illuminate\Support\Js::from($planes->map(fn ($p) => ['id' => $p->id, 'name' => $p->name, 'price' => (float) $p->price, 'duration_days' => $p->duration_days])) }},
+
+        abrir(d) {
+            this.id = d.id;
+            this.url = d.url;
+            this.cliente = d.cliente;
+            this.planId = d.planId;
+            this.startsAt = d.startsAt;
+            this.endsAt = d.endsAt;
+            this.discount = d.discount;
+            this.price = d.price;
+            this.abierto = true;
+        },
+
+        get precioBase() {
+            const p = this.planes.find(x => x.id == this.planId);
+            return p ? p.price : this.price;
+        },
+        get total() {
+            return (this.precioBase - (Number(this.discount) || 0)).toFixed(2);
+        },
+        recalcularFin() {
+            const p = this.planes.find(x => x.id == this.planId);
+            if (p && this.startsAt) {
+                const inicio = new Date(this.startsAt + 'T00:00:00');
+                const fin = new Date(inicio);
+                fin.setDate(fin.getDate() + p.duration_days);
+                this.endsAt = fin.toISOString().slice(0, 10);
+            }
         },
     };
 }

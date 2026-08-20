@@ -299,6 +299,46 @@ class SaleController extends Controller
     }
 
     /**
+     * Muestra el formulario de edición de una venta.
+     */
+    public function edit(Sale $venta): View
+    {
+        $this->authorize('manage', $venta);
+        return view('admin.ventas.edit', compact('venta'));
+    }
+
+    /**
+     * Actualiza los datos de una venta.
+     */
+    public function update(Request $request, Sale $venta): RedirectResponse
+    {
+        $this->authorize('manage', $venta);
+
+        $datos = $request->validate([
+            'concept'      => ['sometimes', 'string', 'max:120'],
+            'method'       => ['sometimes', 'required', 'in:efectivo,transferencia,yape,plin,tarjeta,otro'],
+            'status'       => ['sometimes', 'string'],
+        ]);
+
+        $venta->update($datos);
+
+        // Notificar al admin (aunque él mismo se está editando, por si hay
+        // otro admin que necesite enterarse)
+        app(NotificationService::class)->dispararA(
+            app(User::where('role_id', Role::where('slug', 'admin')->value('id'))->first()),
+            'venta.editada',
+            'Venta editada',
+            "Un admin editó la venta {$venta->number}",
+            'ventas',
+            'media',
+            $venta->id,
+            route('admin.ventas.show', $venta),
+        );
+
+        return back()->with('exito', "Venta {$venta->number} actualizada.");
+    }
+
+    /**
      * Los tipos de venta que muestra cada pestaña de /admin/ventas.
      * "Productos" solo ventas de mostrador; "Registros" es el cajón de todo
      * lo que no es producto (membresías, servicios, otros). Mantener la

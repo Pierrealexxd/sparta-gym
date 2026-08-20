@@ -43,6 +43,19 @@ class Member extends Model
         });
     }
 
+    /**
+     * Bypasea el global scope 'gym' al resolver por route model binding.
+     * Sin esto, un admin en sede "cruceta" no podría ver un cliente de
+     * otra sede (el scope filtraría por gym_id y el findOrFail 404earía).
+     * La autorización real la hace cada controlador, no el scope.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        return $this->withoutGlobalScope('gym')
+            ->where($field ?? $this->getRouteKeyName(), $value)
+            ->firstOrFail();
+    }
+
     /* ---------------------------------------------------------- */
     /* Relaciones                                                 */
     /* ---------------------------------------------------------- */

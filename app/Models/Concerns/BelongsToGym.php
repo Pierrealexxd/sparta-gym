@@ -38,6 +38,19 @@ trait BelongsToGym
         });
     }
 
+    /**
+     * Bypasea el global scope 'gym' al resolver por route model binding.
+     * Sin esto, un admin en sede A no podría ver registros de sede B
+     * (el scope filtraría por gym_id y findOrFail 404earía).
+     * La autorización real la hace cada controlador, no el scope.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        return $this->withoutGlobalScope('gym')
+            ->where($field ?? $this->getRouteKeyName(), $value)
+            ->firstOrFail();
+    }
+
     public function gym(): BelongsTo
     {
         return $this->belongsTo(Gym::class);

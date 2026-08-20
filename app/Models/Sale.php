@@ -36,6 +36,18 @@ class Sale extends Model
     public function items(): HasMany        { return $this->hasMany(SaleItem::class); }
     public function membership(): BelongsTo { return $this->belongsTo(Membership::class); }
 
+    /**
+     * Bypasea el global scope 'gym' al resolver por route model binding.
+     * Sin esto, un admin en sede "Cruceta" no podría ver/anular una venta
+     * de "Las Lomas" (el scope filtraría por gym_id y findOrFail 404earía).
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        return $this->withoutGlobalScope('gym')
+            ->where($field ?? $this->getRouteKeyName(), $value)
+            ->firstOrFail();
+    }
+
     public function scopeCompletadas(Builder $q): Builder
     {
         return $q->where('status', 'completada');

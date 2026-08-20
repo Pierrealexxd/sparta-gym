@@ -126,7 +126,7 @@
     @if ($tipo === 'membresia')
         <div class="tabla-envoltorio" data-revelar>
             <table class="tabla tabla--tarjetas">
-                <thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Concepto</th><th>Total</th><th class="tabla__oculta-movil">Método</th><th>Vendido por</th></tr></thead>
+                <thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Concepto</th><th>Total</th><th class="tabla__oculta-movil">Método</th><th>Vendido por</th><th></th></tr></thead>
                 <tbody>
                     @forelse ($ventas as $venta)
                         <tr>
@@ -141,14 +141,27 @@
                             <td data-etiqueta="Total">S/ {{ number_format($venta->total, 2) }}</td>
                             <td class="tabla__oculta-movil" data-etiqueta="Método">{{ config("sparta.metodos_pago.$venta->method", $venta->method) }}</td>
                             <td data-etiqueta="Vendido por">{{ $venta->soldBy?->name ?? '—' }}</td>
+                            <td data-etiqueta="nada">
+                                @if ($venta->status === 'completada' && auth()->user()->tienePermiso('pagos.anular'))
+                                    <button class="btn btn--desnudo" type="button"
+                                            @click="$store.confirmar.abrir({
+                                                accion: '{{ route('admin.ventas.anular', $venta) }}',
+                                                metodo: 'POST',
+                                                titulo: 'Anular registro',
+                                                mensaje: '¿Anular este registro? El monto de S/ {{ number_format($venta->total, 2) }} se descontará de la recaudación.',
+                                                etiqueta: 'Anular'
+                                            })">Anular</button>
+                                @endif
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="tabla__vacio"><x-estado-vacio icono="tarjetas" texto="Sin membresías vendidas en este rango." /></td></tr>
+                        <tr><td colspan="8" class="tabla__vacio"><x-estado-vacio icono="tarjetas" texto="Sin membresías vendidas en este rango." /></td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
         <div class="paginacion">{{ $ventas->links() }}</div>
+        <x-modal-confirmar />
     @endif
 
     @if ($tipo === 'producto' && auth()->user()->tienePermiso('ventas.registrar'))

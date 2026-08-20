@@ -56,6 +56,10 @@ Route::prefix('entrenador')->name('entrenador.')->middleware('rol:entrenador')->
         Route::post('rutinas', [InscripcionController::class, 'store'])->name('inscripciones.store');
     });
 
+    Route::middleware('permiso:inscripciones.editar')->group(function () {
+        Route::put('rutinas/{membership}', [InscripcionController::class, 'update'])->name('inscripciones.update');
+    });
+
     // Asistencia, con dos caras: "Mi marcación" es el fichaje laboral propio
     // (StaffAttendance: turno + entrada/salida) y "Mis clientes" es el
     // calendario de asistencias de clientes que el propio entrenador registró
@@ -98,5 +102,12 @@ Route::prefix('entrenador')->name('entrenador.')->middleware('rol:entrenador')->
     Route::middleware('permiso:ventas.registrar')->group(function () {
         Route::get('ventas', [VentaController::class, 'index'])->name('ventas.index');
         Route::post('ventas', [VentaController::class, 'store'])->name('ventas.store');
+    });
+
+    // Editar ventas propias (nombre, monto, método, etc.)
+    Route::middleware('permiso:ventas.editar')->group(function () {
+        Route::get('ventas/{venta}/edit', [VentaController::class, 'edit'])->name('ventas.edit');
+        Route::put('ventas/{venta}', [VentaController::class, 'update'])->name('ventas.update');
+        Route::post('ventas/{venta}/anular', [VentaController::class, 'anular'])->name('ventas.anular');
     });
 });

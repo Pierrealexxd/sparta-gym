@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Entrenador;
 use App\Http\Controllers\Controller;
 use App\Models\Membership;
 use App\Models\Product;
+use App\Models\Role;
 use App\Models\Sale;
 use App\Models\StockMovement;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,7 +30,16 @@ class VentaController extends Controller
 {
     public function index(Request $request): View
     {
-        $tipo  = $request->get('tipo') === 'inscripcion' ? 'inscripcion' : 'producto';
+        // 1. FORZAR tipo: definición explícita y orden prioritario.
+        //    - Si viene ?tipo=inscripcion -> muestra inscripciones
+        //    - En TODO lo otro (incluido null, 'producto, o vacío) -> productos
+        //    Esto evita que la URL o el navegador dejen el filtro "atrapado".
+        $tipoSolicitado = $request->get('tipo');
+        $tipo = $tipoSolicitado === 'inscripcion' ? 'inscripcion' : 'producto';
+
+        // 2. Asegurar que $tipo nunca sea null (protección adicional)
+        $tipo = $tipo ?? 'producto';
+
         $desde = $request->get('desde', now()->toDateString());
         $hasta = $request->get('hasta', now()->toDateString());
 
@@ -67,6 +78,7 @@ class VentaController extends Controller
         } else {
             $ventas = Sale::with('items')
                 ->where('sold_by', $request->user()->id)
+                ->where('sale_type', 'producto')
                 ->completadas()
                 ->whereBetween('sold_at', $rango)
                 ->latest('sold_at')
@@ -76,6 +88,7 @@ class VentaController extends Controller
             $datos['kpis'] = [
                 'cantidad' => $ventas->total(),
                 'total'    => (float) Sale::where('sold_by', $request->user()->id)
+                    ->where('sale_type', 'producto')
                     ->completadas()
                     ->whereBetween('sold_at', $rango)
                     ->sum('total'),
@@ -94,6 +107,7 @@ class VentaController extends Controller
     private function ventasPorDia(int $userId, \Illuminate\Support\Carbon $desde, \Illuminate\Support\Carbon $hasta): array
     {
         $filas = Sale::where('sold_by', $userId)
+            ->where('sale_type', 'producto')
             ->completadas()
             ->whereBetween('sold_at', [$desde, $hasta])
             ->selectRaw('DATE(sold_at) as dia, SUM(total) as total')
@@ -195,5 +209,96 @@ class VentaController extends Controller
         }
 
         return redirect()->route('entrenador.ventas.index')->with('exito', "Venta {$venta->number} registrada.");
+    }
+
+    public function edit(Sale $venta): View
+    {
+        $this->authorize('ventas.editar', $venta);
+        return view('entrenador.ventas.edit', compact('venta'));
+    }
+
+    public function update(Request $request, Sale $venta): RedirectResponse
+    {
+        $this->authorize('ventas.editar', $venta);
+
+        $datos = $request->validate([
+            'concept'      => ['sometimes', 'string', 'max:120'],
+            'method'       => ['sometimes', 'required', 'in:efectivo,transferencia,yape,plin,tarjeta,otro'],
+            'status'       => ['sometimes', 'string'],
+        ]);
+
+        $venta->update($datos);
+
+        // Notificar al admin
+        app(NotificationService::class)->dispararA(
+            app(User::where('role_id', Role::where('slug', 'admin')->value('id'))->first()),
+            'venta.editada',
+            'Venta editada',
+            "El entrenador {$request->user()->name} editó la venta {$venta->number}",
+            'ventas',
+            'media',
+            $venta->id,
+            route('admin.ventas.show', $venta),
+        );
+
+        return redirect()
+            ->route('entrenador.ventas.index', ['tipo' => 'producto'])
+            ->with('exito', "Venta {$venta->number} actualizada.");
+    }
+
+    /**
+     * Anula una venta propia del entrenador. Repone el stock de cada línea
+     * (mismo patrón que Admin\SaleController::anular) y notifica al admin.
+     */
+    public function anular(Sale $venta): RedirectResponse
+    {
+        if ($venta->sold_by !== auth()->id()) {
+            abort(403);
+        }
+
+        if ($venta->status === 'anulada') {
+            return back()->with('error', 'Esta venta ya estaba anulada.');
+        }
+
+        DB::transaction(function () use ($venta) {
+            foreach ($venta->items as $linea) {
+                $producto = Product::where('id', $linea->product_id)->lockForUpdate()->first();
+
+                if (! $producto) {
+                    continue;
+                }
+
+                $nuevoStock = $producto->stock + $linea->quantity;
+
+                StockMovement::create([
+                    'product_id'     => $producto->id,
+                    'user_id'        => auth()->id(),
+                    'type'           => 'entrada',
+                    'quantity'       => $linea->quantity,
+                    'stock_after'    => $nuevoStock,
+                    'reason'         => 'Anulación venta ' . $venta->number,
+                    'reference_type' => Sale::class,
+                    'reference_id'   => $venta->id,
+                ]);
+
+                $producto->update(['stock' => $nuevoStock]);
+            }
+
+            $venta->update(['status' => 'anulada']);
+        });
+
+        app(NotificationService::class)->dispararA(
+            User::where('role_id', Role::where('slug', 'admin')->value('id'))->first(),
+            'venta.anulada',
+            'Venta anulada',
+            "El entrenador " . auth()->user()->name . " anuló la venta {$venta->number}",
+            'ventas',
+            'media',
+            $venta->id,
+            route('admin.ventas.index'),
+        );
+
+        return redirect()->route('entrenador.ventas.index', ['tipo' => 'producto'])
+            ->with('exito', "Venta {$venta->number} anulada.");
     }
 }

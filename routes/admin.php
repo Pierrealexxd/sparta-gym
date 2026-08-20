@@ -231,6 +231,12 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
     Route::post('ventas', [SaleController::class, 'store'])->name('ventas.store')->middleware('permiso:ventas.registrar');
     Route::post('ventas/{venta}/anular', [SaleController::class, 'anular'])
         ->name('ventas.anular')->middleware('permiso:pagos.anular');
+
+    // Editar venta (concepto, método, estado)
+    Route::get('ventas/{venta}/edit', [SaleController::class, 'edit'])
+        ->name('ventas.edit')->middleware('permiso:ventas.registrar');
+    Route::put('ventas/{venta}', [SaleController::class, 'update'])
+        ->name('ventas.update')->middleware('permiso:ventas.registrar');
     Route::get('ventas/buscar-cliente', [SaleController::class, 'buscarCliente'])
         ->name('ventas.buscar-cliente')->middleware('permiso:ventas.registrar');
     // Antes de "ventas/{venta}/anular" en el archivo no importa (Laravel

@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Member;
 use App\Models\Membership;
 use App\Models\Plan;
+use App\Models\Role;
 use App\Models\Trainer;
+use App\Models\User;
 use App\Services\MatriculaService;
+use App\Services\NotificationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -190,5 +193,42 @@ class InscripcionController extends Controller
         return redirect()
             ->route('entrenador.inscripciones.index')
             ->with('exito', $mensaje);
+    }
+
+    public function update(Request $request, Membership $membership): RedirectResponse
+    {
+        $datos = $request->validate([
+            'plan_id'   => ['required', 'exists:plans,id'],
+            'starts_at' => ['required', 'date'],
+            'ends_at'   => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'discount'  => ['nullable', 'numeric', 'min:0'],
+            'price'     => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $plan = Plan::findOrFail($datos['plan_id']);
+
+        $membership->update([
+            'plan_id'   => $plan->id,
+            'plan_name' => $plan->name,
+            'price'     => $datos['price'],
+            'discount'  => $datos['discount'] ?? 0,
+            'starts_at' => $datos['starts_at'],
+            'ends_at'   => $datos['ends_at'] ?? $membership->ends_at,
+        ]);
+
+        app(NotificationService::class)->dispararA(
+            User::where('role_id', Role::where('slug', 'admin')->value('id'))->get(),
+            'inscripcion.editada',
+            'Inscripción editada',
+            "El entrenador {$request->user()->name} editó la inscripción de {$membership->member->full_name} ({$plan->name})",
+            'usuarios',
+            'media',
+            $membership->id,
+            route('admin.clientes.show', $membership->member),
+        );
+
+        return redirect()
+            ->route('entrenador.inscripciones.index')
+            ->with('exito', "Inscripción de {$membership->member->full_name} actualizada.");
     }
 }
