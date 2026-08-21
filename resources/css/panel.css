@@ -1935,14 +1935,28 @@
    MENSAJERÍA · chat interno entre usuarios de la sede
    ============================================================ */
 
-/* Sin conversación abierta solo existe la lista (ocupa todo el ancho);
-   el hilo aparece al elegir un chat. En escritorio vuelve la vista partida. */
+/* Página-app (mensajería): el membrete ocupa su fila y la fila del chat se
+   lleva TODO el alto restante del viewport — en escritorio Y móvil, misma
+   regla. La clase llega desde Blade (@section('contenido_clase')), sin
+   depender de :has(). --alto-cabecera aproxima la barra sticky del panel;
+   si queda un pelo corta, sobra aire abajo, no aparece scroll fantasma. */
+.panel__contenido--lleno {
+    --alto-cabecera: 4.5rem;
+    min-height: calc(100dvh - var(--alto-cabecera));
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+/* Sin conversación abierta solo existe la lista (ocupa todo el ancho); el
+   hilo aparece al elegir un chat. En escritorio vuelve la vista partida.
+   Sin altura fija: la fila minmax(0,1fr) estira la tarjeta del listado
+   hasta el borde inferior, con scroll interno propio de la lista. */
 .chat {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     gap: var(--e-4);
-    height: min(720px, calc(100dvh - 250px));
-    min-height: 460px;
+    height: auto;
+    min-height: 480px;
 }
 .chat.is-hilo-abierto { grid-template-columns: 340px minmax(0, 1fr); }
 
@@ -1950,25 +1964,9 @@
 .chat.is-hilo-abierto .chat__hilo { display: flex; }
 
 @media (max-width: 900px) {
-    /* Página-app (mensajería): el membrete ocupa su fila y la fila del chat
-       se lleva TODO el alto restante del viewport. La clase llega desde
-       Blade (@section('contenido_clase')), sin depender de :has().
-       --alto-cabecera aproxima la barra sticky del panel; si queda un pelo
-       corta, sobra aire abajo, no aparece scroll fantasma. */
-    .panel__contenido--lleno {
-        --alto-cabecera: 4.5rem;
-        min-height: calc(100dvh - var(--alto-cabecera));
-        grid-template-rows: auto minmax(0, 1fr);
-        padding-bottom: var(--e-4);
-    }
-    .chat {
-        grid-template-columns: minmax(0, 1fr);
-        /* El listado llena su fila completa: la tarjeta no puede quedarse
-           a media pantalla con el fondo asomando debajo. */
-        grid-template-rows: minmax(0, 1fr);
-        height: auto;
-        min-height: 0;
-    }
+    /* En pantallas bajas (phone horizontal) el guardia de escritorio
+       sobra: manda el alto real disponible. */
+    .chat { min-height: 0; }
 
     .chat.is-hilo-abierto { grid-template-columns: minmax(0, 1fr); }
     .chat.is-hilo-abierto .chat__panel { display: none; }

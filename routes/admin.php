@@ -39,6 +39,9 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
     // a "clientes/{member}" (show), que si no la captura como si "buscar"
     // fuera un id.
     Route::get('clientes/buscar', [MemberController::class, 'buscar'])->name('clientes.buscar');
+    // Chequeo anti-duplicados del modal de matrícula (literal antes de
+    // clientes/{member}, mismo motivo que "buscar").
+    Route::get('clientes/verificar', [MemberController::class, 'verificar'])->name('clientes.verificar');
     // 'create' fuera: "Nuevo cliente" vive como modal de admin.clientes.index
     // (ver más abajo) en vez de pantalla propia — igual que ya hicimos con
     // matrícula e inscripción.

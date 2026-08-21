@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Imports\SaleImport;
 use App\Imports\SaleRecordImport;
 use App\Models\Member;
+use App\Models\Plan;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\StockMovement;
@@ -57,16 +58,29 @@ class SaleController extends Controller
             $desde = $hasta = now()->toDateString();
         }
 
+        // En la pestaña Registros el filtro además aísla las ventas del pase
+        // diario: transacciones de hoy cuyo concepto es el plan de un día de
+        // la sede (duration_days = 1; el nombre no importa, cada sede pone
+        // el suyo). En Productos no hay plan que vender: botón oculto.
+        $soloPlanDiario = fn ($q) => $q->whereHas(
+            'membership.plan',
+            fn ($p) => $p->where('duration_days', 1),
+        );
+        $aplicaPlanDiario = $asistieronHoy && $tipo === 'membresia';
+
         $ventas = Sale::with(['member', 'soldBy', 'items'])
             ->whereIn('sale_type', $this->tiposDePestana($tipo))
             ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
+            ->when($aplicaPlanDiario, $soloPlanDiario)
             ->latest('sold_at')->paginate(10)->onEachSide(1)->withQueryString();
 
         $totalRango = Sale::completadas()->whereIn('sale_type', $this->tiposDePestana($tipo))
             ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
+            ->when($aplicaPlanDiario, $soloPlanDiario)
             ->sum('total');
         $conteoRango = Sale::completadas()->whereIn('sale_type', $this->tiposDePestana($tipo))
             ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
+            ->when($aplicaPlanDiario, $soloPlanDiario)
             ->count();
 
         return view('admin.ventas.index', [
@@ -80,6 +94,9 @@ class SaleController extends Controller
             'totalRango'     => $totalRango,
             'conteoRango'    => $conteoRango,
             'ticketPromedio' => $conteoRango > 0 ? round((float) $totalRango / $conteoRango, 2) : 0,
+            // Nombre real del pase diario de la sede, para el tooltip del
+            // botón (null si la sede no configuró ninguno).
+            'planDiario'     => Plan::where('duration_days', 1)->first(),
         ]);
     }
 
@@ -159,9 +176,15 @@ class SaleController extends Controller
             $desde = $hasta = now()->toDateString();
         }
 
+        // En Registros, el filtro también aísla las ventas del pase diario,
+        // igual que en pantalla (ver index()).
         $ventas = Sale::with(['items', 'member', 'soldBy'])
             ->whereIn('sale_type', $this->tiposDePestana($tipo))
             ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
+            ->when(
+                $request->get('asistencia') === 'hoy' && $tipo === 'membresia',
+                fn ($q) => $q->whereHas('membership.plan', fn ($p) => $p->where('duration_days', 1)),
+            )
             ->orderByDesc('sold_at')
             ->get();
 

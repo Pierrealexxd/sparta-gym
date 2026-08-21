@@ -147,6 +147,17 @@ class Member extends Model
         return $codigo;
     }
 
+    /**
+     * Normalización compartida por el chequeo anti-duplicados (endpoint
+     * MemberController::verificar y freno de MatriculaController::store):
+     * colapsa espacios y baja a minúsculas para que "Ana  Pérez " y
+     * "ana perez" cuenten como la misma persona.
+     */
+    public static function normalizarNombre(?string $valor): string
+    {
+        return mb_strtolower(trim((string) preg_replace('/\s+/', ' ', $valor ?? '')));
+    }
+
     /* ---------------------------------------------------------- */
     /* Atributos derivados                                        */
     /* ---------------------------------------------------------- */

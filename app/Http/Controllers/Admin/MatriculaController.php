@@ -69,6 +69,38 @@ class MatriculaController extends Controller
         $datos = $request->validate($reglas);
         $plan  = Plan::findOrFail($datos['plan_id']);
 
+        // Capa pasiva anti-duplicados: el modal ya avisa en vivo (ver
+        // MemberController::verificar), pero si el operador ignoró el aviso,
+        // escribió a mano tras descartarlo o llegó sin JS, acá se frena igual.
+        // Solo aplica al alta nueva: con member_id presente es una renovación
+        // del cliente elegido y por definición no crea nadie duplicado.
+        if (blank($datos['member_id'] ?? null)) {
+            $duplicado = Member::query()
+                ->where(function ($q) use ($datos) {
+                    $documento = trim((string) ($datos['document'] ?? ''));
+                    if ($documento !== '') {
+                        $q->orWhere('document', $documento);
+                    }
+
+                    $nombres   = Member::normalizarNombre($datos['first_name'] ?? '');
+                    $apellidos = Member::normalizarNombre($datos['last_name'] ?? '');
+                    if ($nombres !== '' && $apellidos !== '') {
+                        $q->orWhere(fn ($x) => $x
+                            ->whereRaw('LOWER(TRIM(first_name)) = ?', [$nombres])
+                            ->whereRaw('LOWER(TRIM(last_name)) = ?', [$apellidos]));
+                    }
+                })
+                ->first();
+
+            if ($duplicado) {
+                throw ValidationException::withMessages([
+                    'first_name' => "Este cliente ya está registrado: {$duplicado->full_name}"
+                        . " (código {$duplicado->code})."
+                        . ' Úsalo desde «¿Ya es cliente? Buscarlo» para renovarle el plan en vez de crear otro registro.',
+                ]);
+            }
+        }
+
         // El global scope de BelongsToGym ya aísla por sede: si el id no
         // pertenece a la activa, Member::find() simplemente no lo encuentra.
         $existente = $datos['member_id'] ?? null ? Member::find($datos['member_id']) : null;

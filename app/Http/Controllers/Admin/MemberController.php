@@ -29,23 +29,23 @@ class MemberController extends Controller
     {
         $asistieronHoy = $request->get('asistencia') === 'hoy';
 
-        // "Asistieron hoy" = trámite del día actual, no check-in físico:
-        // socio creado hoy o matrícula/renovación creada hoy. El where()
-        // envuelve el OR para no contaminar el resto de condiciones.
+        // "Asistieron hoy" = pase diario en uso: check-in físico de hoy Y
+        // matrícula vigente del plan de un día de la sede. El plan diario
+        // se identifica por duración (duration_days = 1), no por nombre:
+        // cada sede bautiza su pase como quiera y el filtro lo sigue
+        // encontrando. El global scope de Plan ya acota a la sede activa.
         $inicioDia = now()->startOfDay();
         $finDia    = now()->endOfDay();
 
         $socios = Member::query()
             ->buscar($request->get('q'))
             ->when($request->get('estado'), fn ($q, $estado) => $q->where('status', $estado))
-            ->when($asistieronHoy, fn ($q) => $q->where(
-                fn ($hoy) => $hoy
-                    ->whereBetween('created_at', [$inicioDia, $finDia])
-                    ->orWhereHas(
-                        'memberships',
-                        fn ($m) => $m->whereBetween('created_at', [$inicioDia, $finDia])
-                    )
-            ))
+            ->when($asistieronHoy, fn ($q) => $q
+                ->whereHas('attendances', fn ($a) => $a->whereBetween('checked_in_at', [$inicioDia, $finDia]))
+                ->whereHas('memberships', fn ($m) => $m
+                    ->vigentes()
+                    ->whereDate('starts_at', '<=', today())
+                    ->whereHas('plan', fn ($p) => $p->where('duration_days', 1))))
             ->with('currentMembership')
             ->with(['attendances' => fn ($q) => $q->latest('checked_in_at')->take(1)])
             ->when(GymContext::id() === null, fn ($q) => $q->with('gym'))
@@ -61,6 +61,8 @@ class MemberController extends Controller
             'planes'   => auth()->user()->tienePermiso('clientes.crear')
                 ? Plan::activos()->orderBy('price')->get()
                 : collect(),
+            // Nombre del pase diario de la sede para el tooltip del filtro.
+            'planDiario' => Plan::where('duration_days', 1)->first(),
         ]);
     }
 
@@ -92,6 +94,65 @@ class MemberController extends Controller
             'email'      => $m->email,
             'code'       => $m->code,
         ]));
+    }
+
+    /**
+     * Chequeo anti-duplicados en vivo del modal "Nueva matrícula": mientras
+     * el operador teclea documento, correo o nombres y apellidos, el paso 1
+     * consulta acá. Misma regla que frena MatriculaController::store — pero
+     * avisando ANTES de llenar plan y pago, no al chocar con el error.
+     *
+     * Devuelve a lo más un cliente: primero gana el documento exacto, luego
+     * el correo exacto y recién después la coincidencia de nombres completos
+     * (comparación laxa a mayúsculas y espacios, vía Member::normalizarNombre).
+     */
+    public function verificar(Request $request): JsonResponse
+    {
+        $documento = trim((string) $request->get('document'));
+        $correo    = trim((string) $request->get('email'));
+        $nombres   = Member::normalizarNombre($request->get('first_name'));
+        $apellidos = Member::normalizarNombre($request->get('last_name'));
+
+        $encontrado = null;
+        $motivo     = null;
+
+        if (mb_strlen($documento) >= 4) {
+            $encontrado = Member::where('document', $documento)->first();
+            $motivo     = 'documento';
+        }
+
+        if (! $encontrado && $correo !== '') {
+            $encontrado = Member::where('email', $correo)->first();
+            $motivo     = 'correo';
+        }
+
+        if (! $encontrado && mb_strlen($nombres) >= 3 && mb_strlen($apellidos) >= 3) {
+            // LOWER/TRIM en SQL para no depender del collation de la tabla;
+            // el lado PHP ya viene normalizado igual desde normalizarNombre.
+            $encontrado = Member::whereRaw('LOWER(TRIM(first_name)) = ?', [$nombres])
+                ->whereRaw('LOWER(TRIM(last_name)) = ?', [$apellidos])
+                ->first();
+            $motivo = 'nombre';
+        }
+
+        if (! $encontrado) {
+            return response()->json(['coincide' => false]);
+        }
+
+        return response()->json([
+            'coincide' => true,
+            'motivo'   => $motivo,
+            'cliente'  => [
+                'id'         => $encontrado->id,
+                'full_name'  => $encontrado->full_name,
+                'code'       => $encontrado->code,
+                'first_name' => $encontrado->first_name,
+                'last_name'  => $encontrado->last_name,
+                'document'   => $encontrado->document,
+                'phone'      => $encontrado->phone,
+                'email'      => $encontrado->email,
+            ],
+        ]);
     }
 
     public function store(Request $request): RedirectResponse

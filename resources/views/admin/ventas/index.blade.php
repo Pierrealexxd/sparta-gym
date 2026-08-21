@@ -73,6 +73,7 @@
             <button class="btn btn--vidrio" type="submit">Filtrar</button>
             @if ($tipo === 'membresia')
                 <button class="btn btn--vidrio" type="button"
+                        @if ($planDiario ?? null) data-title="Pase diario: {{ $planDiario->name }}" @endif
                         onclick="this.form.elements.asistencia.value=this.form.elements.asistencia.value==='hoy'?'':'hoy';this.form.submit()">
                     <x-icono nombre="entrada" /> {{ $asistieronHoy ? 'Ver todas' : 'Asistieron hoy' }}
                 </button>

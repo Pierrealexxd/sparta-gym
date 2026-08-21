@@ -530,6 +530,27 @@ textarea.campo__control { min-height: 8rem; resize: vertical; }
 
 .aviso--exito { border-color: color-mix(in srgb, var(--ok) 40%, transparent); background: color-mix(in srgb, var(--ok) 10%, transparent); color: var(--ok); }
 .aviso--error { border-color: color-mix(in srgb, var(--sangre) 45%, transparent); background: color-mix(in srgb, var(--sangre) 12%, transparent); color: var(--alerta); }
+
+/* Aviso con acción a la derecha (p. ej. "Cliente existente seleccionado —
+   Quitar" en la matrícula). El mensaje ocupa el sobrante y parte en varias
+   líneas; los botones conservan su medida natural. Sin esto el botón era
+   encogible como cualquier hijo flex y .btn —nowrap + overflow:hidden—
+   terminaba mostrando "UITA" en vez de "Quitar". */
+.aviso--accion {
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.aviso--accion > :first-child {
+    flex: 1 1 22ch;
+    min-width: 0;
+}
+
+.aviso--accion > :not(:first-child) {
+    flex: none;
+    margin-left: auto;
+}
 /* Informativo (formato de archivo esperado, ayudas de formulario): reusa
    --agua, el único acento "frío" del sistema (ver tokens.css), en vez de
    inventar un azul literal como pedía el plan original. */

@@ -54,10 +54,11 @@
                 <option value="{{ $v }}" @selected(request('estado') === $v)>{{ $l }}</option>
             @endforeach
         </select>
-        <button class="btn btn--vidrio" type="button"
-                onclick="this.form.elements.asistencia.value=this.form.elements.asistencia.value==='hoy'?'':'hoy';this.form.submit()">
-            <x-icono nombre="entrada" /> {{ request('asistencia') === 'hoy' ? 'Ver todos' : 'Asistieron hoy' }}
-        </button>
+                <button class="btn btn--vidrio" type="button"
+                        @if ($planDiario) data-title="Pase diario: {{ $planDiario->name }}" @endif
+                        onclick="this.form.elements.asistencia.value=this.form.elements.asistencia.value==='hoy'?'':'hoy';this.form.submit()">
+                    <x-icono nombre="entrada" /> {{ request('asistencia') === 'hoy' ? 'Ver todos' : 'Asistieron hoy' }}
+                </button>
         <input type="hidden" name="asistencia" value="{{ request('asistencia') === 'hoy' ? 'hoy' : '' }}">
     </form>
 
@@ -440,7 +441,7 @@
                         </button>
                     </nav>
 
-                    <form method="POST" action="{{ route('admin.matricula.store') }}" @submit="enviando = true">
+                    <form method="POST" action="{{ route('admin.matricula.store') }}" @submit="enviar($event)">
                         @csrf
 
                         {{-- ---------- PASO 1: CLIENTE ---------- --}}
@@ -449,25 +450,45 @@
 
                             <x-buscador-cliente bloqueado-cuando="clienteExistenteId" />
 
-                            <div x-show="clienteExistenteId" x-cloak class="aviso" style="display:flex;justify-content:space-between;align-items:center;gap:var(--e-3)">
+                            <div x-show="clienteExistenteId" x-cloak class="aviso aviso--accion">
                                 <span>Cliente existente seleccionado — se usa su ficha, no se crea una nueva.</span>
                                 <button type="button" class="btn btn--desnudo" @click="quitarClienteExistente()">Quitar</button>
                             </div>
 
                             <div class="formulario-panel__fila">
                                 <label class="campo"><span class="campo__etiqueta">Nombres</span>
-                                    <input class="campo__control" type="text" name="first_name" x-model="nuevo.first_name" :disabled="clienteExistenteId"></label>
+                                    <input class="campo__control" type="text" name="first_name" x-model="nuevo.first_name" @input="verificarDuplicado()" :disabled="clienteExistenteId"></label>
                                 <label class="campo"><span class="campo__etiqueta">Apellidos</span>
-                                    <input class="campo__control" type="text" name="last_name" x-model="nuevo.last_name" :disabled="clienteExistenteId"></label>
+                                    <input class="campo__control" type="text" name="last_name" x-model="nuevo.last_name" @input="verificarDuplicado()" :disabled="clienteExistenteId"></label>
                                 <label class="campo"><span class="campo__etiqueta">Documento</span>
-                                    <input class="campo__control" type="text" name="document" x-model="nuevo.document" :disabled="clienteExistenteId"></label>
+                                    <input class="campo__control" type="text" name="document" x-model="nuevo.document" @input="verificarDuplicado()" :disabled="clienteExistenteId"></label>
                                 <label class="campo"><span class="campo__etiqueta">Teléfono</span>
                                     <input class="campo__control" type="text" name="phone" x-model="nuevo.phone" :disabled="clienteExistenteId"></label>
                                 <label class="campo"><span class="campo__etiqueta">Correo</span>
-                                    <input class="campo__control" type="email" name="email" x-model="nuevo.email" :disabled="clienteExistenteId"></label>
+                                    <input class="campo__control" type="email" name="email" x-model="nuevo.email" @input="verificarDuplicado()" :disabled="clienteExistenteId"></label>
                                 <label class="campo"><span class="campo__etiqueta">Altura (cm) — opcional</span>
                                     <input class="campo__control" type="number" name="height_cm" min="100" max="260" x-model="nuevo.height_cm" :disabled="clienteExistenteId"></label>
                             </div>
+
+                            {{-- Alerta anti-duplicados: misma regla que frena el
+                                 backend (documento o nombres+apellidos). Mientras
+                                 esté activa el paso 1 no avanza: se usa al cliente
+                                 existente o se descarta a mano. --}}
+                            <div x-show="duplicado && !clienteExistenteId" x-cloak class="aviso aviso--error aviso--accion">
+                                <div>
+                                    <b>Este cliente ya está registrado.</b>
+                                    <span x-show="duplicado">
+                                        <b x-text="duplicado?.cliente.full_name"></b><span x-text="duplicado?.cliente.code ? ' · código ' + duplicado.cliente.code : ''"></span> —
+                                        <span x-text="duplicado?.motivo === 'documento' ? 'mismo documento' : duplicado?.motivo === 'correo' ? 'mismo correo' : 'mismos nombres y apellidos'"></span>.
+                                    </span>
+                                    Sus campos ya están completados con su ficha.
+                                </div>
+                                <div style="display:flex;gap:var(--e-2)">
+                                    <button type="button" class="btn btn--fuego" @click="usarClienteExistente()">Usar este cliente</button>
+                                    <button type="button" class="btn btn--desnudo" @click="descartarDuplicado()">No es él / ella</button>
+                                </div>
+                            </div>
+                            <p x-show="verificando" x-cloak style="color:var(--humo);font-size:var(--t-xs);margin-top:var(--e-2)">Verificando si ya existe…</p>
 
                             <div class="formulario-panel__acciones">
                                 <button type="button" class="btn btn--fuego" @click="siguiente()" :disabled="!puedeAvanzarPaso1()">Siguiente</button>
@@ -565,7 +586,61 @@ function matricula() {
         // Selector de cliente existente — elegir uno rellena el paso 1 solo.
         buscarQ: '', resultados: [], clienteExistenteId: null,
 
+        // Anti-duplicados en vivo: mientras se teclea documento, correo o
+        // nombres completos se pregunta al backend; si ya existe, se rellena
+        // la ficha y el paso 1 queda bloqueado hasta decidir.
+        duplicado: null, verificando: false, _verifTimer: null,
+
         init() {},
+
+        verificarDuplicado() {
+            if (this.clienteExistenteId) { this.duplicado = null; return; }
+            clearTimeout(this._verifTimer);
+
+            const n = this.nuevo;
+            const hayDoc    = n.document.trim().length >= 4;
+            const hayCorreo = /\S+@\S+\.\S+/.test(n.email.trim());
+            const hayNombre = n.first_name.trim().length >= 3 && n.last_name.trim().length >= 3;
+            // Sin criterio suficiente no se consulta (evita falsos positivos
+            // a medio teclear) y un duplicado previo caduca si borran campos.
+            if (!hayDoc && !hayCorreo && !hayNombre) { this.duplicado = null; this.verificando = false; return; }
+
+            this.verificando = true;
+            this._verifTimer = setTimeout(() => {
+                const p = new URLSearchParams();
+                if (hayDoc) p.set('document', n.document.trim());
+                if (hayCorreo) p.set('email', n.email.trim());
+                if (hayNombre) {
+                    p.set('first_name', n.first_name.trim());
+                    p.set('last_name', n.last_name.trim());
+                }
+                fetch('{{ route('admin.clientes.verificar') }}?' + p)
+                    .then(r => r.json())
+                    .then(d => {
+                        this.duplicado = d.coincide ? d : null;
+                        if (d.coincide) {
+                            // Autorrelleno con la ficha canónica del registro
+                            // existente; asignar por x-model no dispara @input,
+                            // así que no vuelve a consultar en bucle.
+                            const c = d.cliente;
+                            this.nuevo.first_name = c.first_name;
+                            this.nuevo.last_name = c.last_name;
+                            this.nuevo.document = c.document ?? '';
+                            this.nuevo.phone = c.phone ?? '';
+                            this.nuevo.email = c.email ?? '';
+                        }
+                    })
+                    .catch(() => {})
+                    .finally(() => { this.verificando = false; });
+            }, 400);
+        },
+        usarClienteExistente() {
+            if (!this.duplicado) return;
+            const c = this.duplicado.cliente;
+            this.duplicado = null;
+            this.elegirCliente(c);
+        },
+        descartarDuplicado() { this.duplicado = null; },
 
         buscarCliente() {
             if (this.buscarQ.trim().length < 2) { this.resultados = []; return; }
@@ -579,15 +654,31 @@ function matricula() {
             this.nuevo = { first_name: m.first_name, last_name: m.last_name, document: m.document ?? '', phone: m.phone ?? '', email: m.email ?? '', height_cm: '' };
             this.buscarQ = m.first_name + ' ' + m.last_name + (m.code ? ' (' + m.code + ')' : '');
             this.resultados = [];
+            this.duplicado = null;
         },
         quitarClienteExistente() {
             this.clienteExistenteId = null;
             this.buscarQ = '';
             this.nuevo = { first_name: '', last_name: '', document: '', phone: '', email: '' };
+            this.duplicado = null;
         },
 
         puedeAvanzarPaso1() {
+            // Duplicado sin resolver = no se avanza a plan ni pago. El
+            // backend lo vuelve a comprobar igual, por si llegan sin JS.
+            if (this.duplicado && !this.clienteExistenteId) return false;
             return this.nuevo.first_name.trim() && this.nuevo.last_name.trim();
+        },
+        enviar($event) {
+            // Última línea del frontend: si se llegó al paso 3 saltándose el
+            // candado (p. ej. editaron los nombres tras elegir plan), el
+            // submit regresa al paso 1 en vez de mandar un duplicado.
+            if (this.duplicado && !this.clienteExistenteId) {
+                $event.preventDefault();
+                this.paso = 1;
+                return;
+            }
+            this.enviando = true;
         },
         siguiente() {
             if (this.paso === 2 && !this.accessEmail) {
