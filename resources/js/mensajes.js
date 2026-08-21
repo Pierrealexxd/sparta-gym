@@ -14,9 +14,12 @@ import Alpine from 'alpinejs';
 
 const RUTA = (clave, id) => (window.spartaMensajes?.[clave] ?? '').replace('__ID__', id);
 
+const PESO_MAX_ADJUNTO = 20 * 1024 * 1024; // mismo techo que el backend
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('chat', (conversaciones) => ({
         conversaciones: conversaciones ?? [],
+        filtroLista: '',
         nuevoAbierto: false,
         filtroRol: '',
         busqueda: '',
@@ -27,9 +30,20 @@ document.addEventListener('alpine:init', () => {
         mensajes: [],
         ultimoId: 0,
         texto: '',
+        adjunto: null,
+        aviso: '',
         enviando: false,
         cargandoHilo: false,
         temporizador: null,
+
+        get conversacionesFiltradas() {
+            const t = this.filtroLista.trim().toLowerCase();
+            if (!t) return this.conversaciones;
+            return this.conversaciones.filter((c) =>
+                c.nombre.toLowerCase().includes(t)
+                || (c.ultimo || '').toLowerCase().includes(t),
+            );
+        },
 
         init() {
             if (window.spartaAbrirConversacion) {
@@ -54,6 +68,8 @@ document.addEventListener('alpine:init', () => {
 
             this.conversacion = id;
             this.cargandoHilo = true;
+            this.quitarAdjunto();
+            this.aviso = '';
             try {
                 const { data } = await axios.get(RUTA('listaMensajes', id));
                 this.contacto = data.contacto;
@@ -91,18 +107,56 @@ document.addEventListener('alpine:init', () => {
 
         async enviarMensaje() {
             const cuerpo = this.texto.trim();
-            if (!cuerpo || this.enviando || !this.conversacion) return;
+            if ((!cuerpo && !this.adjunto) || this.enviando || !this.conversacion) return;
 
             this.enviando = true;
             try {
-                const { data } = await axios.post(RUTA('enviar', this.conversacion), { body: cuerpo });
+                let data;
+                if (this.adjunto) {
+                    // Con adjunto va FormData: el archivo manda multipart y
+                    // el texto viaja como campo opcional del mismo POST.
+                    const fd = new FormData();
+                    fd.append('body', cuerpo);
+                    fd.append('adjunto', this.adjunto.file);
+                    ({ data } = await axios.post(RUTA('enviar', this.conversacion), fd));
+                } else {
+                    ({ data } = await axios.post(RUTA('enviar', this.conversacion), { body: cuerpo }));
+                }
+
                 this.mensajes.push(data.mensaje);
                 this.ultimoId = data.mensaje.id;
                 this.texto = '';
+                this.quitarAdjunto();
                 this.$nextTick(() => this.irAlFinal());
             } finally {
                 this.enviando = false;
             }
+        },
+
+        elegirAdjunto(e) {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file) return;
+
+            if (file.size > PESO_MAX_ADJUNTO) {
+                this.aviso = 'El archivo supera el límite de 20 MB.';
+                return;
+            }
+
+            this.aviso = '';
+            this.adjunto = { file, nombre: file.name };
+        },
+
+        quitarAdjunto() {
+            this.adjunto = null;
+        },
+
+        abrirNuevo() {
+            this.nuevoAbierto = true;
+            this.filtroRol = '';
+            this.busqueda = '';
+            this.cargarDirectorio();
+            this.$nextTick(() => this.$refs.busqueda?.focus());
         },
 
         async cargarDirectorio() {

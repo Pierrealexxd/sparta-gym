@@ -27,10 +27,27 @@ class MemberController extends Controller
 {
     public function index(Request $request): View
     {
+        $asistieronHoy = $request->get('asistencia') === 'hoy';
+
+        // "Asistieron hoy" = trámite del día actual, no check-in físico:
+        // socio creado hoy o matrícula/renovación creada hoy. El where()
+        // envuelve el OR para no contaminar el resto de condiciones.
+        $inicioDia = now()->startOfDay();
+        $finDia    = now()->endOfDay();
+
         $socios = Member::query()
             ->buscar($request->get('q'))
             ->when($request->get('estado'), fn ($q, $estado) => $q->where('status', $estado))
+            ->when($asistieronHoy, fn ($q) => $q->where(
+                fn ($hoy) => $hoy
+                    ->whereBetween('created_at', [$inicioDia, $finDia])
+                    ->orWhereHas(
+                        'memberships',
+                        fn ($m) => $m->whereBetween('created_at', [$inicioDia, $finDia])
+                    )
+            ))
             ->with('currentMembership')
+            ->with(['attendances' => fn ($q) => $q->latest('checked_in_at')->take(1)])
             ->when(GymContext::id() === null, fn ($q) => $q->with('gym'))
             ->orderBy('last_name')
             ->paginate(10)

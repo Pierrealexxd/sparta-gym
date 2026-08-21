@@ -77,7 +77,7 @@
         </div>
 
         <div>
-            <nav class="pestanas__nav" style="margin-bottom:var(--e-5)">
+            <nav class="pestanas__nav pestanas__nav--ancha" style="margin-bottom:var(--e-5)">
                 <button class="pestanas__enlace" :aria-current="tab==='resumen'" @click="tab='resumen'" type="button">Resumen</button>
                 <button class="pestanas__enlace" :aria-current="tab==='medidas'" @click="tab='medidas'" type="button">Medidas</button>
                 <button class="pestanas__enlace" :aria-current="tab==='membresias'" @click="tab='membresias'" type="button">Membresías</button>

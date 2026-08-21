@@ -51,6 +51,7 @@
         'chat'       => '<path d="M21 12a8.5 8.5 0 0 1-12.3 7.6L4 21l1.4-4.7A8.5 8.5 0 1 1 21 12z"/><path d="M8.5 12h7M8.5 8.5h4.5"/>',
         'perfil'     => '<circle cx="12" cy="8" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
         'avion'      => '<path d="M3 10.5L21 3l-7.5 18-3-6.5z"/><path d="M10.5 14.5L21 3"/>',
+        'clip'       => '<path d="M21 12.5l-8.2 8.2a5.8 5.8 0 0 1-8.2-8.2l8.6-8.6a3.9 3.9 0 0 1 5.5 5.5L10.5 17.6a1.95 1.95 0 0 1-2.75-2.75L15.5 7"/>',
 
         // Método de la mano (nutrición, Fase 0 — ver PLAN_NUTRICION_PROGRESO.md)
         'mano-palma' => '<path d="M6 21v-6c0-4 2-8 6-8s6 4 6 8v6"/><path d="M9 8V5M12 7V4M15 8V5"/>',

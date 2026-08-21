@@ -194,7 +194,10 @@
                 </div>
             </header>
 
-            <main class="panel__contenido">
+            {{-- Las páginas pueden añadir una clase al contenedor con
+                 @section('contenido_clase') — p. ej. la mensajería la usa
+                 para comportarse como pantalla completa en móvil. --}}
+            <main class="panel__contenido @yield('contenido_clase')">
                 {{-- Bienvenida de login/registro: a diferencia del toast de
                      abajo (usado para confirmaciones de acciones dentro del
                      panel), esta va arriba del todo, en el mismo lugar/estilo

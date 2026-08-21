@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -20,9 +21,19 @@ use Illuminate\Support\Facades\DB;
  * los endpoints JSON (sin websockets ni dependencias nuevas): listar hilos,
  * abrir un hilo, enviar y marcar leído. Cada contacto ofrece además un
  * atajo a WhatsApp por si la vía interna no basta.
+ *
+ * Un mensaje es texto, adjunto o ambos: imágenes y archivos sueltos. El
+ * binario vive en el disco público bajo mensajes/, la fila guarda ruta +
+ * nombre original + categoría resuelta (imagen|archivo).
  */
 class MensajeController extends Controller
 {
+    /** Extensiones que se aceptan como adjunto. Sin exe/dll/bat ni similares. */
+    private const EXTENSIONES = [
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif',
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv', 'zip',
+    ];
+
     public function index(Request $request): View
     {
         $yo = $request->user();
@@ -96,7 +107,19 @@ class MensajeController extends Controller
         $conversacion = Conversation::sinFiltroDeGimnasio()->findOrFail($conversacion);
         abort_unless($conversacion->esParticipante($yo->id), 403);
 
-        $datos = $request->validate(['body' => ['required', 'string', 'max:2000']]);
+        $datos = $request->validate([
+            'body'    => ['nullable', 'string', 'max:2000', 'required_without:adjunto'],
+            'adjunto' => ['nullable', 'file', 'max:20480'],
+        ]);
+
+        $adjunto = $datos['adjunto'] ?? null;
+
+        if ($adjunto instanceof UploadedFile) {
+            // mimes: de Laravel depende del mime reportado, que varía por
+            // navegador. La lista blanca por extensión es lo predecible.
+            $extension = strtolower($adjunto->getClientOriginalExtension() ?: $adjunto->guessExtension());
+            abort_unless(in_array($extension, self::EXTENSIONES, true), 422, "Extensión .{$extension} no permitida.");
+        }
 
         // Mismo bug de fondo que conversar(): messages.gym_id tampoco admite
         // NULL y dependía de BelongsToGym + GymContext::id() (null con el
@@ -106,8 +129,9 @@ class MensajeController extends Controller
         $mensaje = $conversacion->messages()->create([
             'gym_id'    => $conversacion->gym_id,
             'sender_id' => $yo->id,
-            'body'      => trim($datos['body']),
-        ]);
+            'body'      => trim($datos['body'] ?? ''),
+        ] + $this->guardarAdjunto($adjunto));
+
         $conversacion->touch();
         $this->marcarLeidas($conversacion, $yo);
 
@@ -234,6 +258,33 @@ class MensajeController extends Controller
     /* Internos                                                  */
     /* ---------------------------------------------------------- */
 
+    /** Columnas de adjunto para create(); vacío si no viene archivo. */
+    private function guardarAdjunto(?UploadedFile $adjunto): array
+    {
+        if (! $adjunto instanceof UploadedFile) {
+            return [];
+        }
+
+        return [
+            'attachment_path' => $adjunto->store('mensajes', 'public'),
+            // Nombre visible para quien recibe: el original, saneado de ruta.
+            'attachment_name' => basename($adjunto->getClientOriginalName() ?: 'archivo'),
+            'attachment_type' => $this->categoriaAdjunto($adjunto),
+        ];
+    }
+
+    /** imagen | archivo. La vista solo decide cómo pintar. */
+    private function categoriaAdjunto(UploadedFile $adjunto): string
+    {
+        $mime = (string) $adjunto->getMimeType();
+
+        if (str_starts_with($mime, 'image/')) {
+            return 'imagen';
+        }
+
+        return 'archivo';
+    }
+
     /**
      * El admin gestiona varias sedes a la vez: sus hilos aparecen sin
      * importar cuál tenga activa en el selector, para que un mensaje de
@@ -286,7 +337,12 @@ class MensajeController extends Controller
                 'avatar'    => $otro?->avatar_path ? asset('storage/' . $otro->avatar_path) : null,
                 'rol'       => $otro?->role?->name,
                 'sede'      => $mostrarSede ? $otro?->gym?->name : null,
-                'ultimo'    => $ultimo?->body,
+                // Sin texto, la previsualización nombra al adjunto.
+                'ultimo'    => match (true) {
+                    $ultimo === null                  => '',
+                    trim((string) $ultimo->body) !== '' => $ultimo->body,
+                    default                           => $ultimo->etiquetaAdjunto(),
+                },
                 'hora'      => $ultimo
                     ? ($ultimo->created_at->isToday()
                         ? $ultimo->created_at->format('H:i')
@@ -300,13 +356,18 @@ class MensajeController extends Controller
     private function serializarMensaje(Message $m, User $yo): array
     {
         return [
-            'id'     => $m->id,
-            'cuerpo' => $m->body,
-            'mio'    => $m->sender_id === $yo->id,
-            'hora'   => $m->created_at->isToday()
+            'id'      => $m->id,
+            'cuerpo'  => $m->body,
+            'mio'     => $m->sender_id === $yo->id,
+            'adjunto' => $m->tieneAdjunto() ? [
+                'url'    => $m->urlAdjunto(),
+                'tipo'   => $m->attachment_type,
+                'nombre' => $m->attachment_name,
+            ] : null,
+            'hora'    => $m->created_at->isToday()
                 ? $m->created_at->format('H:i')
                 : $m->created_at->translatedFormat('d M · H:i'),
-            'leido'  => $m->read_at !== null,
+            'leido'   => $m->read_at !== null,
         ];
     }
 

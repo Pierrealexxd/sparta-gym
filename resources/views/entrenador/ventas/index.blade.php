@@ -16,7 +16,7 @@
 @endsection
 
 @section('contenido')
-    <nav class="pestanas__nav" style="margin-bottom:var(--e-5)">
+    <nav class="pestanas__nav pestanas__nav--ancha" style="margin-bottom:var(--e-5)">
         <a class="pestanas__enlace" href="{{ route('entrenador.ventas.index', ['tipo' => 'producto']) }}" aria-current="{{ $tipo === 'producto' ? 'true' : 'false' }}">Productos</a>
         <a class="pestanas__enlace" href="{{ route('entrenador.ventas.index', ['tipo' => 'inscripcion']) }}" aria-current="{{ $tipo === 'inscripcion' ? 'true' : 'false' }}">Registros</a>
     </nav>

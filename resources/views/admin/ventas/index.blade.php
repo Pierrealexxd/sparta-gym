@@ -23,7 +23,7 @@
 @section('contenido')
     {{-- Pestañas por tipo: un solo listado en vez de pantallas separadas
          que preguntaban lo mismo ("¿qué se vendió?"). --}}
-    <nav class="pestanas__nav" style="margin-bottom:var(--e-5)">
+    <nav class="pestanas__nav pestanas__nav--ancha" style="margin-bottom:var(--e-5)">
         <a class="pestanas__enlace" href="{{ route('admin.ventas.index', ['tipo' => 'producto']) }}" aria-current="{{ $tipo === 'producto' ? 'true' : 'false' }}">Productos</a>
         <a class="pestanas__enlace" href="{{ route('admin.ventas.index', ['tipo' => 'membresia']) }}" aria-current="{{ $tipo === 'membresia' ? 'true' : 'false' }}">Registros</a>
     </nav>
@@ -60,18 +60,31 @@
         </article>
     </div>
 
-    <form class="panel__toolbar" method="GET">
+    <form class="panel__toolbar toolbar-ventas" method="GET">
         <input type="hidden" name="tipo" value="{{ $tipo }}">
-        <label class="campo"><input class="campo__control" type="date" name="desde" value="{{ $desde }}"></label>
-        <label class="campo"><input class="campo__control" type="date" name="hasta" value="{{ $hasta }}"></label>
-        <button class="btn btn--vidrio" type="submit">Filtrar</button>
+        @if ($tipo === 'membresia')
+            <input type="hidden" name="asistencia" value="{{ $asistieronHoy ? 'hoy' : '' }}">
+        @endif
+        <div class="toolbar-ventas__fechas">
+            <label class="campo"><input class="campo__control" type="date" name="desde" value="{{ $desde }}"></label>
+            <label class="campo"><input class="campo__control" type="date" name="hasta" value="{{ $hasta }}"></label>
+        </div>
+        <div class="toolbar-ventas__acciones">
+            <button class="btn btn--vidrio" type="submit">Filtrar</button>
+            @if ($tipo === 'membresia')
+                <button class="btn btn--vidrio" type="button"
+                        onclick="this.form.elements.asistencia.value=this.form.elements.asistencia.value==='hoy'?'':'hoy';this.form.submit()">
+                    <x-icono nombre="entrada" /> {{ $asistieronHoy ? 'Ver todas' : 'Asistieron hoy' }}
+                </button>
+            @endif
+        </div>
     </form>
 
     {{-- Exportar: respeta el filtro de fechas y tipo activo (van en la
          query string). Mismo permiso que importar: quien puede sacar el
          Excel de referencia también puede volver a subirlo. --}}
     @if (auth()->user()->tienePermiso('reportes.exportar'))
-        <div class="toolbar-acciones" data-revelar>
+        <div class="toolbar-acciones toolbar-exportar" data-revelar>
             <span class="toolbar-acciones__label">Exportar:</span>
             <a class="btn btn--vidrio btn--sm"
                href="{{ route('admin.ventas.exportar', ['tipo' => $tipo, 'desde' => $desde, 'hasta' => $hasta, 'formato' => 'excel']) }}">
@@ -91,7 +104,8 @@
                 <thead><tr><th>N°</th><th>Fecha</th><th>Productos</th><th class="tabla__oculta-movil">Método</th><th>Total</th><th>Vendido por</th><th>Estado</th><th></th></tr></thead>
                 <tbody>
                     @forelse ($ventas as $venta)
-                        <tr>
+                        <tr class="tarjeta--interactiva" style="cursor:pointer"
+                            @click="$dispatch('abrir-detalle-venta', { url: '{{ route('admin.ventas.detalle', $venta) }}' })">
                             <td class="es-fuerte" style="font-family:var(--f-mono)" data-etiqueta="N°">{{ $venta->number }}</td>
                             <td data-etiqueta="Fecha">{{ $venta->sold_at->format('d/m/y H:i') }}</td>
                             <td data-etiqueta="Productos">{{ $venta->items->map(fn ($i) => $i->quantity . '× ' . $i->product_name)->join(', ') }}</td>
@@ -102,7 +116,7 @@
                             <td data-etiqueta="nada">
                                 @if ($venta->status === 'completada' && auth()->user()->tienePermiso('pagos.anular'))
                                     <button class="btn btn--desnudo" type="button"
-                                            @click="$store.confirmar.abrir({
+                                            @click.stop="$store.confirmar.abrir({
                                                 accion: '{{ route('admin.ventas.anular', $venta) }}',
                                                 metodo: 'POST',
                                                 titulo: 'Anular venta',
@@ -113,7 +127,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="tabla__vacio"><x-estado-vacio icono="caja" texto="Sin ventas en este rango." /></td></tr>
+                        <tr><td colspan="8" class="tabla__vacio" data-etiqueta=""><x-estado-vacio icono="caja" texto="Sin ventas en este rango." /></td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -129,7 +143,8 @@
                 <thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Concepto</th><th>Total</th><th class="tabla__oculta-movil">Método</th><th>Vendido por</th><th></th></tr></thead>
                 <tbody>
                     @forelse ($ventas as $venta)
-                        <tr>
+                        <tr class="tarjeta--interactiva" style="cursor:pointer"
+                            @click="$dispatch('abrir-detalle-venta', { url: '{{ route('admin.ventas.detalle', $venta) }}' })">
                             <td class="es-fuerte" style="font-family:var(--f-mono)" data-etiqueta="N°">{{ $venta->number }}</td>
                             <td data-etiqueta="Fecha">{{ $venta->sold_at->format('d/m/y H:i') }}</td>
                             <td class="es-fuerte" data-etiqueta="Cliente">
@@ -144,7 +159,7 @@
                             <td data-etiqueta="nada">
                                 @if ($venta->status === 'completada' && auth()->user()->tienePermiso('pagos.anular'))
                                     <button class="btn btn--desnudo" type="button"
-                                            @click="$store.confirmar.abrir({
+                                            @click.stop="$store.confirmar.abrir({
                                                 accion: '{{ route('admin.ventas.anular', $venta) }}',
                                                 metodo: 'POST',
                                                 titulo: 'Anular registro',
@@ -155,7 +170,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="tabla__vacio"><x-estado-vacio icono="tarjetas" texto="Sin membresías vendidas en este rango." /></td></tr>
+                        <tr><td colspan="8" class="tabla__vacio" data-etiqueta=""><x-estado-vacio icono="tarjetas" texto="Sin membresías vendidas en este rango." /></td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -308,5 +323,7 @@
             </div>
         </div>
     @endif
+
+    @include('admin.ventas._detalle-venta')
 
 @endsection

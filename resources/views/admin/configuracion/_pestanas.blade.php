@@ -5,7 +5,7 @@
      cada pestaña tiene SU PROPIO permiso (no uno compartido), así que se
      ocultan las que el usuario no puede abrir en vez de dejarlo entrar a
      un 403. --}}
-<nav class="pestanas__nav" style="margin-bottom:var(--e-5)">
+<nav class="pestanas__nav pestanas__nav--ancha" style="margin-bottom:var(--e-5)">
     @if (auth()->user()->tienePermiso('entrenadores.gestionar'))
         <a class="pestanas__enlace" href="{{ route('admin.entrenadores.index') }}" aria-current="{{ request()->routeIs('admin.entrenadores.*') ? 'true' : 'false' }}">Entrenadores</a>
     @endif

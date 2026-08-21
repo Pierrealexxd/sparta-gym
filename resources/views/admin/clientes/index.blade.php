@@ -26,7 +26,7 @@
     @php
         $modoTodas = \App\Support\GymContext::id() === null;
         $puedeEliminar = auth()->user()->tienePermiso('clientes.eliminar');
-        $colspan = 5 + ($modoTodas ? 1 : 0) + ($puedeEliminar ? 1 : 0);
+        $colspan = 6 + ($modoTodas ? 1 : 0) + ($puedeEliminar ? 1 : 0);
         // El modal de edición (abajo) se reabre solo si el error de
         // validación vino de su formulario — ver _origen en el modal.
         $errorEditor = $errors->any() && old('_origen') === 'cliente-editar';
@@ -45,12 +45,20 @@
                    placeholder="Buscar por nombre, código o documento…">
         </div>
 
-        <select class="campo__control" name="estado" style="max-width:180px" onchange="this.form.submit()">
+        <select class="campo__control" name="estado" onchange="this.form.submit()">
             <option value="">Todos los estados</option>
+            @if (request('asistencia') === 'hoy')
+                <option value="" selected>Asistieron hoy</option>
+            @endif
             @foreach (['activo' => 'Activo', 'inactivo' => 'Inactivo', 'suspendido' => 'Suspendido'] as $v => $l)
                 <option value="{{ $v }}" @selected(request('estado') === $v)>{{ $l }}</option>
             @endforeach
         </select>
+        <button class="btn btn--vidrio" type="button"
+                onclick="this.form.elements.asistencia.value=this.form.elements.asistencia.value==='hoy'?'':'hoy';this.form.submit()">
+            <x-icono nombre="entrada" /> {{ request('asistencia') === 'hoy' ? 'Ver todos' : 'Asistieron hoy' }}
+        </button>
+        <input type="hidden" name="asistencia" value="{{ request('asistencia') === 'hoy' ? 'hoy' : '' }}">
     </form>
 
     <div class="tabla-bulk" x-data="{
@@ -77,7 +85,7 @@
                                        aria-label="Seleccionar todos los de esta página">
                             </th>
                         @endif
-                        <th>Cliente</th><th class="tabla__oculta-movil">Código</th>@if ($modoTodas)<th>Sede</th>@endif<th>Membresía</th><th>Estado</th><th></th>
+                        <th>Cliente</th><th class="tabla__oculta-movil">Código</th>@if ($modoTodas)<th>Sede</th>@endif<th>Membresía</th><th class="tabla__oculta-movil">Última asistencia</th><th>Estado</th><th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -103,6 +111,13 @@
                                     Vence {{ $cliente->currentMembership->ends_at->translatedFormat('d M Y') }}
                                 @else
                                     <span style="color:var(--humo)">Sin membresía</span>
+                                @endif
+                            </td>
+                            <td class="tabla__oculta-movil" data-etiqueta="Última asistencia">
+                                @if ($cliente->attendances->count())
+                                    <span class="estado" style="color:var(--ok)">{{ $cliente->attendances->first()->checked_in_at->format('d/m/Y H:i') }}</span>
+                                @else
+                                    <span style="color:var(--humo)">—</span>
                                 @endif
                             </td>
                             <td data-etiqueta="Estado"><span class="estado estado--{{ $cliente->status }}">{{ ucfirst($cliente->status) }}</span></td>

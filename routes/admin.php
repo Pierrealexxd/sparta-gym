@@ -239,6 +239,10 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
         ->name('ventas.update')->middleware('permiso:ventas.registrar');
     Route::get('ventas/buscar-cliente', [SaleController::class, 'buscarCliente'])
         ->name('ventas.buscar-cliente')->middleware('permiso:ventas.registrar');
+
+    Route::get('ventas/{venta}/detalle', [SaleController::class, 'detalle'])
+        ->name('ventas.detalle')->middleware('permiso:inventario.ver')
+        ->whereNumber('venta');
     // Antes de "ventas/{venta}/anular" en el archivo no importa (Laravel
     // matchea por método+segmento literal primero), pero "exportar" e
     // "importar" son literales fijos, así que no chocan con {venta}.

@@ -804,6 +804,31 @@
     .tabla--tarjetas td[data-etiqueta="nada"]::before,
     .tabla--tarjetas td[data-etiqueta="check"]::before,
     .tabla--tarjetas td[data-etiqueta=""]::before { content: none; }
+    /* Red de seguridad: una celda a la que se le olvidó el atributo no
+       puede pintar un ":" suelto (attr() ausente = cadena vacía). */
+    .tabla--tarjetas td:not([data-etiqueta])::before { content: none; }
+
+    /* La celda del estado vacío no es un par "etiqueta : valor": ocupa la
+       tarjeta completa y centra icono + mensaje en ambos ejes. */
+    .tabla--tarjetas td.tabla__vacio {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: var(--e-2) 0;
+        text-align: center;
+    }
+    /* Y la fila que solo contiene ese estado no dibuja carcasa de tarjeta:
+       el mensaje flota centrado, igual que en escritorio. */
+    .tabla--tarjetas tbody tr:has(> td.tabla__vacio) {
+        display: block;
+        margin: var(--e-2) var(--e-3);
+        padding: var(--e-4);
+        border: 0;
+        background: none;
+        box-shadow: none;
+    }
     .tabla--tarjetas td[data-etiqueta="check"] { justify-content: flex-start; }
     .tabla--tarjetas td[data-etiqueta="nada"] {
         justify-content: flex-end;
@@ -816,8 +841,19 @@
     .tabla--tarjetas tbody tr:last-child { margin-bottom: var(--e-2); }
 }
 
-/* ---------- Estado vacío ilustrado ---------- */
-.estado-vacio { display: grid; place-items: center; gap: var(--e-3); }
+/* ---------- Estado vacío ilustrado ----------
+   Columna centrada en ambos ejes, siempre: icono arriba, mensaje debajo.
+   text-align center para que el texto de varias líneas no quede pegado
+   a la izquierda dentro de su propia caja. */
+.estado-vacio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--e-3);
+    width: 100%;
+    text-align: center;
+}
 .estado-vacio__icono {
     width: 48px; height: 48px;
     display: grid; place-items: center;
@@ -1899,18 +1935,58 @@
    MENSAJERÍA · chat interno entre usuarios de la sede
    ============================================================ */
 
+/* Sin conversación abierta solo existe la lista (ocupa todo el ancho);
+   el hilo aparece al elegir un chat. En escritorio vuelve la vista partida. */
 .chat {
     display: grid;
-    grid-template-columns: 340px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--e-4);
     height: min(720px, calc(100dvh - 250px));
     min-height: 460px;
 }
+.chat.is-hilo-abierto { grid-template-columns: 340px minmax(0, 1fr); }
+
+.chat__hilo { display: none; }
+.chat.is-hilo-abierto .chat__hilo { display: flex; }
+
 @media (max-width: 900px) {
-    .chat { grid-template-columns: minmax(0, 1fr); }
-    .chat__hilo { display: none; }
+    /* Página-app (mensajería): el membrete ocupa su fila y la fila del chat
+       se lleva TODO el alto restante del viewport. La clase llega desde
+       Blade (@section('contenido_clase')), sin depender de :has().
+       --alto-cabecera aproxima la barra sticky del panel; si queda un pelo
+       corta, sobra aire abajo, no aparece scroll fantasma. */
+    .panel__contenido--lleno {
+        --alto-cabecera: 4.5rem;
+        min-height: calc(100dvh - var(--alto-cabecera));
+        grid-template-rows: auto minmax(0, 1fr);
+        padding-bottom: var(--e-4);
+    }
+    .chat {
+        grid-template-columns: minmax(0, 1fr);
+        /* El listado llena su fila completa: la tarjeta no puede quedarse
+           a media pantalla con el fondo asomando debajo. */
+        grid-template-rows: minmax(0, 1fr);
+        height: auto;
+        min-height: 0;
+    }
+
+    .chat.is-hilo-abierto { grid-template-columns: minmax(0, 1fr); }
     .chat.is-hilo-abierto .chat__panel { display: none; }
-    .chat.is-hilo-abierto .chat__hilo { display: flex; }
+    /* Hilo abierto = pantalla completa, por encima del chrome del panel
+       (cabecera sticky, menú lateral) pero por debajo de los modales.
+       Volver es lo único que saca al usuario de ahí. */
+    .chat.is-hilo-abierto .chat__hilo {
+        position: fixed;
+        inset: 0;
+        z-index: calc(var(--z-nav) + 5);
+        height: 100dvh;
+        border-radius: 0;
+        border: none;
+    }
+    /* iPhone con notch: la barra de escritura no puede pegarse al borde. */
+    .chat.is-hilo-abierto .chat__escribir {
+        padding-bottom: calc(var(--e-3) + env(safe-area-inset-bottom));
+    }
 }
 
 .chat__panel {
@@ -1923,31 +1999,14 @@
     overflow: hidden;
 }
 
-.chat__cabecera-lista {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--e-3);
-    padding: var(--e-3);
-    border-bottom: 1px solid var(--acero);
+/* Búsqueda rápida de la lista: primer elemento del panel, filtra en vivo
+   los hilos ya cargados sin ir al servidor. */
+.chat__buscar { position: relative; padding: var(--e-3); border-bottom: 1px solid var(--acero); }
+.chat__buscar svg {
+    position: absolute; left: calc(var(--e-3) + 1rem); top: 50%; transform: translateY(-50%);
+    width: 16px; height: 16px; color: var(--humo); pointer-events: none;
 }
-.chat__titulo-lista {
-    font-family: var(--f-display);
-    font-size: var(--t-base);
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    color: var(--hueso);
-}
-.chat__nuevo {
-    flex: none;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    display: grid;
-    place-items: center;
-    border-radius: var(--r-md);
-}
-.chat__nuevo svg { width: 1.1em; height: 1.1em; }
+.chat__buscar input { width: 100%; padding-left: 2.6rem; border-radius: var(--r-full); }
 
 .chat__cuerpo-lista { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 
@@ -1993,6 +2052,7 @@
     border-radius: 50%;
     background: var(--metal);
     border: 1px solid var(--acero-claro);
+    box-shadow: var(--s-sm); /* el avatar flota sobre la fila, no se pinta encima */
     font-family: var(--f-mono);
     font-size: var(--t-xs);
     color: var(--ceniza);
@@ -2022,11 +2082,15 @@
     flex: none;
 }
 .chat__conversacion-meta small { color: var(--humo); font-size: .62rem; font-family: var(--f-mono); }
+/* Badge circular de no leídos: disco sangre con aro del fondo, para que
+   se lea como contador y no se pierda junto a la hora. */
 .chat__no-leidas {
-    min-width: 20px; height: 20px; padding: 0 6px;
+    min-width: 21px; height: 21px; padding: 0 5px;
     display: grid; place-items: center;
     border-radius: var(--r-full);
     background: var(--sangre);
+    border: 2px solid var(--grafito);
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--sangre) 45%, transparent);
     color: #fff;
     font-family: var(--f-mono);
     font-style: normal;
@@ -2141,8 +2205,15 @@
     font-size: var(--t-sm);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.chat__cabecera-info small { color: var(--humo); font-size: var(--t-xs); }
-.chat__wa--cabecera { width: auto; height: auto; padding: .5rem 1rem; font-size: var(--t-xs); border-radius: var(--r-full); color: var(--ceniza); }
+/* Cabecera minimalista del hilo: retorno + avatar + nombre, sin acciones
+   de contacto (WhatsApp vive en el directorio, no acá). */
+.chat__avatar--cabecera { width: 36px; height: 36px; }
+.chat__cabecera-nombre {
+    flex: 1; min-width: 0;
+    color: var(--hueso);
+    font-size: var(--t-sm);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
 .chat__mensajes {
     flex: 1;
@@ -2186,6 +2257,38 @@
     opacity: .75;
 }
 
+/* Adjuntos dentro del bocadillo. La imagen es miniatura clicable (abre
+   el original); el archivo, una tarjeta con nombre descargable. */
+.chat__adjunto-imagen { display: block; }
+.chat__adjunto-imagen img {
+    display: block;
+    max-width: min(260px, 62vw);
+    max-height: 300px;
+    width: auto; height: auto;
+    border-radius: var(--r-md);
+}
+.chat__adjunto-archivo {
+    display: flex;
+    align-items: center;
+    gap: var(--e-2);
+    max-width: 100%;
+    margin-bottom: var(--e-1);
+    padding: .55rem .8rem;
+    border-radius: var(--r-md);
+    background: rgba(0, 0, 0, .25);
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    color: inherit;
+    transition: background var(--v-rapido);
+}
+.chat__adjunto-archivo:hover { background: rgba(0, 0, 0, .4); }
+.chat__burbuja--mio .chat__adjunto-archivo { background: rgba(255, 255, 255, .16); }
+.chat__burbuja--mio .chat__adjunto-archivo:hover { background: rgba(255, 255, 255, .26); }
+.chat__adjunto-archivo svg { width: 1em; height: 1em; flex: none; }
+/* El texto va debajo del adjunto cuando hay ambos. */
+.chat__adjunto-imagen + .chat__texto,
+.chat__adjunto-archivo + .chat__texto { margin-top: var(--e-2); }
+
 .chat__cargando {
     flex: 1;
     display: grid;
@@ -2196,43 +2299,78 @@
     letter-spacing: .1em;
     text-transform: uppercase;
 }
-.chat__vacio {
-    flex: 1;
-    display: grid;
-    place-items: center;
-    align-content: center;
-    gap: var(--e-3);
-    text-align: center;
-    padding: var(--e-6);
-    color: var(--humo);
-}
-.chat__vacio-icono {
-    width: 56px; height: 56px;
-    display: grid; place-items: center;
-    border-radius: 50%;
-    background: var(--grafito-alto);
-    border: 1px solid var(--acero);
-    color: var(--acero-claro);
-}
-.chat__vacio-icono svg { width: 26px; height: 26px; }
-.chat__vacio b {
-    color: var(--ceniza);
-    font-size: var(--t-lg);
-    font-family: var(--f-display);
-    text-transform: uppercase;
-    letter-spacing: .04em;
-}
-.chat__vacio p { font-size: var(--t-sm); max-width: 34ch; }
-
 .chat__escribir {
     display: flex;
-    gap: var(--e-3);
-    padding: var(--e-4);
+    flex-direction: column;
+    gap: var(--e-2);
+    padding: var(--e-3) var(--e-4);
     border-top: 1px solid var(--acero);
 }
-.chat__escribir input { flex: 1; }
-.chat__escribir .btn { padding: 0 1.2rem; flex: none; }
-.chat__escribir .btn svg { width: 1.2em; height: 1.2em; }
+
+/* Chip del adjunto pendiente, sobre la fila de escritura. */
+.chat__chip {
+    display: flex;
+    align-items: center;
+    gap: var(--e-2);
+    padding: .4rem .5rem .4rem .8rem;
+    border: 1px dashed var(--acero-claro);
+    border-radius: var(--r-md);
+    background: var(--relleno-suave);
+}
+.chat__chip-nombre {
+    flex: 1; min-width: 0;
+    font-family: var(--f-mono);
+    font-size: var(--t-xs);
+    color: var(--ceniza);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.chat__chip-quitar {
+    width: 26px; height: 26px; flex: none;
+    display: grid; place-items: center;
+    border-radius: var(--r-full);
+    color: var(--humo);
+}
+.chat__chip-quitar:hover { color: var(--hueso); background: var(--relleno-hover); }
+.chat__chip-quitar svg { width: .9em; height: .9em; }
+
+.chat__aviso {
+    font-size: var(--t-xs);
+    color: var(--sangre-clara, var(--brasa));
+    padding: 0 var(--e-2);
+}
+
+.chat__escribir-fila { display: flex; align-items: center; gap: var(--e-2); }
+
+/* Input de archivo oculto: el botón clip lo dispara ($refs.archivo.click()). */
+.chat__archivo-input {
+    position: absolute; width: 1px; height: 1px;
+    opacity: 0; pointer-events: none;
+}
+
+.chat__accion {
+    width: 42px; height: 42px; flex: none;
+    display: grid; place-items: center;
+    border-radius: var(--r-full);
+    border: 1px solid var(--acero);
+    background: var(--control-fondo);
+    color: var(--ceniza);
+    transition: color var(--v-rapido), border-color var(--v-rapido), background var(--v-rapido);
+}
+.chat__accion svg { width: 1.15em; height: 1.15em; }
+.chat__accion:hover { color: var(--hueso); background: var(--relleno-hover); }
+.chat__accion.is-activo { color: var(--brasa); border-color: var(--brasa); }
+
+.chat__texto-input { flex: 1; min-width: 0; border-radius: var(--r-full); }
+
+/* Envío destacado: disco fuego a la derecha, mismo lenguaje que los avatares. */
+.chat__enviar {
+    width: 46px; height: 46px; flex: none;
+    display: grid; place-items: center;
+    padding: 0;
+    border-radius: var(--r-full);
+    box-shadow: var(--s-sm);
+}
+.chat__enviar svg { width: 1.25em; height: 1.25em; }
 
 /* ============================================================
    PREVISUALIZACIÓN DE SECCIONES DE LA LANDING
@@ -2412,5 +2550,120 @@
     }
     .contacto-mapa-modal .modal-info__cuerpo {
         padding: var(--e-3);
+    }
+}
+
+/* ---------- Toolbar responsivo: Clientes y Ventas ---------- */
+
+/* Detalle de venta: bloques con fondo adaptativo al tema */
+.detalle-venta__bloque {
+    padding: var(--e-3);
+    background: var(--grafito-alto);
+    border-radius: var(--r-md);
+}
+.detalle-venta__etiqueta {
+    font-size: var(--t-xs);
+    color: var(--humo);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+.detalle-venta__item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--e-2) var(--e-3);
+    background: var(--relleno-suave);
+    border-radius: var(--r-sm);
+}
+
+/* Clientes PC: búsqueda a la izquierda, select + botón a la derecha en fila.
+   El select llega con width:100% de .campo__control (pensado para controles
+   dentro de un wrapper .campo); como acá es hijo directo del flex, ese 100%
+   se come el botón — se devuelve a auto con cotas y se deja encogible como
+   válvula de escape en pantallas justas. */
+@media (min-width: 521px) {
+    .panel__toolbar:has(.panel__busqueda) {
+        flex-wrap: nowrap;
+    }
+    .panel__toolbar:has(.panel__busqueda) select {
+        width: auto;
+        flex: 0 1 auto;
+        min-width: 9rem;
+        max-width: 16rem;
+    }
+    .panel__toolbar:has(.panel__busqueda) .btn {
+        flex-shrink: 0;
+    }
+}
+
+/* Clientes móvil: dropdown estados full-width, botón "Asistieron hoy" centrado */
+@media (max-width: 520px) {
+    .panel__toolbar:has(.panel__busqueda) {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .panel__toolbar:has(.panel__busqueda) .panel__busqueda {
+        max-width: none;
+        min-width: 0;
+    }
+    .panel__toolbar:has(.panel__busqueda) select {
+        max-width: none;
+        width: 100%;
+    }
+    .panel__toolbar:has(.panel__busqueda) .btn {
+        align-self: center;
+    }
+}
+
+/* Ventas móvil: todo apilado, fechas en fila, botones centrados */
+@media (max-width: 520px) {
+    .toolbar-ventas {
+        flex-direction: column;
+        align-items: stretch;
+        overflow: hidden;
+    }
+    .toolbar-ventas__fechas {
+        display: flex;
+        gap: var(--e-2);
+        min-width: 0;
+    }
+    .toolbar-ventas__fechas .campo {
+        flex: 1;
+        min-width: 0;
+    }
+    .toolbar-ventas__fechas .campo__control {
+        min-width: 0;
+    }
+    .toolbar-ventas__acciones {
+        display: flex;
+        gap: var(--e-2);
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .toolbar-ventas__acciones .btn {
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+    }
+    .toolbar-exportar {
+        justify-content: center;
+    }
+}
+
+/* Ventas PC: toolbar en una sola fila bien distribuida */
+@media (min-width: 521px) {
+    .toolbar-ventas {
+        flex-wrap: nowrap;
+        gap: var(--e-2);
+    }
+    .toolbar-ventas__fechas {
+        display: flex;
+        gap: var(--e-2);
+        flex-shrink: 0;
+    }
+    .toolbar-ventas__acciones {
+        display: flex;
+        gap: var(--e-2);
+        margin-left: auto;
     }
 }

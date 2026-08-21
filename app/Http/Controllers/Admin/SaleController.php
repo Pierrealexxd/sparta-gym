@@ -49,20 +49,31 @@ class SaleController extends Controller
         $desde = $request->get('desde', now()->startOfMonth()->toDateString());
         $hasta = $request->get('hasta', now()->toDateString());
 
+        // "Asistieron hoy" = registros del día actual (sold_at), no check-in
+        // físico: el filtro manda sobre el rango y lo colapsa a hoy.
+        $asistieronHoy = $request->get('asistencia') === 'hoy';
+
+        if ($asistieronHoy) {
+            $desde = $hasta = now()->toDateString();
+        }
+
         $ventas = Sale::with(['member', 'soldBy', 'items'])
             ->whereIn('sale_type', $this->tiposDePestana($tipo))
             ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
             ->latest('sold_at')->paginate(10)->onEachSide(1)->withQueryString();
 
         $totalRango = Sale::completadas()->whereIn('sale_type', $this->tiposDePestana($tipo))
-            ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])->sum('total');
+            ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
+            ->sum('total');
         $conteoRango = Sale::completadas()->whereIn('sale_type', $this->tiposDePestana($tipo))
-            ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])->count();
+            ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
+            ->count();
 
         return view('admin.ventas.index', [
             'tipo'           => $tipo,
             'desde'          => $desde,
             'hasta'          => $hasta,
+            'asistieronHoy'  => $asistieronHoy,
             'ventasHoy'      => Sale::completadas()->delDia()->sum('total'),
             'productos'      => Product::activos()->orderBy('name')->get(),
             'ventas'         => $ventas,
@@ -91,6 +102,46 @@ class SaleController extends Controller
     }
 
     /**
+     * Detalle de una venta individual para el modal (fetch → JSON).
+     */
+    public function detalle(Sale $venta): JsonResponse
+    {
+        $venta->load(['member', 'soldBy', 'items', 'membership.plan']);
+
+        return response()->json([
+            'id'            => $venta->id,
+            'number'        => $venta->number,
+            'tipo'          => $venta->sale_type,
+            'fecha'         => $venta->sold_at->format('d/m/Y H:i'),
+            'cliente'       => $venta->member ? [
+                'id'        => $venta->member->id,
+                'full_name' => $venta->member->full_name,
+                'code'      => $venta->member->code,
+            ] : null,
+            'vendido_por'   => $venta->soldBy?->name ?? '—',
+            'metodo'        => $venta->metodo_legible,
+            'concepto'      => $venta->concept,
+            'subtotal'      => (float) $venta->subtotal,
+            'descuento'     => (float) $venta->discount,
+            'total'         => (float) $venta->total,
+            'estado'        => $venta->status,
+            'notas'         => $venta->notes,
+            'items'         => $venta->items->map(fn ($i) => [
+                'producto'   => $i->product_name,
+                'cantidad'   => $i->quantity,
+                'unit_price' => (float) $i->unit_price,
+                'total'      => (float) $i->total,
+            ]),
+            'membresia'     => $venta->membership ? [
+                'plan'      => $venta->membership->plan?->name ?? $venta->membership->plan_name,
+                'inicio'    => $venta->membership->starts_at?->format('d/m/Y'),
+                'fin'       => $venta->membership->ends_at?->format('d/m/Y'),
+                'dias'      => $venta->membership->dias_restantes,
+            ] : null,
+        ]);
+    }
+
+    /**
      * Exporta el listado ya filtrado (mismo $tipo/$desde/$hasta que la
      * pantalla) a Excel o PDF. No usamos GymContext aquí a mano: Sale trae
      * BelongsToGym, así que el global scope ya filtra por sede igual que
@@ -102,6 +153,11 @@ class SaleController extends Controller
         $desde = $request->get('desde', now()->startOfMonth()->toDateString());
         $hasta = $request->get('hasta', now()->toDateString());
         $formato = $request->get('formato') === 'pdf' ? 'pdf' : 'excel';
+
+        // Mismo criterio que index(): el filtro de hoy colapsa el rango.
+        if ($request->get('asistencia') === 'hoy') {
+            $desde = $hasta = now()->toDateString();
+        }
 
         $ventas = Sale::with(['items', 'member', 'soldBy'])
             ->whereIn('sale_type', $this->tiposDePestana($tipo))

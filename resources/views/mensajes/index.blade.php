@@ -1,6 +1,18 @@
 @extends('layouts.panel')
 
 @section('titulo', 'Mensajes')
+@section('contenido_clase', 'panel__contenido--lleno')
+
+{{-- El botón vive en el membrete del módulo (junto al título) y habla con
+     el componente Alpine por evento de ventana — mismo patrón que el modal
+     "Nuevo cliente" de Clientes, porque el membrete está fuera del scope
+     x-data del chat. --}}
+@section('acciones')
+    <button type="button" class="btn btn--fuego"
+            @click="window.dispatchEvent(new CustomEvent('abrir-nuevo-chat'))">
+        <x-icono nombre="agregar" /> Nuevo chat
+    </button>
+@endsection
 
 @push('scripts')
     @php
@@ -26,22 +38,23 @@
 @section('contenido')
     <div class="chat" x-data="chat({{ Js::from($conversaciones) }})"
          :class="{ 'is-hilo-abierto': conversacion }"
+         @abrir-nuevo-chat.window="abrirNuevo()"
          @keydown.escape.window="nuevoAbierto = false">
 
-        {{-- Columna izquierda: lista de hilos --}}
+        {{-- Columna izquierda: lista de hilos. Sin cabecera propia: el
+             título vive en el membrete y el único botón "+" es el suyo. --}}
         <aside class="chat__panel" x-cloak>
-            <div class="chat__cabecera-lista">
-                <span class="chat__titulo-lista">Conversaciones</span>
-                <button type="button" class="btn btn--fuego chat__nuevo"
-                        @click="nuevoAbierto = true; filtroRol = ''; busqueda = ''; cargarDirectorio(); $nextTick(() => $refs.busqueda?.focus())"
-                        aria-label="Nuevo mensaje" data-title="Nuevo mensaje" aria-haspopup="dialog" :aria-expanded="nuevoAbierto">
-                    <x-icono nombre="agregar" />
-                </button>
+            {{-- Búsqueda rápida sobre los hilos ya abiertos: filtra en vivo,
+                 sin ir al servidor — la lista completa ya está en memoria. --}}
+            <div class="chat__buscar">
+                <x-icono nombre="lupa" />
+                <input class="campo__control" type="search" x-model="filtroLista"
+                       placeholder="Buscar conversación…" autocomplete="off">
             </div>
 
             <div class="chat__cuerpo-lista">
                 <div class="chat__lista" x-ref="lista">
-                    <template x-for="c in conversaciones" :key="c.id">
+                    <template x-for="c in conversacionesFiltradas" :key="c.id">
                         <button type="button" class="chat__conversacion"
                                 :class="{ 'is-activa': c.id === conversacion }"
                                 @click="abrir(c.id)">
@@ -59,8 +72,11 @@
                             </span>
                         </button>
                     </template>
+                    <p class="chat__vacio-lista" x-show="conversacionesFiltradas.length === 0 && filtroLista.trim()">
+                        Ninguna conversación coincide con la búsqueda.
+                    </p>
                     <p class="chat__vacio-lista" x-show="conversaciones.length === 0">
-                        Sin conversaciones todavía. Toca + para escribir a alguien.
+                        Sin conversaciones todavía. Toca Nuevo chat para escribir a alguien.
                     </p>
                 </div>
             </div>
@@ -68,23 +84,16 @@
 
         {{-- Columna derecha: hilo --}}
         <section class="chat__hilo" x-cloak>
-            {{-- Cabecera del hilo --}}
+            {{-- Cabecera del hilo: solo retorno + avatar + nombre --}}
             <header class="chat__cabecera" x-show="conversacion" x-cloak>
                 <button type="button" class="chat__volver" @click="conversacion = null" title="Volver a la lista">
                     <x-icono nombre="flecha-der" />
                 </button>
-                <span class="chat__avatar">
+                <span class="chat__avatar chat__avatar--cabecera">
                     <img x-show="contacto?.avatar" :src="contacto?.avatar" alt="">
                     <span x-show="!contacto?.avatar" x-text="contacto?.iniciales"></span>
                 </span>
-                <div class="chat__cabecera-info">
-                    <b x-text="contacto?.nombre"></b>
-                    <small x-text="contacto?.rol"></small>
-                </div>
-                <a x-show="contacto?.whatsapp" :href="contacto?.whatsapp" target="_blank" rel="noopener"
-                   class="btn btn--vidrio chat__wa chat__wa--cabecera" title="Continuar por WhatsApp">
-                    <x-icono nombre="telefono" /> WhatsApp
-                </a>
+                <b class="chat__cabecera-nombre" x-text="contacto?.nombre"></b>
             </header>
 
             {{-- Cuerpo de mensajes --}}
@@ -92,7 +101,18 @@
                 <template x-for="m in mensajes" :key="m.id">
                     <div class="chat__mensaje" :class="{ 'chat__mensaje--mio': m.mio }">
                         <div class="chat__burbuja" :class="m.mio ? 'chat__burbuja--mio' : 'chat__burbuja--otro'">
-                            <span class="chat__texto" x-text="m.cuerpo"></span>
+                            <template x-if="m.adjunto?.tipo === 'imagen'">
+                                <a class="chat__adjunto-imagen" :href="m.adjunto.url" target="_blank" rel="noopener">
+                                    <img :src="m.adjunto.url" :alt="m.adjunto.nombre" loading="lazy">
+                                </a>
+                            </template>
+                            <template x-if="m.adjunto && m.adjunto.tipo !== 'imagen'">
+                                <a class="chat__adjunto-archivo" :href="m.adjunto.url" target="_blank" rel="noopener" download>
+                                    <x-icono nombre="clip" />
+                                    <span x-text="m.adjunto.nombre"></span>
+                                </a>
+                            </template>
+                            <span class="chat__texto" x-show="m.cuerpo" x-text="m.cuerpo"></span>
                             <small class="chat__hora">
                                 <span x-text="m.hora"></span>
                                 <span class="chat__leido" x-show="m.mio" x-text="m.leido ? '✓✓' : '✓'"></span>
@@ -104,19 +124,36 @@
 
             <div class="chat__cargando" x-show="cargandoHilo" x-cloak>Cargando…</div>
 
-            <div class="chat__vacio" x-show="!conversacion && !cargandoHilo" x-cloak>
-                <span class="chat__vacio-icono"><x-icono nombre="chat" /></span>
-                <b>Elige una conversación</b>
-                <p>O abre el directorio para escribir a alguien del gimnasio.</p>
-            </div>
+            {{-- Sin tarjeta de estado vacío: hasta que se elige conversación,
+                 el hilo ni siquiera existe en pantalla (en escritorio el panel
+                 ocupa todo el ancho; en móvil no hay nada detrás). --}}
 
-            {{-- Componer --}}
+            {{-- Componer: adjunto + texto + envío. Sin notas de voz a
+                 propósito — el backend solo acepta imágenes y archivos. --}}
             <form class="chat__escribir" x-show="conversacion" x-cloak @submit.prevent="enviarMensaje()">
-                <input class="campo__control" type="text" x-model="texto" maxlength="2000"
-                       placeholder="Escribe un mensaje…" autocomplete="off">
-                <button class="btn btn--fuego" type="submit" :disabled="!texto.trim() || enviando">
-                    <x-icono nombre="avion" />
-                </button>
+                <div class="chat__chip" x-show="adjunto" x-cloak>
+                    <small class="chat__chip-nombre" x-text="adjunto?.nombre"></small>
+                    <button type="button" class="chat__chip-quitar" @click="quitarAdjunto()" aria-label="Quitar adjunto">
+                        <x-icono nombre="cerrar" />
+                    </button>
+                </div>
+                <p class="chat__aviso" x-show="aviso" x-text="aviso"></p>
+
+                <div class="chat__escribir-fila">
+                    <input type="file" x-ref="archivo" class="chat__archivo-input" tabindex="-1" aria-hidden="true"
+                           accept=".jpg,.jpeg,.png,.gif,.webp,.avif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip"
+                           @change="elegirAdjunto($event)">
+                    <button type="button" class="chat__accion" :class="{ 'is-activo': adjunto }"
+                            @click="$refs.archivo.click()" title="Adjuntar archivo o imagen">
+                        <x-icono nombre="clip" />
+                    </button>
+                    <input class="campo__control chat__texto-input" type="text" x-model="texto" maxlength="2000"
+                           placeholder="Escribe un mensaje…" autocomplete="off">
+                    <button class="btn btn--fuego chat__enviar" type="submit"
+                            :disabled="(!texto.trim() && !adjunto) || enviando" title="Enviar">
+                        <x-icono nombre="avion" />
+                    </button>
+                </div>
             </form>
         </section>
 
