@@ -958,7 +958,13 @@
     z-index: var(--z-toast);
     display: grid;
     gap: var(--e-3);
-    width: min(24rem, calc(100vw - var(--e-5) * 2));
+    /* Ancho adaptable, no fijo: siendo fixed, el contenedor se encoje hasta
+       el contenido de su toast más ancho (con tope de 24rem para que textos
+       largos trunquen, no desborden). justify-items: end apila cada toast
+       contra su propio contenido alineado a la derecha — un "Guardado"
+       corto ya no arrastra medio panel de aire muerto antes de la cruz. */
+    justify-items: end;
+    max-width: min(24rem, calc(100vw - var(--e-5) * 2));
     pointer-events: none;
 }
 .toast {
@@ -1024,7 +1030,7 @@
         right: var(--e-4);
         left: var(--e-4);
         top: 4.75rem;
-        width: auto;
+        max-width: none;
     }
 }
 
@@ -2923,4 +2929,34 @@
         gap: var(--e-2);
         margin-left: auto;
     }
+}
+
+/* Lector de código de barras */
+.preview-camara-contenedor {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--e-4);
+    background-color: var(--obsidiana);
+    border-radius: var(--r-2);
+    margin-bottom: var(--e-4);
+}
+
+.preview-camara {
+    width: 100%;
+    max-width: 400px;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--r-2);
+    overflow: hidden;
+    background-color: var(--grafito);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-camara video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
 }
