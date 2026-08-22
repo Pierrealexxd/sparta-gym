@@ -236,6 +236,7 @@ $vacios = [
                                 facingMode: 'environment',
                                 width: { ideal: 1920 },
                                 height: { ideal: 1080 },
+                                advanced: [{ focusMode: 'continuous' }]
                             },
                             formatsToSupport: [
                                 Html5QrcodeSupportedFormats.EAN_13,
