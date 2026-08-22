@@ -15,7 +15,7 @@ class Product extends Model
     use HasFactory, SoftDeletes, BelongsToGym;
 
     protected $fillable = [
-        'gym_id', 'name', 'sku', 'category', 'description', 'image_path',
+        'gym_id', 'name', 'sku', 'barcode', 'category', 'description', 'image_path',
         'cost_price', 'sale_price', 'stock', 'min_stock', 'is_active',
     ];
 

@@ -179,6 +179,46 @@ class ProductController extends Controller
         return redirect()->route('admin.inventario.index')->with('exito', "{$desactivados} productos desactivados.");
     }
 
+    /**
+     * Busca un producto por su código de barras (o SKU) para el modal de Nuevo Producto.
+     */
+    public function buscarPorCodigo(Request $request)
+    {
+        $codigo = $request->input('code');
+
+        if (empty($codigo)) {
+            return response()->json(['encontrado' => false, 'producto' => null]);
+        }
+
+        $producto = Product::activos()
+            ->where(function ($query) use ($codigo) {
+                $query->where('barcode', $codigo)
+                      ->orWhere('sku', $codigo);
+            })
+            ->first();
+
+        if ($producto) {
+            return response()->json([
+                'encontrado' => true,
+                'producto' => [
+                    'id' => $producto->id,
+                    'name' => $producto->name,
+                    'sku' => $producto->sku,
+                    'barcode' => $producto->barcode,
+                    'category' => $producto->category,
+                    'description' => $producto->description,
+                    'cost_price' => (float) $producto->cost_price,
+                    'sale_price' => (float) $producto->sale_price,
+                    'min_stock' => $producto->min_stock,
+                    'stock' => $producto->stock,
+                    'image_path' => $producto->image_path,
+                ]
+            ]);
+        }
+
+        return response()->json(['encontrado' => false, 'producto' => null]);
+    }
+
     /** Entrada de mercancía o ajuste manual — nunca se toca `stock` directo. */
     public function registrarMovimiento(Request $request, Product $producto): RedirectResponse
     {
@@ -243,6 +283,12 @@ class ProductController extends Controller
                     }
                 },
                 Rule::unique('products', 'sku')
+                    ->where('gym_id', GymContext::id())
+                    ->ignore($producto?->id),
+            ],
+            'barcode'       => [
+                'nullable', 'string', 'max:100',
+                Rule::unique('products', 'barcode')
                     ->where('gym_id', GymContext::id())
                     ->ignore($producto?->id),
             ],

@@ -216,13 +216,86 @@ $vacios = [
          x-show="abierta" x-cloak
          @abrir-inventario.window="abrir($event.detail)"
          @keydown.escape.window="cerrar()">
-        <div class="tarjeta modal__caja formulario-panel" @click.outside="cerrar()">
+         <div class="tarjeta modal__caja formulario-panel" @click.outside="cerrar()"
+             x-data="{
+                pestana: 'escribir',
+                camaraActiva: false,
+                html5Qrcode: null,
+                mensajeCamara: null,
+                tipoMensajeCamara: null,
+                iniciarCamara() {
+                    if (!this.html5Qrcode) {
+                        this.html5Qrcode = new Html5Qrcode('lector-codigo');
+                    }
+                    this.html5Qrcode.start(
+                        { facingMode: 'environment' },
+                        { fps: 10, qrbox: { width: 250, height: 150 } },
+                        (decodedText) => this.onCodigoDetectado(decodedText),
+                        (errorMessage) => { /* ignorar errores */ }
+                    ).then(() => {
+                        this.camaraActiva = true;
+                        this.mensajeCamara = null;
+                    }).catch(err => {
+                        this.mensajeCamara = 'No se pudo acceder a la cámara. Prueba escribir manualmente.';
+                        this.tipoMensajeCamara = 'aviso';
+                    });
+                },
+                detenerCamara() {
+                    if (this.html5Qrcode && this.camaraActiva) {
+                        this.html5Qrcode.stop().then(() => {
+                            this.camaraActiva = false;
+                        }).catch(err => {});
+                    }
+                },
+                onCodigoDetectado(codigo) {
+                    this.detenerCamara();
+                    this.mensajeCamara = 'Buscando...';
+                    this.tipoMensajeCamara = 'exito';
+                    fetch(`{{ route('admin.inventario.buscar-por-codigo') }}?code=${encodeURIComponent(codigo)}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.encontrado) {
+                                this.fila = { ...this.fila, ...data.producto };
+                                this.fila.barcode = codigo;
+                                this.mensajeCamara = `Producto encontrado: ${data.producto.name}`;
+                                this.tipoMensajeCamara = 'exito';
+                            } else {
+                                this.fila.barcode = codigo;
+                                this.fila.sku = codigo;
+                                this.mensajeCamara = 'Código nuevo — completa los datos';
+                                this.tipoMensajeCamara = 'aviso';
+                            }
+                        })
+                        .catch(() => {
+                            this.mensajeCamara = 'No se pudo buscar el código. Revisa tu conexión e intenta de nuevo.';
+                            this.tipoMensajeCamara = 'aviso';
+                        });
+                }
+             }"
+             @abrir-inventario.window="pestana = 'escribir'; mensajeCamara = null; detenerCamara()"
+             x-init="$watch('abierta', val => { if (!val) detenerCamara(); })">
             <div class="modal__cabecera">
                 <h3 x-text="editando ? 'Editar producto' : 'Nuevo producto'"></h3>
                 <button class="modal__cerrar" type="button" @click="cerrar()" aria-label="Cerrar"><x-icono nombre="cerrar" /></button>
             </div>
 
-            <form class="formulario-panel" method="POST" :action="accion" enctype="multipart/form-data">
+            <nav class="pestanas__nav" style="margin-bottom: var(--e-4);" x-show="!editando">
+                <button type="button" class="pestanas__enlace" :class="{'is-activa': pestana === 'escribir'}" @click="pestana = 'escribir'; detenerCamara()">Escribir</button>
+                <button type="button" class="pestanas__enlace" :class="{'is-activa': pestana === 'escanear'}" @click="pestana = 'escanear'">Escanear</button>
+            </nav>
+
+            <div x-show="pestana === 'escanear' && !editando" class="preview-camara-contenedor" x-cloak>
+                <div id="lector-codigo" class="preview-camara"></div>
+                <div style="margin-top: var(--e-4); display: flex; flex-direction: column; gap: var(--e-3); align-items: center;">
+                    <template x-if="mensajeCamara">
+                        <div class="aviso" :class="tipoMensajeCamara === 'exito' ? 'aviso--exito' : 'aviso--alerta'" role="alert" x-text="mensajeCamara"></div>
+                    </template>
+                    <button type="button" class="btn btn--fuego" x-show="!camaraActiva" @click="iniciarCamara()">Activar cámara</button>
+                    <button type="button" class="btn btn--vidrio" x-show="camaraActiva" @click="detenerCamara()">Detener cámara</button>
+                </div>
+            </div>
+
+            <form class="formulario-panel" method="POST" :action="accion" enctype="multipart/form-data" x-show="pestana === 'escribir' || editando">
                 @csrf
                 <input type="hidden" name="_method" :value="editando ? 'PUT' : ''">
                 <input type="hidden" name="_origen" value="inventario">
@@ -235,18 +308,20 @@ $vacios = [
                 <div class="formulario-panel__fila">
                     <label class="campo"><span class="campo__etiqueta">Nombre</span>
                         <input class="campo__control" type="text" name="name" required x-model="fila.name"></label>
-                    <label class="campo"><span class="campo__etiqueta">SKU (opcional)</span>
-                        <input class="campo__control" type="text" name="sku" id="sku" x-model="fila.sku">
-                    </label>
+                    <label class="campo"><span class="campo__etiqueta">Código barras (opcional)</span>
+                        <input class="campo__control" type="text" name="barcode" x-model="fila.barcode"></label>
                 </div>
 
                 <div class="formulario-panel__fila">
-                    <label class="campo">
-                        <input type="checkbox" name="generar_sku_automatico" id="generar_sku_automatico"
-                            value="1" checked>
-                        Generar SKU automáticamente
+                    <label class="campo"><span class="campo__etiqueta">SKU (opcional)</span>
+                        <input class="campo__control" type="text" name="sku" id="sku" x-model="fila.sku">
+                    </label>
+                    <label class="campo" style="display:flex;align-items:center;padding-top:1.5rem">
+                        <input type="checkbox" name="generar_sku_automatico" id="generar_sku_automatico" value="1" checked>
+                        <span style="margin-left:var(--e-2)">Generar SKU automático</span>
                     </label>
                 </div>
+
 
                 <script>
                     document.addEventListener('DOMContentLoaded', function() {
@@ -339,3 +414,11 @@ $vacios = [
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    {{-- Versión clavada a propósito: un CDN a "última mayor" rompe el
+         lector en producción sin tocar código. Al final con defer deja de
+         pesar ~300 KB en cada visita a inventario aunque nadie abra el
+         modal; Alpine solo lo usa al pulsar "Activar cámara". --}}
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
+@endpush

@@ -221,6 +221,7 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
         // Alertas para la campanita: literal y ANTES de "inventario/{producto}"
         // (show), para que "alertas" no lo capture como si fuera un id.
         Route::get('inventario/alertas', [StockAlertController::class, 'pendientesJson'])->name('inventario.alertas');
+        Route::get('inventario/buscar-por-codigo', [ProductController::class, 'buscarPorCodigo'])->name('inventario.buscar-por-codigo')->middleware('permiso:inventario.gestionar');
         Route::get('inventario/{producto}', [ProductController::class, 'show'])->name('inventario.show');
         Route::get('inventario/{producto}/edit', [ProductController::class, 'edit'])->name('inventario.edit')->middleware('permiso:inventario.gestionar');
         Route::put('inventario/{producto}', [ProductController::class, 'update'])->name('inventario.update')->middleware('permiso:inventario.gestionar');
