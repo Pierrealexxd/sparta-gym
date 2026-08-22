@@ -229,7 +229,24 @@ $vacios = [
                     }
                     this.html5Qrcode.start(
                         { facingMode: 'environment' },
-                        { fps: 10, qrbox: { width: 250, height: 150 } },
+                        {
+                            fps: 12,
+                            qrbox: (ancho, alto) => ({ width: Math.floor(ancho * 0.8), height: Math.floor(alto * 0.35) }),
+                            videoConstraints: {
+                                facingMode: 'environment',
+                                width: { ideal: 1920 },
+                                height: { ideal: 1080 },
+                            },
+                            formatsToSupport: [
+                                Html5QrcodeSupportedFormats.EAN_13,
+                                Html5QrcodeSupportedFormats.EAN_8,
+                                Html5QrcodeSupportedFormats.UPC_A,
+                                Html5QrcodeSupportedFormats.UPC_E,
+                                Html5QrcodeSupportedFormats.CODE_128,
+                                Html5QrcodeSupportedFormats.CODE_39
+                            ],
+                            experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+                        },
                         (decodedText) => this.onCodigoDetectado(decodedText),
                         (errorMessage) => { /* ignorar errores */ }
                     ).then(() => {
@@ -292,6 +309,7 @@ $vacios = [
                     </template>
                     <button type="button" class="btn btn--fuego" x-show="!camaraActiva" @click="iniciarCamara()">Activar cámara</button>
                     <button type="button" class="btn btn--vidrio" x-show="camaraActiva" @click="detenerCamara()">Detener cámara</button>
+                    <p style="color:var(--ceniza);font-size:var(--t-xs)">Que el código llene el recuadro y mantén la mano firme.</p>
                 </div>
             </div>
 
