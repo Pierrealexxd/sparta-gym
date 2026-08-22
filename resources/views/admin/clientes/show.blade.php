@@ -281,7 +281,7 @@
                         // guiones que la recepción pudo teclear al registrar
                         // el teléfono — wa.me exige el número "pelado".
                         $urlWhatsApp = 'https://wa.me/' . preg_replace('/\D+/', '', $cliente->phone)
-                                      . '?text=' . urlencode($mensajeWhatsApp);
+                                      . '?text=' . rawurlencode($mensajeWhatsApp);
                     @endphp
 
                     {{-- Sin x-data/x-init de autocierre: el recepcionista

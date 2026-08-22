@@ -190,7 +190,7 @@
                                         @php
                                             $nom = $cliente->first_name;
                                             $msg = "Hola {$nom}\nTe informamos que tu membresía en Sparta GYM está próximo a vencer.\nNos encantaría que puedas renovarla y seguir entrenando con nosotros 💪🔥\nPara nosotros es un verdadero placer tenerte como parte de la familia Spartana.\n¡Te esperamos para seguir alcanzando tus objetivos juntos!";
-                                            $wa = 'https://wa.me/' . preg_replace('/\D+/', '', $cliente->phone) . '?text=' . urlencode($msg);
+                                            $wa = 'https://wa.me/' . preg_replace('/\D+/', '', $cliente->phone) . '?text=' . rawurlencode($msg);
                                         @endphp
                                         <a class="btn btn--desnudo" href="{{ $wa }}" target="_blank" rel="noopener" title="Enviar recordatorio por WhatsApp">
                                             <x-icono nombre="whatsapp" />

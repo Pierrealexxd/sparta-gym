@@ -11,6 +11,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(\App\Http\Middleware\SetUtf8Charset::class);
         $middleware->alias([
             'rol'         => \App\Http\Middleware\EnsureRole::class,
             'permiso'     => \App\Http\Middleware\EnsurePermission::class,
