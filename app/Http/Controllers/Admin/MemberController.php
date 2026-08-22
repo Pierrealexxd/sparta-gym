@@ -27,25 +27,90 @@ class MemberController extends Controller
 {
     public function index(Request $request): View
     {
+        // Pestañas sobre el listado (mismo patrón que Ventas): la pestaña
+        // activa vive en la URL y cualquier valor fuera de la lista blanca
+        // cae a 'todos'. El pase diario se identifica por duración (= 1
+        // día), nunca por nombre; 'membresias' es todo lo de duración
+        // mayor (mensual en adelante). Un socio con pase diario Y
+        // membresía vigentes aparece legítimamente en ambas pestañas.
+        $tipo = in_array($request->get('tipo'), ['todos', 'rutinas', 'membresias', 'por-vencer'], true)
+            ? $request->get('tipo')
+            : 'todos';
+
         $asistieronHoy = $request->get('asistencia') === 'hoy';
 
-        // "Asistieron hoy" = pase diario en uso: check-in físico de hoy Y
-        // matrícula vigente del plan de un día de la sede. El plan diario
-        // se identifica por duración (duration_days = 1), no por nombre:
-        // cada sede bautiza su pase como quiera y el filtro lo sigue
-        // encontrando. El global scope de Plan ya acota a la sede activa.
+        // Periodicidad del plan: solo aplica en la pestaña "membresías".
+        // Valores válidos: mensual (≤ 30d), trimestral (31–90d),
+        // semestral (91–180d), anual (> 180d). Cualquier otro cae a null
+        // (sin filtro de periodicidad).
+        $periodicidad = in_array($request->get('periodicidad'), ['mensual', 'trimestral', 'semestral', 'anual'], true)
+            ? $request->get('periodicidad')
+            : null;
+
+        // "Asistieron hoy" = registro de entrada del DÍA EN CURSO. Recepción
+        // tiene dos pruebas del ingreso y basta una:
+        //   1. Check-in físico: asistencia fechada hoy.
+        //   2. Pase diario cobrado HOY (venta completada con sold_at de hoy):
+        //      comprar el pase ES entrar ese día, y la marca de asistencia
+        //      puede llegar después o fallar (QR en construcción).
+        // El pase diario se identifica por duración (= 1 día), nunca por
+        // nombre, y su VENTANA debe cubrir hoy aunque el flag de estado diga
+        // otra cosa: una renovación o el cron pueden marcarlo 'vencida'
+        // antes de que expire de verdad (status ≠ verdad, fechas sí).
+        // La venta cuenta solo si está completada: una anulada no es entrada.
+        // El OR va agrupado para no filtrar las condiciones de pestaña; así,
+        // en "Todos" un socio mensual que asistió hoy aparece igual — el
+        // requisito de plan diario lo pone la pestaña Rutinas, no el botón.
         $inicioDia = now()->startOfDay();
         $finDia    = now()->endOfDay();
 
         $socios = Member::query()
             ->buscar($request->get('q'))
             ->when($request->get('estado'), fn ($q, $estado) => $q->where('status', $estado))
-            ->when($asistieronHoy, fn ($q) => $q
-                ->whereHas('attendances', fn ($a) => $a->whereBetween('checked_in_at', [$inicioDia, $finDia]))
-                ->whereHas('memberships', fn ($m) => $m
-                    ->vigentes()
-                    ->whereDate('starts_at', '<=', today())
-                    ->whereHas('plan', fn ($p) => $p->where('duration_days', 1))))
+            // Rutinas diarias: pase diario vigente (ya empezado y sin vencer).
+            ->when($tipo === 'rutinas', fn ($q) => $q->whereHas('memberships', fn ($m) => $m
+                ->vigentes()
+                ->whereDate('starts_at', '<=', today())
+                ->whereHas('plan', fn ($p) => $p->where('duration_days', 1))))
+            // Membresías: plan de mediana/larga duración vigente (> 1 día).
+            ->when($tipo === 'membresias', fn ($q) => $q->whereHas('memberships', fn ($m) => $m
+                ->vigentes()
+                ->whereDate('starts_at', '<=', today())
+                ->whereHas('plan', function ($p) use ($periodicidad) {
+                    $p->where('duration_days', '>', 1);
+                    // Filtro de periodicidad: acota por rango de días del
+                    // plan asociado a la membresía vigente.
+                    match ($periodicidad) {
+                        'mensual'    => $p->where('duration_days', '<=', 30),
+                        'trimestral' => $p->whereBetween('duration_days', [31, 90]),
+                        'semestral'  => $p->whereBetween('duration_days', [91, 180]),
+                        'anual'      => $p->where('duration_days', '>', 180),
+                        default      => null,
+                    };
+                })))
+            // Por vencer: membresía activa cuyo vencimiento cae en los
+            // próximos N días (mismo umbral que el cron y el botón de
+            // WhatsApp en el detalle del cliente). EXCLUYE pases diarios
+            // de raíz: un pase de 1 día vendido hoy vence mañana y sin
+            // este corte saturaba la pestaña con ruido que ya tiene su
+            // propia pestaña (Rutinas diarias). Quedan las membresías de
+            // duración real: semanales, mensuales, trimestrales,
+            // semestrales y anuales.
+            ->when($tipo === 'por-vencer', fn ($q) => $q->whereHas('memberships', fn ($m) => $m
+                ->vencenEn((int) config('sparta.aviso_vencimiento_dias', 7))
+                ->whereHas('plan', fn ($p) => $p->where('duration_days', '>', 1))))
+            ->when($asistieronHoy, fn ($q) => $q->where(function ($q) use ($inicioDia, $finDia) {
+                $q->whereHas('attendances', fn ($a) => $a->whereBetween('checked_in_at', [$inicioDia, $finDia]))
+                  ->orWhereHas('memberships', fn ($m) => $m
+                      ->whereDate('starts_at', '<=', today())
+                      ->whereDate('ends_at', '>=', today())
+                      ->whereHas('plan', fn ($p) => $p->where('duration_days', 1))
+                      // La venta que respalda el pase: registrada y cobrada
+                      // en el día en curso (paid_at/sold_at real de caja).
+                      ->whereHas('sales', fn ($s) => $s
+                          ->where('status', 'completada')
+                          ->whereDate('sold_at', today())));
+            }))
             ->with('currentMembership')
             ->with(['attendances' => fn ($q) => $q->latest('checked_in_at')->take(1)])
             ->when(GymContext::id() === null, fn ($q) => $q->with('gym'))
@@ -56,6 +121,11 @@ class MemberController extends Controller
 
         return view('admin.clientes.index', [
             'clientes' => $socios,
+            // Pestaña activa para la barra y el hidden del formulario.
+            'tipo'     => $tipo,
+            // Periodicidad seleccionada (para preseleccionar el option en el
+            // dropdown de la pestaña "Membresías").
+            'periodicidad' => $periodicidad,
             // Para el modal "Nueva matrícula" — vive en esta pantalla en vez
             // de una página propia (ver MatriculaController::store).
             'planes'   => auth()->user()->tienePermiso('clientes.crear')
@@ -176,8 +246,8 @@ class MemberController extends Controller
             // la tabla de abajo (esa usa $medidasPag, aparte).
             'measurements' => fn ($q) => $q->orderBy('measured_at'),
             'goals' => fn ($q) => $q->activos(),
-            'memberships' => fn ($q) => $q->latest('starts_at'),
-            'sales' => fn ($q) => $q->completadas()->latest('sold_at')->take(10),
+            'memberships' => fn ($q) => $q->with('createdBy')->latest('starts_at'),
+            'sales' => fn ($q) => $q->completadas()->with('items')->latest('sold_at')->take(10),
             'attendances' => fn ($q) => $q->latest('checked_in_at')->take(10),
         ]);
 
@@ -185,7 +255,7 @@ class MemberController extends Controller
         // de un x-data de Alpine, que Alpine evalúa como JS — un valor con
         // comillas ahí sería inyección). Se resuelve acá contra una lista
         // blanca de las 5 pestañas reales; cualquier otra cosa cae a 'resumen'.
-        $tabActiva = in_array($request->get('tab'), ['resumen', 'medidas', 'membresias', 'pagos', 'asistencia'], true)
+        $tabActiva = in_array($request->get('tab'), ['resumen', 'medidas', 'membresias', 'asistencia'], true)
             ? $request->get('tab')
             : 'resumen';
 

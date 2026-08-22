@@ -60,8 +60,9 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
     Route::post('clientes/{member}/objetivos', [MemberController::class, 'guardarObjetivo'])->name('clientes.objetivos.store');
     Route::get('clientes/{member}/carnet', [MemberController::class, 'carnet'])->name('clientes.carnet');
 
-    // El wizard vive como modal dentro de Clientes (admin.clientes.index) en
-    // vez de pantalla propia — solo queda el POST que procesa el envío.
+    // La matrícula vive como modal en la pestaña Registros de Ventas
+    // (SaleController::index le pasa $planes y $productos) — solo queda
+    // el POST que procesa el envío.
     Route::post('matricula', [MatriculaController::class, 'store'])
         ->name('matricula.store')->middleware('permiso:clientes.crear');
 
@@ -236,8 +237,8 @@ Route::prefix('admin')->name('admin.')->middleware('rol:admin,recepcion')->group
         ->name('ventas.anular')->middleware('permiso:pagos.anular');
 
     // Editar venta (concepto, método, estado)
-    Route::get('ventas/{venta}/edit', [SaleController::class, 'edit'])
-        ->name('ventas.edit')->middleware('permiso:ventas.registrar');
+    // La edición de una venta del día es un modal dentro de index
+    // (mismo patrón que el detalle): no hay página propia.
     Route::put('ventas/{venta}', [SaleController::class, 'update'])
         ->name('ventas.update')->middleware('permiso:ventas.registrar');
     Route::get('ventas/buscar-cliente', [SaleController::class, 'buscarCliente'])

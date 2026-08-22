@@ -128,13 +128,17 @@ $vacios = [
                                 @endif
                             </td>
                             <td data-etiqueta="nada">
-                                <div style="display:flex;gap:var(--e-2)">
-                                    <a class="btn btn--desnudo" href="{{ route('admin.inventario.show', $producto) }}"
-                                       aria-label="Ver detalle de {{ $producto->name }}">
+                                {{-- Acciones por icono, mismo patrón que Ventas:
+                                     ojo = ver (neutro), lápiz = editar (brasa),
+                                     papelera = desactivar (alerta). --}}
+                                <div class="acciones-icono">
+                                    <a class="accion-icono" href="{{ route('admin.inventario.show', $producto) }}"
+                                       title="Ver producto" aria-label="Ver producto {{ $producto->name }}">
                                         <x-icono nombre="ojo" />
                                     </a>
                                     @if ($puedeGestionar)
-                                        <button class="btn btn--desnudo" type="button"
+                                        <button class="accion-icono accion-icono--editar" type="button"
+                                                title="Editar producto" aria-label="Editar producto {{ $producto->name }}"
                                                 @click="window.dispatchEvent(new CustomEvent('abrir-inventario', { detail: @js([
                                                     'id' => $producto->id,
                                                     'name' => $producto->name,
@@ -149,7 +153,8 @@ $vacios = [
                                                 ]) }))">
                                             <x-icono nombre="lapiz" />
                                         </button>
-                                        <button class="btn btn--desnudo" type="button"
+                                        <button class="accion-icono accion-icono--peligro" type="button"
+                                                title="Desactivar producto" aria-label="Desactivar producto {{ $producto->name }}"
                                                 @click="$store.confirmar.abrir({
                                                     accion: '{{ route('admin.inventario.destroy', $producto) }}',
                                                     titulo: 'Desactivar producto',

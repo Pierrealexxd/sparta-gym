@@ -7,18 +7,14 @@
     @php $todas = \App\Support\GymContext::id() === null; @endphp
     <div style="display:flex;gap:var(--e-3)">
         {{-- Abre el modal de cliente nuevo (ver abajo), mismo patrón que
-             "Nueva matrícula" — antes era su propia pantalla
-             (admin.clientes.create, ya no existe como ruta). --}}
+              "Nueva matrícula" — antes era su propia pantalla
+              (admin.clientes.create, ya no existe como ruta).
+              La matrícula ya no vive acá: se matricula desde la caja,
+              pestaña Registros de /admin/ventas. --}}
         <button class="btn btn--vidrio" type="button"
             @if($todas) disabled data-title="Elige una sede primero" @else @click="window.dispatchEvent(new CustomEvent('abrir-cliente'))" @endif>
             <x-icono nombre="agregar" /> Nuevo cliente
         </button>
-        @if (auth()->user()->tienePermiso('clientes.crear'))
-            <button class="btn btn--fuego" type="button"
-                @if($todas) disabled data-title="Elige una sede primero" @else @click="window.dispatchEvent(new CustomEvent('abrir-matricula'))" @endif>
-                <x-icono nombre="agregar" /> Nueva matrícula
-            </button>
-        @endif
     </div>
 @endsection
 
@@ -38,6 +34,33 @@
         ];
     @endphp
 
+    {{-- Pestañas del listado, misma línea gráfica que Ventas. La pestaña
+         activa vive en la URL (?tipo=…) y sobrevive a búsqueda, filtros y
+         paginación: el formulario lleva un hidden tipo y el paginador usa
+         withQueryString(). Cambiar de pestaña conserva lo ya filtrado;
+         solo descarta la página actual. --}}
+    @php
+        $basePestana = request()->query();
+        unset($basePestana['page']);
+        $urlPestana = fn (string $pestana): string => request()->url() . '?' . http_build_query([...$basePestana, 'tipo' => $pestana]);
+        $vacios = [
+            'todos'      => 'No se encontraron clientes.',
+            'rutinas'    => 'Nadie con pase diario vigente.',
+            'membresias' => 'Nadie con membresía vigente.',
+            'por-vencer' => 'Nadie con membresía próxima a vencer.',
+        ];
+    @endphp
+    <nav class="pestanas__nav pestanas__nav--ancha" style="margin-bottom:var(--e-5)" aria-label="Filtrar clientes por tipo de plan">
+        <a class="pestanas__enlace" href="{{ $urlPestana('todos') }}" aria-current="{{ $tipo === 'todos' ? 'true' : 'false' }}">Todos</a>
+        <a class="pestanas__enlace" href="{{ $urlPestana('rutinas') }}" aria-current="{{ $tipo === 'rutinas' ? 'true' : 'false' }}">Rutinas diarias</a>
+        <a class="pestanas__enlace" href="{{ $urlPestana('membresias') }}" aria-current="{{ $tipo === 'membresias' ? 'true' : 'false' }}">Membresías</a>
+        <a class="pestanas__enlace" href="{{ $urlPestana('por-vencer') }}" aria-current="{{ $tipo === 'por-vencer' ? 'true' : 'false' }}">Por vencer</a>
+    </nav>
+
+    {{-- Toolbar adaptativo: cada pestaña muestra los filtros que le
+         corresponden. La búsqueda y la pestaña siempre están. Los demás
+         campos viajan como hidden cuando la pestaña no los usa, para que
+         el paginador (withQueryString) no pierda valores irrelevantes. --}}
     <form class="panel__toolbar" method="GET">
         <div class="panel__busqueda">
             <x-icono nombre="lupa" />
@@ -45,21 +68,49 @@
                    placeholder="Buscar por nombre, código o documento…">
         </div>
 
-        <select class="campo__control" name="estado" onchange="this.form.submit()">
-            <option value="">Todos los estados</option>
-            @if (request('asistencia') === 'hoy')
-                <option value="" selected>Asistieron hoy</option>
-            @endif
-            @foreach (['activo' => 'Activo', 'inactivo' => 'Inactivo', 'suspendido' => 'Suspendido'] as $v => $l)
-                <option value="{{ $v }}" @selected(request('estado') === $v)>{{ $l }}</option>
-            @endforeach
-        </select>
-                <button class="btn btn--vidrio" type="button"
-                        @if ($planDiario) data-title="Pase diario: {{ $planDiario->name }}" @endif
-                        onclick="this.form.elements.asistencia.value=this.form.elements.asistencia.value==='hoy'?'':'hoy';this.form.submit()">
-                    <x-icono nombre="entrada" /> {{ request('asistencia') === 'hoy' ? 'Ver todos' : 'Asistieron hoy' }}
-                </button>
+        {{-- Dropdown de estado: solo en Todos, Rutinas y Membresías.
+             En "Por vencer" se oculta porque la pestaña ya aísla por
+             definición las membresías próximas a expirar. --}}
+        @if ($tipo !== 'por-vencer')
+            <select class="campo__control" name="estado" onchange="this.form.submit()">
+                <option value="">Todos los estados</option>
+                @foreach (['activo' => 'Activo', 'inactivo' => 'Inactivo', 'suspendido' => 'Suspendido'] as $v => $l)
+                    <option value="{{ $v }}" @selected(request('estado') === $v)>{{ $l }}</option>
+                @endforeach
+            </select>
+        @else
+            <input type="hidden" name="estado" value="">
+        @endif
+
+        {{-- Dropdown de periodicidad: solo en la pestaña Membresías.
+             Permite segmentar por duración del plan (mensual, trimestral,
+             semestral, anual). En las demás pestañas viaja como hidden. --}}
+        @if ($tipo === 'membresias')
+            <select class="campo__control" name="periodicidad" onchange="this.form.submit()">
+                <option value="">Todas las membresías</option>
+                <option value="mensual" @selected(request('periodicidad') === 'mensual')>Mensual</option>
+                <option value="trimestral" @selected(request('periodicidad') === 'trimestral')>Trimestral</option>
+                <option value="semestral" @selected(request('periodicidad') === 'semestral')>Semestral</option>
+                <option value="anual" @selected(request('periodicidad') === 'anual')>Anual</option>
+            </select>
+        @else
+            <input type="hidden" name="periodicidad" value="">
+        @endif
+
+        {{-- Botón "Asistieron hoy": solo en Todos y Rutinas diarias.
+             En Membresías y Por vencer no aplica (los pases diarios van
+             por su propia pestaña). --}}
+        @if (in_array($tipo, ['todos', 'rutinas'], true))
+            <button class="btn btn--vidrio" type="button"
+                    @if ($planDiario) data-title="Pase diario: {{ $planDiario->name }}" @endif
+                    onclick="this.form.elements.asistencia.value=this.form.elements.asistencia.value==='hoy'?'':'hoy';this.form.submit()">
+                <x-icono nombre="entrada" /> {{ request('asistencia') === 'hoy' ? 'Ver todos' : 'Asistieron hoy' }}
+            </button>
+        @endif
         <input type="hidden" name="asistencia" value="{{ request('asistencia') === 'hoy' ? 'hoy' : '' }}">
+
+        {{-- La pestaña viaja con el formulario: filtrar o buscar no la pierde. --}}
+        <input type="hidden" name="tipo" value="{{ $tipo }}">
     </form>
 
     <div class="tabla-bulk" x-data="{
@@ -86,7 +137,7 @@
                                        aria-label="Seleccionar todos los de esta página">
                             </th>
                         @endif
-                        <th>Cliente</th><th class="tabla__oculta-movil">Código</th>@if ($modoTodas)<th>Sede</th>@endif<th>Membresía</th><th class="tabla__oculta-movil">Última asistencia</th><th>Estado</th><th></th>
+                        <th>Cliente</th><th class="tabla__oculta-movil">Código</th>@if ($modoTodas)<th>Sede</th>@endif<th>Membresía</th>@if ($tipo === 'por-vencer')<th class="tabla__oculta-movil">Faltan</th>@else<th class="tabla__oculta-movil">Última asistencia</th>@endif<th>Estado</th><th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -114,16 +165,37 @@
                                     <span style="color:var(--humo)">Sin membresía</span>
                                 @endif
                             </td>
-                            <td class="tabla__oculta-movil" data-etiqueta="Última asistencia">
-                                @if ($cliente->attendances->count())
-                                    <span class="estado" style="color:var(--ok)">{{ $cliente->attendances->first()->checked_in_at->format('d/m/Y H:i') }}</span>
-                                @else
-                                    <span style="color:var(--humo)">—</span>
-                                @endif
-                            </td>
+                            @if ($tipo === 'por-vencer')
+                                @php $dias = $cliente->currentMembership?->dias_restantes; @endphp
+                                <td class="tabla__oculta-movil" data-etiqueta="Faltan">
+                                    @if ($dias !== null)
+                                        <span class="estado" style="color:var(--brasa)">{{ $dias }} días</span>
+                                    @else
+                                        <span style="color:var(--humo)">—</span>
+                                    @endif
+                                </td>
+                            @else
+                                <td class="tabla__oculta-movil" data-etiqueta="Última asistencia">
+                                    @if ($cliente->attendances->count())
+                                        <span class="estado" style="color:var(--ok)">{{ $cliente->attendances->first()->checked_in_at->format('d/m/Y H:i') }}</span>
+                                    @else
+                                        <span style="color:var(--humo)">—</span>
+                                    @endif
+                                </td>
+                            @endif
                             <td data-etiqueta="Estado"><span class="estado estado--{{ $cliente->status }}">{{ ucfirst($cliente->status) }}</span></td>
                             <td data-etiqueta="nada">
                                 <div style="display:flex;gap:var(--e-2)">
+                                    @if ($tipo === 'por-vencer' && $cliente->phone)
+                                        @php
+                                            $nom = $cliente->first_name;
+                                            $msg = "Hola {$nom}\nTe informamos que tu membresía en Sparta GYM está próximo a vencer.\nNos encantaría que puedas renovarla y seguir entrenando con nosotros 💪🔥\nPara nosotros es un verdadero placer tenerte como parte de la familia Spartana.\n¡Te esperamos para seguir alcanzando tus objetivos juntos!";
+                                            $wa = 'https://wa.me/' . preg_replace('/\D+/', '', $cliente->phone) . '?text=' . urlencode($msg);
+                                        @endphp
+                                        <a class="btn btn--desnudo" href="{{ $wa }}" target="_blank" rel="noopener" title="Enviar recordatorio por WhatsApp">
+                                            <x-icono nombre="whatsapp" />
+                                        </a>
+                                    @endif
                                     <button class="btn btn--desnudo" type="button"
                                             @click="window.dispatchEvent(new CustomEvent('abrir-cliente-editar', { detail: @js([
                                                 'id' => $cliente->id,
@@ -158,7 +230,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="{{ $colspan }}" class="tabla__vacio"><x-estado-vacio icono="usuarios" texto="No se encontraron clientes." /></td></tr>
+                        <tr><td colspan="{{ $colspan }}" class="tabla__vacio"><x-estado-vacio icono="usuarios" texto="{{ $vacios[$tipo] }}" /></td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -402,299 +474,4 @@
         </div>
     </div>
 
-    @if (auth()->user()->tienePermiso('clientes.crear'))
-        {{-- Wizard de matrícula (cliente nuevo + plan + pago), como modal de
-             esta pantalla — antes era una página propia (admin.matricula.create).
-             Se abre solo: por el botón de arriba, o de entrada si la última
-             sumisión trajo errores de validación (para no perder lo tecleado). --}}
-        <div x-data="{ abierta: {{ $errors->any() && old('plan_id') !== null ? 'true' : 'false' }} }"
-             x-on:abrir-matricula.window="abierta = true"
-             @keydown.escape.window="abierta = false">
-            <div class="modal__fondo" x-show="abierta" x-cloak>
-                <div class="tarjeta modal__caja wizard"
-                     x-data="matricula()" x-init="init()" @click.outside="abierta = false">
-                    <div class="modal__cabecera">
-                        <h3>Nueva matrícula</h3>
-                        <button class="modal__cerrar" type="button" @click="abierta = false" aria-label="Cerrar"><x-icono nombre="cerrar" /></button>
-                    </div>
-
-                    @if ($errors->any())
-                        <div class="aviso aviso--error" role="alert" style="margin-bottom:var(--e-5)">
-                            {{ $errors->first() }}
-                        </div>
-                    @endif
-
-                    <div class="aviso" style="margin-bottom:var(--e-5)">
-                        Si el cliente ya existe, búscalo abajo para no volver a teclear sus datos.
-                    </div>
-
-                    {{-- Cabecera de pasos --}}
-                    <nav class="wizard__pasos" aria-label="Progreso de matrícula">
-                        <button type="button" class="wizard__paso" :class="{ 'is-activo': paso === 1, 'is-hecho': paso > 1 }" @click="irA(1)">
-                            <span>1</span> Cliente
-                        </button>
-                        <button type="button" class="wizard__paso" :class="{ 'is-activo': paso === 2, 'is-hecho': paso > 2 }" @click="irA(2)">
-                            <span>2</span> Plan
-                        </button>
-                        <button type="button" class="wizard__paso" :class="{ 'is-activo': paso === 3 }" @click="irA(3)">
-                            <span>3</span> Pago y confirmación
-                        </button>
-                    </nav>
-
-                    <form method="POST" action="{{ route('admin.matricula.store') }}" @submit="enviar($event)">
-                        @csrf
-
-                        {{-- ---------- PASO 1: CLIENTE ---------- --}}
-                        <div x-show="paso === 1" x-cloak class="formulario-panel">
-                            <input type="hidden" name="member_id" :value="clienteExistenteId">
-
-                            <x-buscador-cliente bloqueado-cuando="clienteExistenteId" />
-
-                            <div x-show="clienteExistenteId" x-cloak class="aviso aviso--accion">
-                                <span>Cliente existente seleccionado — se usa su ficha, no se crea una nueva.</span>
-                                <button type="button" class="btn btn--desnudo" @click="quitarClienteExistente()">Quitar</button>
-                            </div>
-
-                            <div class="formulario-panel__fila">
-                                <label class="campo"><span class="campo__etiqueta">Nombres</span>
-                                    <input class="campo__control" type="text" name="first_name" x-model="nuevo.first_name" @input="verificarDuplicado()" :disabled="clienteExistenteId"></label>
-                                <label class="campo"><span class="campo__etiqueta">Apellidos</span>
-                                    <input class="campo__control" type="text" name="last_name" x-model="nuevo.last_name" @input="verificarDuplicado()" :disabled="clienteExistenteId"></label>
-                                <label class="campo"><span class="campo__etiqueta">Documento</span>
-                                    <input class="campo__control" type="text" name="document" x-model="nuevo.document" @input="verificarDuplicado()" :disabled="clienteExistenteId"></label>
-                                <label class="campo"><span class="campo__etiqueta">Teléfono</span>
-                                    <input class="campo__control" type="text" name="phone" x-model="nuevo.phone" :disabled="clienteExistenteId"></label>
-                                <label class="campo"><span class="campo__etiqueta">Correo</span>
-                                    <input class="campo__control" type="email" name="email" x-model="nuevo.email" @input="verificarDuplicado()" :disabled="clienteExistenteId"></label>
-                                <label class="campo"><span class="campo__etiqueta">Altura (cm) — opcional</span>
-                                    <input class="campo__control" type="number" name="height_cm" min="100" max="260" x-model="nuevo.height_cm" :disabled="clienteExistenteId"></label>
-                            </div>
-
-                            {{-- Alerta anti-duplicados: misma regla que frena el
-                                 backend (documento o nombres+apellidos). Mientras
-                                 esté activa el paso 1 no avanza: se usa al cliente
-                                 existente o se descarta a mano. --}}
-                            <div x-show="duplicado && !clienteExistenteId" x-cloak class="aviso aviso--error aviso--accion">
-                                <div>
-                                    <b>Este cliente ya está registrado.</b>
-                                    <span x-show="duplicado">
-                                        <b x-text="duplicado?.cliente.full_name"></b><span x-text="duplicado?.cliente.code ? ' · código ' + duplicado.cliente.code : ''"></span> —
-                                        <span x-text="duplicado?.motivo === 'documento' ? 'mismo documento' : duplicado?.motivo === 'correo' ? 'mismo correo' : 'mismos nombres y apellidos'"></span>.
-                                    </span>
-                                    Sus campos ya están completados con su ficha.
-                                </div>
-                                <div style="display:flex;gap:var(--e-2)">
-                                    <button type="button" class="btn btn--fuego" @click="usarClienteExistente()">Usar este cliente</button>
-                                    <button type="button" class="btn btn--desnudo" @click="descartarDuplicado()">No es él / ella</button>
-                                </div>
-                            </div>
-                            <p x-show="verificando" x-cloak style="color:var(--humo);font-size:var(--t-xs);margin-top:var(--e-2)">Verificando si ya existe…</p>
-
-                            <div class="formulario-panel__acciones">
-                                <button type="button" class="btn btn--fuego" @click="siguiente()" :disabled="!puedeAvanzarPaso1()">Siguiente</button>
-                            </div>
-                        </div>
-
-                        {{-- ---------- PASO 2: PLAN ---------- --}}
-                        <div x-show="paso === 2" x-cloak class="formulario-panel">
-                            <div class="formulario-panel__fila">
-                                @foreach ($planes as $plan)
-                                    <label class="tarjeta tarjeta--interactiva" style="padding:var(--e-4);cursor:pointer"
-                                           :style="planId == {{ $plan->id }} ? 'border-color:var(--sangre-viva)' : ''">
-                                        <input type="radio" name="plan_id" value="{{ $plan->id }}" x-model="planId" style="display:none">
-                                        <b style="display:block;font-family:var(--f-display);font-size:var(--t-lg)">{{ $plan->name }}</b>
-                                        <span style="color:var(--bronce);font-family:var(--f-mono)">S/ {{ number_format($plan->price, 0) }}</span>
-                                        <span style="display:block;color:var(--humo);font-size:var(--t-sm)">{{ $plan->duracion_legible }}</span>
-                                    </label>
-                                @endforeach
-                            </div>
-
-                            <div class="formulario-panel__fila">
-                                <label class="campo"><span class="campo__etiqueta">Inicio</span>
-                                    <input class="campo__control" type="date" name="starts_at" x-model="startsAt"></label>
-                                <label class="campo"><span class="campo__etiqueta">Descuento (S/)</span>
-                                    <input class="campo__control" type="number" step="0.01" name="discount" x-model="discount"></label>
-                            </div>
-
-                            <div class="formulario-panel__acciones">
-                                <button type="button" class="btn btn--vidrio" @click="paso = 1">Atrás</button>
-                                <button type="button" class="btn btn--fuego" @click="siguiente()" :disabled="!planId">Siguiente</button>
-                            </div>
-                        </div>
-
-                        {{-- ---------- PASO 3: PAGO Y CONFIRMACIÓN ---------- --}}
-                        <div x-show="paso === 3" x-cloak class="formulario-panel">
-                            <label class="campo"><span class="campo__etiqueta">
-                                <input type="checkbox" name="registrar_pago" value="1" x-model="registrarPago"> Registrar pago ahora
-                            </span></label>
-
-                            <div x-show="registrarPago" x-cloak class="formulario-panel__fila">
-                                <label class="campo"><span class="campo__etiqueta">Método de pago</span>
-                                    <select class="campo__control" name="method" x-model="method">
-                                        @foreach (config('sparta.metodos_pago') as $v => $l)<option value="{{ $v }}">{{ $l }}</option>@endforeach
-                                    </select></label>
-                                <label class="campo"><span class="campo__etiqueta">Referencia</span>
-                                    <input class="campo__control" type="text" name="reference" x-model="reference"></label>
-                            </div>
-
-                            {{-- Matricular NO da acceso a /cliente por sí solo — son dos
-                                 trámites distintos (ver docs). Este checkbox los junta. --}}
-                            <label class="campo" style="margin-top:var(--e-4)"><span class="campo__etiqueta">
-                                <input type="checkbox" name="crear_login" value="1" x-model="crearLogin"> Crear login a "Mi cuenta" para este cliente
-                            </span></label>
-                            <div x-show="crearLogin" x-cloak class="formulario-panel__fila">
-                                <label class="campo"><span class="campo__etiqueta">Correo para el login</span>
-                                    <input class="campo__control" type="email" name="access_email" x-model="accessEmail" placeholder="correo@ejemplo.com"></label>
-                                <p style="color:var(--ceniza);font-size:var(--t-sm);align-self:end;margin-bottom:var(--e-3)">
-                                    Se genera una contraseña aleatoria que se muestra una sola vez al confirmar.
-                                </p>
-                            </div>
-
-                            {{-- Resumen final: nada de sorpresas al confirmar --}}
-                            <div class="tarjeta" style="padding:var(--e-5);background:var(--metal)">
-                                <div class="ficha__dato"><span>Cliente</span><span x-text="nuevo.first_name + ' ' + nuevo.last_name"></span></div>
-                                <div class="ficha__dato"><span>Plan</span><span x-text="nombrePlan()"></span></div>
-                                <div class="ficha__dato"><span>A pagar hoy</span><span x-text="registrarPago ? ('S/ ' + montoFinal()) : 'No se registra pago'"></span></div>
-                            </div>
-
-                            <div class="formulario-panel__acciones">
-                                <button type="button" class="btn btn--vidrio" @click="paso = 2">Atrás</button>
-                                <button class="btn btn--fuego btn--bloque" type="submit" :disabled="enviando">
-                                    <span x-show="!enviando">Confirmar matrícula</span>
-                                    <span x-show="enviando" x-cloak>Guardando…</span>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    @endif
 @endsection
-
-@push('scripts')
-<script>
-function matricula() {
-    return {
-        paso: 1, enviando: false,
-        nuevo: { first_name: '', last_name: '', document: '', phone: '', email: '', height_cm: '' },
-        planId: null, startsAt: new Date().toISOString().slice(0, 10), discount: 0,
-        registrarPago: true, method: 'efectivo', reference: '',
-        crearLogin: false, accessEmail: '',
-        planes: @json($planes->map(fn ($p) => ['id' => $p->id, 'name' => $p->name, 'price' => (float) $p->price])),
-
-        // Selector de cliente existente — elegir uno rellena el paso 1 solo.
-        buscarQ: '', resultados: [], clienteExistenteId: null,
-
-        // Anti-duplicados en vivo: mientras se teclea documento, correo o
-        // nombres completos se pregunta al backend; si ya existe, se rellena
-        // la ficha y el paso 1 queda bloqueado hasta decidir.
-        duplicado: null, verificando: false, _verifTimer: null,
-
-        init() {},
-
-        verificarDuplicado() {
-            if (this.clienteExistenteId) { this.duplicado = null; return; }
-            clearTimeout(this._verifTimer);
-
-            const n = this.nuevo;
-            const hayDoc    = n.document.trim().length >= 4;
-            const hayCorreo = /\S+@\S+\.\S+/.test(n.email.trim());
-            const hayNombre = n.first_name.trim().length >= 3 && n.last_name.trim().length >= 3;
-            // Sin criterio suficiente no se consulta (evita falsos positivos
-            // a medio teclear) y un duplicado previo caduca si borran campos.
-            if (!hayDoc && !hayCorreo && !hayNombre) { this.duplicado = null; this.verificando = false; return; }
-
-            this.verificando = true;
-            this._verifTimer = setTimeout(() => {
-                const p = new URLSearchParams();
-                if (hayDoc) p.set('document', n.document.trim());
-                if (hayCorreo) p.set('email', n.email.trim());
-                if (hayNombre) {
-                    p.set('first_name', n.first_name.trim());
-                    p.set('last_name', n.last_name.trim());
-                }
-                fetch('{{ route('admin.clientes.verificar') }}?' + p)
-                    .then(r => r.json())
-                    .then(d => {
-                        this.duplicado = d.coincide ? d : null;
-                        if (d.coincide) {
-                            // Autorrelleno con la ficha canónica del registro
-                            // existente; asignar por x-model no dispara @input,
-                            // así que no vuelve a consultar en bucle.
-                            const c = d.cliente;
-                            this.nuevo.first_name = c.first_name;
-                            this.nuevo.last_name = c.last_name;
-                            this.nuevo.document = c.document ?? '';
-                            this.nuevo.phone = c.phone ?? '';
-                            this.nuevo.email = c.email ?? '';
-                        }
-                    })
-                    .catch(() => {})
-                    .finally(() => { this.verificando = false; });
-            }, 400);
-        },
-        usarClienteExistente() {
-            if (!this.duplicado) return;
-            const c = this.duplicado.cliente;
-            this.duplicado = null;
-            this.elegirCliente(c);
-        },
-        descartarDuplicado() { this.duplicado = null; },
-
-        buscarCliente() {
-            if (this.buscarQ.trim().length < 2) { this.resultados = []; return; }
-            fetch('{{ route('admin.clientes.buscar') }}?q=' + encodeURIComponent(this.buscarQ))
-                .then(r => r.json())
-                .then(d => this.resultados = d)
-                .catch(() => this.resultados = []);
-        },
-        elegirCliente(m) {
-            this.clienteExistenteId = m.id;
-            this.nuevo = { first_name: m.first_name, last_name: m.last_name, document: m.document ?? '', phone: m.phone ?? '', email: m.email ?? '', height_cm: '' };
-            this.buscarQ = m.first_name + ' ' + m.last_name + (m.code ? ' (' + m.code + ')' : '');
-            this.resultados = [];
-            this.duplicado = null;
-        },
-        quitarClienteExistente() {
-            this.clienteExistenteId = null;
-            this.buscarQ = '';
-            this.nuevo = { first_name: '', last_name: '', document: '', phone: '', email: '' };
-            this.duplicado = null;
-        },
-
-        puedeAvanzarPaso1() {
-            // Duplicado sin resolver = no se avanza a plan ni pago. El
-            // backend lo vuelve a comprobar igual, por si llegan sin JS.
-            if (this.duplicado && !this.clienteExistenteId) return false;
-            return this.nuevo.first_name.trim() && this.nuevo.last_name.trim();
-        },
-        enviar($event) {
-            // Última línea del frontend: si se llegó al paso 3 saltándose el
-            // candado (p. ej. editaron los nombres tras elegir plan), el
-            // submit regresa al paso 1 en vez de mandar un duplicado.
-            if (this.duplicado && !this.clienteExistenteId) {
-                $event.preventDefault();
-                this.paso = 1;
-                return;
-            }
-            this.enviando = true;
-        },
-        siguiente() {
-            if (this.paso === 2 && !this.accessEmail) {
-                this.accessEmail = this.nuevo.email;
-            }
-            if (this.paso < 3) this.paso++;
-        },
-        irA(n) { if (n < this.paso || (n === 2 && this.puedeAvanzarPaso1()) || (n === 3 && this.planId)) this.paso = n; },
-
-        nombrePlan() { return this.planes.find(p => p.id == this.planId)?.name ?? '—'; },
-        montoFinal() {
-            const plan = this.planes.find(p => p.id == this.planId);
-            const precio = plan ? plan.price : 0;
-            return (precio - (Number(this.discount) || 0)).toFixed(2);
-        },
-    };
-}
-</script>
-@endpush

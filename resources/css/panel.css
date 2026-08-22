@@ -732,6 +732,43 @@
     min-height: 2.5rem;
 }
 
+/* ---------- Acciones de fila como iconos ----------
+   Columnas finales de Ventas e Inventario: lápiz y papelera en lugar de
+   texto — la forma se reconoce de vista y el title la nombra. Traducción
+   de la especificación (Tailwind → tokens, nada literal):
+   text-gray-400 → --ceniza · hover:text-orange-400 → --brasa ·
+   hover:text-red-400 → --alerta · transition-colors → --v-rapido.
+   Caja táctil de 2.5rem, igual que .btn--desnudo en tabla. */
+.acciones-icono {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--e-3);
+}
+.accion-icono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    text-decoration: none;
+    color: var(--ceniza);
+    cursor: pointer;
+    transition: color var(--v-rapido) var(--curva);
+}
+.accion-icono:hover { color: var(--hueso); }
+.accion-icono--editar:hover { color: var(--brasa); }
+.accion-icono--peligro:hover { color: var(--alerta); }
+.accion-icono:focus-visible {
+    outline: 2px solid var(--brasa);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+}
+
 /* En móvil se ocultan las columnas menos críticas de cada tabla (las que
    tienen la clase) para acortar el scroll horizontal — ver auditoría.
    Breakpoint: ver nota de "Tablas como tarjetas" debajo — debe coincidir
@@ -880,6 +917,31 @@
 .estado--inactivo, .estado--vencida, .estado--pendiente { color: var(--alerta); }
 .estado--suspendido, .estado--cancelada, .estado--anulado { color: var(--humo); }
 .estado--por-vencer { color: var(--brasa); }
+
+/* Badge: etiqueta fija para estados que reemplazan acciones
+   (p. ej. venta anulada: sin botones Editar/Anular, solo el badge). */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--f-mono);
+    font-size: .65rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: var(--r-sm);
+    border: 1px solid;
+    white-space: nowrap;
+}
+.badge--anulado {
+    color: var(--humo);
+    border-color: var(--humo);
+    background: rgba(128,128,128,.08);
+}
+
+/* Tachado de celdas en la fila anulada (acompaña al badge y a la fila
+   a media tinta): el importe se lee pero se entiende fuera de caja. */
+.line-through { text-decoration: line-through; }
 
 /* ---------- Notificaciones (toast) ----------
    Antes: .aviso quedaba fijo arriba del contenido, empujaba el layout y
@@ -1400,7 +1462,7 @@
    desalinear los círculos numerados. */
 .wizard__pasos {
     display: flex; gap: var(--e-4);
-    margin-bottom: var(--e-6);
+    margin-bottom: var(--e-5);
     border-bottom: 1px solid var(--acero);
     padding-bottom: var(--e-4);
     overflow-x: auto;
@@ -1421,6 +1483,203 @@
 .wizard__paso.is-activo span { background: var(--fuego); border-color: transparent; color: #fff; }
 .wizard__paso.is-hecho { color: var(--ceniza); }
 .wizard__paso.is-hecho span { background: var(--grafito-alto); border-color: var(--acero-claro); }
+
+/* ---------- Matriz del wizard (estilo hoja de cálculo) ----------
+   Celdas compactas con filo fino compartido: en vez de dibujar bordes,
+   el acero asoma por una rendija de 1px entre celdas opacas. Más
+   densidad que las tarjetas apiladas — el wizard completo cabe sin
+   scroll vertical. */
+.matriz {
+    display: grid; gap: 1px;
+    background: var(--acero);
+    border: 1px solid var(--acero);
+    border-radius: var(--r-sm);
+    overflow: hidden;
+}
+.matriz__fila {
+    display: grid;
+    grid-template-columns: minmax(7.5rem, 2fr) 3fr;
+    gap: 1px;
+    background: var(--acero);
+}
+/* Variante de dos celdas iguales (nombres/apellidos lado a lado) y de
+   celda única a todo el ancho (casillas, avisos). */
+.matriz__fila--dos { grid-template-columns: 1fr 1fr; }
+.matriz__fila--ancha { grid-template-columns: 1fr; }
+.matriz__fila > * {
+    background: var(--grafito);
+    padding: var(--e-2) var(--e-3);
+    min-width: 0;
+}
+.matriz__etiqueta {
+    display: flex; align-items: center; gap: var(--e-2);
+    font-family: var(--f-mono); font-size: var(--t-xs);
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--humo);
+    background: var(--grafito-alto);
+}
+.matriz__valor {
+    display: flex; align-items: center; gap: var(--e-2);
+    color: var(--hueso); font-size: var(--t-sm);
+}
+.matriz__valor .campo__control { width: 100%; padding-block: var(--e-2); }
+.matriz__fila--dos > .campo { display: flex; flex-direction: column; justify-content: center; }
+/* Pie del cuadro sumario: la cifra que cierra la transacción. */
+.matriz__total {
+    display: flex; justify-content: space-between; align-items: baseline; gap: var(--e-3);
+    background: var(--grafito-alto);
+    padding: var(--e-3) var(--e-4);
+    font-family: var(--f-mono); font-size: var(--t-xs);
+    letter-spacing: .06em; text-transform: uppercase; color: var(--ceniza);
+}
+.matriz__total b {
+    font-size: var(--t-xl); letter-spacing: 0;
+    color: var(--bronce); text-transform: none;
+}
+/* Tabla de planes dentro del wizard: celdas más juntas que en el
+   listado general para que el modal no crezca. */
+.wizard .tabla th, .wizard .tabla td { padding: var(--e-2) var(--e-3); white-space: normal; }
+
+/* Respiración vertical en la hoja de matrícula: buscador de cliente,
+   aviso de "Cliente existente" y la matriz apilaban sus filos sin
+   aire — se leían como una sola masa y las celdas se percibían
+   encimadas. Margen ENTRE bloques, nunca dentro: la matriz conserva
+   su cuadrícula de rendijas de 1px intacta. */
+.hoja-matricula > .buscador { margin-bottom: var(--e-3); }
+.hoja-matricula > .aviso { margin-block: var(--e-3); }
+
+/* ---------- Stepper de cantidades ----------
+   Consumo inmediato en la hoja de matrícula: − / cifra / + como una
+   sola pieza metálica. La cifra se lee contando, no tecleando. */
+.stepper {
+    display: inline-flex; align-items: stretch;
+    border: 1px solid var(--acero);
+    border-radius: var(--r-sm);
+    overflow: hidden;
+    background: var(--obsidiana);
+}
+.stepper__btn {
+    width: 2rem; display: inline-flex; align-items: center; justify-content: center;
+    border: none; background: transparent;
+    font-family: var(--f-mono); font-size: var(--t-md); line-height: 1;
+    color: var(--ceniza); cursor: pointer;
+    transition: background var(--v-rapido) var(--curva), color var(--v-rapido) var(--curva);
+}
+.stepper__btn:hover:not(:disabled) { background: var(--grafito-alto); color: var(--hueso); }
+.stepper__btn:disabled { opacity: .3; cursor: default; }
+.stepper__cifra {
+    min-width: 2.5rem; padding-inline: var(--e-2);
+    border-inline: 1px solid var(--acero);
+    font-family: var(--f-mono); font-size: var(--t-sm); color: var(--hueso);
+    text-align: center; align-self: center;
+}
+/* Variante compacta para caber en la fila del buscador de consumo:
+   misma pieza, menos metal. */
+.stepper--chico .stepper__btn { width: 1.75rem; font-size: var(--t-sm); }
+.stepper--chico .stepper__cifra { min-width: 2rem; padding-inline: var(--e-1); }
+
+/* ---------- Consumo inmediato (modal de matrícula) ----------
+   Buscador + lista de productos con scroll interno. Filas de una sola
+   línea —nombre truncado— porque el dato se escanea, no se lee.
+   La tabla genérica apilaba tarjetas a ≤960px y saturaba el modal;
+   esta pieza no cambia de forma: solo respira más cerca. */
+.consumo {
+    /* 44px: blanco táctil mínimo por fila; ~13.75rem: lista que scrollea
+       sin comerse el modal. Definidos aquí una vez, referenciados abajo. */
+    --consumo-fila-min: 2.75rem;
+    --consumo-max-h: 13.75rem;
+
+    border: 1px solid var(--acero);
+    border-radius: var(--r-lg);
+    background: var(--grafito);
+}
+.consumo__busca {
+    display: flex; align-items: center; gap: var(--e-2);
+    padding: var(--e-2) var(--e-3);
+    border-bottom: 1px solid var(--acero);
+    color: var(--humo);
+}
+.consumo__busca svg { flex: none; }
+.consumo__busca input {
+    flex: 1; min-width: 0;
+    border: none; background: transparent;
+    font-family: var(--f-texto); font-size: var(--t-sm); color: var(--hueso);
+}
+.consumo__busca input:focus { outline: none; }
+.consumo__busca input::placeholder { color: var(--humo); }
+/* Conteo junto a la etiqueta de sección: cuánta hierro va en el ticket. */
+.consumo__conteo {
+    margin-left: var(--e-2);
+    font-family: var(--f-mono); font-size: var(--t-xs);
+    letter-spacing: .06em; text-transform: none;
+    color: var(--brasa);
+}
+
+.consumo__lista { overflow-y: auto; max-height: var(--consumo-max-h); overscroll-behavior: contain; }
+.consumo__cabecera, .consumo__fila {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 4.25rem 6rem 4.75rem;
+    align-items: center;
+    gap: var(--e-2);
+    padding-inline: var(--e-3);
+}
+.consumo__cabecera {
+    position: sticky; top: 0; z-index: 1;
+    padding-block: var(--e-2);
+    /* Fondo OPACO (no --relleno-suave): al scrollear, las filas pasan
+       por debajo y un relleno translúcido las dejaba traslucirse bajo
+       la cabecera. Mismo color que la caja .consumo para que el filo
+       inferior sea lo único que la separa. */
+    background: var(--grafito);
+    border-bottom: 1px solid var(--acero);
+    font-family: var(--f-mono); font-size: .68rem;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ceniza);
+}
+.consumo__fila {
+    min-height: var(--consumo-fila-min);
+    padding-block: var(--e-2);
+    border-bottom: 1px solid color-mix(in srgb, var(--acero) 45%, transparent);
+    transition: background var(--v-rapido) var(--curva);
+}
+.consumo__fila:last-child { border-bottom: 0; }
+.consumo__fila:hover { background: var(--relleno-hover); }
+.consumo__fila.is-seleccionada { background: var(--relleno-hover); box-shadow: inset 3px 0 0 var(--brasa); }
+.consumo__nombre {
+    min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: var(--hueso); font-size: var(--t-sm); font-weight: 500;
+}
+.consumo__precio, .consumo__importe {
+    text-align: right;
+    font-family: var(--f-mono); font-size: var(--t-sm);
+    font-variant-numeric: tabular-nums;
+    color: var(--ceniza);
+}
+.consumo__importe { color: var(--hueso); }
+.consumo__cant { display: flex; justify-content: center; }
+.consumo__vacio { padding: var(--e-5); text-align: center; color: var(--humo); font-size: var(--t-sm); }
+
+/* En teléfono el modal mide lo que da la pantalla: las columnas fijas
+   pasan a medir su contenido (auto) con cifra compacta, y la caja gana
+   un poco de aire soltando padding. Las cuatro columnas siguen alineadas
+   en una sola línea por fila. */
+@media (max-width: 480px) {
+    .consumo { --consumo-max-h: 11.25rem; }
+    .consumo__cabecera, .consumo__fila {
+        grid-template-columns: minmax(0, 1fr) auto auto auto;
+        gap: var(--e-1);
+        padding-inline: var(--e-2);
+    }
+    .consumo__precio, .consumo__importe { font-size: var(--t-xs); }
+    .consumo__cabecera { font-size: .625rem; }
+    .modal__caja { padding: var(--e-4); }
+}
+
+@media (max-width: 480px) {
+    /* En móvil la etiqueta pasa arriba del control: dos columnas de
+       320px no dan para leer "método de pago" al lado del select. */
+    .matriz__fila:not(.matriz__fila--dos):not(.matriz__fila--ancha) { grid-template-columns: 1fr; }
+}
 
 /* ---------- Buscador de cliente con desplegable (x-buscador-cliente) ----------
    Un solo estilo para "escribir y elegir de una lista" en vez de las tres

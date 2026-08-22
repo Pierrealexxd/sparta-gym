@@ -81,7 +81,6 @@
                 <button class="pestanas__enlace" :aria-current="tab==='resumen'" @click="tab='resumen'" type="button">Resumen</button>
                 <button class="pestanas__enlace" :aria-current="tab==='medidas'" @click="tab='medidas'" type="button">Medidas</button>
                 <button class="pestanas__enlace" :aria-current="tab==='membresias'" @click="tab='membresias'" type="button">Membresías</button>
-                <button class="pestanas__enlace" :aria-current="tab==='pagos'" @click="tab='pagos'" type="button">Pagos</button>
                 <button class="pestanas__enlace" :aria-current="tab==='asistencia'" @click="tab='asistencia'" type="button">Asistencia</button>
             </nav>
 
@@ -256,61 +255,6 @@
             </div>
 
             <div x-show="tab==='membresias'" x-cloak class="pestana-panel">
-                <form class="tarjeta formulario-panel" method="POST" action="{{ route('admin.clientes.membresias.store', $cliente) }}">
-                    @csrf
-                    <div class="formulario-panel__fila">
-                        <label class="campo"><span class="campo__etiqueta">Plan</span>
-                            <select class="campo__control" name="plan_id" required>
-                                @foreach ($cliente->gym->plans()->activos()->get() ?? [] as $plan)
-                                    <option value="{{ $plan->id }}">{{ $plan->name }} — S/ {{ number_format($plan->price, 0) }}</option>
-                                @endforeach
-                            </select></label>
-                        <label class="campo"><span class="campo__etiqueta">Inicio</span>
-                            <input class="campo__control" type="date" name="starts_at" value="{{ now()->toDateString() }}" required></label>
-                        <label class="campo">
-                            <span class="campo__etiqueta">
-                                Fin (opcional)
-                                {{-- Tooltip en vez de texto fijo: la ayuda no
-                                     empuja el layout ni desalinea la fila.
-                                     x-teleport lo saca del DOM de .tarjeta —
-                                     ver el porqué en components.css junto a
-                                     .tooltip-flotante. --}}
-                                <span class="campo__ayuda" tabindex="0"
-                                      aria-label="En blanco: inicio + duración del plan. Úsalo si el cliente pagó un periodo distinto (p. ej. inscripción fuera del sistema)."
-                                      x-data="{ abierto: false, x: 0, y: 0 }"
-                                      @mouseenter="abierto = true; const r = $el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top"
-                                      @mouseleave="abierto = false"
-                                      @focus="abierto = true; const r = $el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top"
-                                      @blur="abierto = false">?
-                                    <template x-teleport="body">
-                                        {{-- Sin x-transition: combinado con x-teleport, Alpine
-                                             espera un transitionend que a veces no llega y el
-                                             tooltip se queda pegado abierto (visto en pantalla).
-                                             x-show solo (display:none ↔ '') es instantáneo y
-                                             no depende de ese evento. --}}
-                                        <div class="tooltip-flotante" x-show="abierto" x-cloak
-                                             :style="`left:${x}px;top:${y}px`">
-                                            En blanco: inicio + duración del plan. Úsalo si el cliente pagó un periodo distinto (p. ej. inscripción fuera del sistema).
-                                        </div>
-                                    </template>
-                                </span>
-                            </span>
-                            <input class="campo__control" type="date" name="ends_at" value="{{ old('ends_at') }}">
-                            @error('ends_at')
-                                <span class="campo__error">{{ $message }}</span>
-                            @enderror
-                        </label>
-                        <label class="campo"><span class="campo__etiqueta">Descuento</span>
-                            <input class="campo__control" type="number" step="0.01" name="discount" value="0"></label>
-                        <label class="campo"><span class="campo__etiqueta">Método de pago</span>
-                            <select class="campo__control" name="method" required>
-                                @foreach (config('sparta.metodos_pago') as $v => $l)
-                                    <option value="{{ $v }}">{{ $l }}</option>
-                                @endforeach
-                            </select></label>
-                    </div>
-                </form>
-
                 {{-- Recordatorio de WhatsApp: botón persistente (no se
                      autoculta) que aparece cuando la membresía vigente está
                      a punto de vencer o ya venció (mismo umbral que se usa
@@ -327,13 +271,11 @@
                         $planNombre = $membresiaActual->plan_name;
                         $fechaVencimiento = $membresiaActual->ends_at->translatedFormat('d \\d\\e F');
 
-                        $mensajeWhatsApp = match (true) {
-                            $diasRestantes > 4 => "Hola {$nombreCliente}, tu membresía de {$planNombre} vence en {$diasRestantes} días ({$fechaVencimiento}). ¿Deseas renovarla? 💪",
-                            $diasRestantes > 2 => "Hola {$nombreCliente}, te recordamos que tu membresía de {$planNombre} vence en {$diasRestantes} días ({$fechaVencimiento}). ¡No la dejes pasar! 💪",
-                            $diasRestantes > 0 => "Hola {$nombreCliente}, tu membresía de {$planNombre} vence MAÑANA ({$fechaVencimiento}). ¡Agenda tu renovación! 💪",
-                            $diasRestantes === 0 => "Hola {$nombreCliente}, tu membresía de {$planNombre} vence HOY. ¡Ven a renovarla! 💪",
-                            default => "Hola {$nombreCliente}, tu membresía de {$planNombre} venció hace " . abs($diasRestantes) . " días ({$fechaVencimiento}). ¡Te esperamos para renovar! 💪",
-                        };
+                        $mensajeWhatsApp = "Hola {$nombreCliente}\n"
+                            . "Te informamos que tu membresía en Sparta GYM está próximo a vencer.\n"
+                            . "Nos encantaría que puedas renovarla y seguir entrenando con nosotros 💪🔥\n"
+                            . "Para nosotros es un verdadero placer tenerte como parte de la familia Spartana.\n"
+                            . "¡Te esperamos para seguir alcanzando tus objetivos juntos!";
 
                         // preg_replace deja solo dígitos: quita +, espacios y
                         // guiones que la recepción pudo teclear al registrar
@@ -373,9 +315,23 @@
                         <x-estado-vacio icono="tarjetas" texto="Sin membresías todavía." />
                     </div>
                 @else
-                    <div class="membresias">
+                    <div class="membresias" x-data="{ memModal: null }">
                         @foreach ($cliente->memberships as $mem)
-                            <article class="tarjeta membresia">
+                            <article class="tarjeta membresia" style="cursor:pointer"
+                                     @click="memModal = {{ json_encode([
+                                         'plan'       => $mem->plan_name,
+                                         'estado'     => $etiquetasEstadoMem[$mem->estado_visual] ?? ucfirst($mem->estado_visual),
+                                         'estadoCss'  => $mem->estado_visual,
+                                         'inicio'     => $mem->starts_at->format('d/m/y'),
+                                         'fin'        => $mem->ends_at->format('d/m/y'),
+                                         'precio'     => number_format($mem->price, 2),
+                                         'descuento'  => number_format($mem->discount, 2),
+                                         'total'      => number_format($mem->total, 2),
+                                         'dias'       => $mem->dias_restantes,
+                                         'creadoPor'  => $mem->createdBy?->name ?? '—',
+                                         'creadoEl'   => $mem->created_at->translatedFormat('d \d\e F \d\e Y'),
+                                         'notas'      => $mem->notes,
+                                     ]) }}">
                                 <div class="membresia__cabecera">
                                     <h4 class="membresia__plan">{{ $mem->plan_name }}</h4>
                                     <span class="estado estado--{{ $mem->estado_visual }}">{{ $etiquetasEstadoMem[$mem->estado_visual] ?? ucfirst($mem->estado_visual) }}</span>
@@ -386,26 +342,71 @@
                                 </div>
                             </article>
                         @endforeach
+
+                        {{-- Modal de detalle de membresía --}}
+                        <div class="modal__fondo" x-show="memModal" x-cloak
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0"
+                             x-transition:enter-end="opacity-100"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100"
+                             x-transition:leave-end="opacity-0"
+                             @keydown.escape.window="memModal = null">
+                            <div class="tarjeta modal__caja" style="max-width:28rem"
+                                 @click.outside="memModal = null">
+                                <div class="modal__cabecera">
+                                    <h3 style="font-size:var(--t-lg)" x-text="memModal?.plan"></h3>
+                                    <button class="modal__cerrar" type="button" @click="memModal = null" aria-label="Cerrar"><x-icono nombre="cerrar" /></button>
+                                </div>
+
+                                <div class="matriz" style="margin-bottom:var(--e-4)">
+                                    <div class="matriz__fila">
+                                        <span class="matriz__etiqueta">Estado</span>
+                                        <span class="matriz__valor"><span class="estado" :class="'estado--' + (memModal?.estadoCss ?? '')" x-text="memModal?.estado"></span></span>
+                                    </div>
+                                    <div class="matriz__fila">
+                                        <span class="matriz__etiqueta">Inicio</span>
+                                        <span class="matriz__valor" x-text="memModal?.inicio"></span>
+                                    </div>
+                                    <div class="matriz__fila">
+                                        <span class="matriz__etiqueta">Fin</span>
+                                        <span class="matriz__valor" x-text="memModal?.fin"></span>
+                                    </div>
+                                    <div class="matriz__fila">
+                                        <span class="matriz__etiqueta">Días restantes</span>
+                                        <span class="matriz__valor" x-text="(memModal?.dias ?? 0) + ' días'"></span>
+                                    </div>
+                                    <div class="matriz__fila">
+                                        <span class="matriz__etiqueta">Precio</span>
+                                        <span class="matriz__valor" x-text="'S/ ' + (memModal?.precio ?? '0.00')"></span>
+                                    </div>
+                                    <div class="matriz__fila">
+                                        <span class="matriz__etiqueta">Descuento</span>
+                                        <span class="matriz__valor" x-text="'S/ ' + (memModal?.descuento ?? '0.00')"></span>
+                                    </div>
+                                    <div class="matriz__fila">
+                                        <span class="matriz__etiqueta">Total pagado</span>
+                                        <span class="matriz__valor" style="color:var(--bronce);font-weight:600" x-text="'S/ ' + (memModal?.total ?? '0.00')"></span>
+                                    </div>
+                                    <div class="matriz__fila">
+                                        <span class="matriz__etiqueta">Registrado por</span>
+                                        <span class="matriz__valor" x-text="memModal?.creadoPor"></span>
+                                    </div>
+                                    <div class="matriz__fila">
+                                        <span class="matriz__etiqueta">Fecha de registro</span>
+                                        <span class="matriz__valor" x-text="memModal?.creadoEl"></span>
+                                    </div>
+                                </div>
+
+                                <template x-if="memModal?.notas">
+                                    <div class="aviso" style="margin-bottom:0">
+                                        <b>Notas:</b> <span x-text="memModal?.notas"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
                     </div>
                 @endif
-            </div>
-
-            <div x-show="tab==='pagos'" x-cloak class="tabla-envoltorio">
-                <table class="tabla tabla--tarjetas">
-                    <thead><tr><th>Fecha</th><th>Concepto</th><th>Monto</th><th>Método</th></tr></thead>
-                    <tbody>
-                        @forelse ($cliente->sales as $pago)
-                            <tr>
-                                <td data-etiqueta="Fecha">{{ $pago->sold_at->format('d/m/y H:i') }}</td>
-                                <td class="es-fuerte" data-etiqueta="Concepto">{{ $pago->concept ?? ($pago->sale_type === 'producto' ? 'Venta de producto' : ucfirst($pago->sale_type)) }}</td>
-                                <td data-etiqueta="Monto">S/ {{ number_format($pago->total, 2) }}</td>
-                                <td data-etiqueta="Método">{{ $pago->metodo_legible }}</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="4" class="tabla__vacio" data-etiqueta=""><x-estado-vacio icono="billetera" texto="Sin ventas todavía." /></td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
             </div>
 
             <div x-show="tab==='asistencia'" x-cloak class="tabla-envoltorio">

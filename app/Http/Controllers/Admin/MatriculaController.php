@@ -12,7 +12,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Matrícula guiada: cliente + plan + pago en un solo trámite.
+ * Matrícula guiada: cliente + plan + productos de consumo inmediato + pago,
+ * todo en un mismo comprobante (MatriculaService).
  *
  * Paso 1 del modal admite elegir un cliente que ya existe (ver
  * MemberController::buscar, el selector) para no volver a teclear sus
@@ -20,8 +21,9 @@ use Illuminate\Validation\ValidationException;
  * MatriculaService::renovarMembresia. Sin elegir a nadie, sigue siendo
  * alta de cliente nuevo (nuevaMatricula).
  *
- * El formulario vive como modal dentro de admin.clientes.index (ver
- * MemberController::index, que le pasa $planes) — acá solo queda el store.
+ * El formulario vive como modal en la pestaña Registros de /admin/ventas
+ * (ver SaleController::index, que le pasa $planes y $productos) — acá solo
+ * queda el store.
  */
 class MatriculaController extends Controller
 {
@@ -60,6 +62,12 @@ class MatriculaController extends Controller
             // puede bloquear un alta en el mostrador. Misma regla que
             // PerfilController::actualizar.
             'height_cm'      => ['nullable', 'integer', 'min:100', 'max:260'],
+            // Consumo inmediato en el mismo ticket: el stock y la sede se
+            // validan dentro de MatriculaService (lockForUpdate), acá solo
+            // se comprueba la forma.
+            'productos'               => ['nullable', 'array'],
+            'productos.*.product_id'  => ['required', 'integer'],
+            'productos.*.quantity'    => ['required', 'integer', 'min:1'],
         ];
 
         if ($request->boolean('crear_login')) {
@@ -109,9 +117,9 @@ class MatriculaController extends Controller
         }
 
         if ($existente) {
-            $resultado = $this->matricula->renovarMembresia($existente, $plan, $datos, $request->user());
+            $resultado = $this->matricula->renovarMembresia($existente, $plan, $datos, $request->user(), $datos['productos'] ?? []);
         } else {
-            $resultado = $this->matricula->nuevaMatricula($datos, $plan, $datos, $request->user());
+            $resultado = $this->matricula->nuevaMatricula($datos, $plan, $datos, $request->user(), $datos['productos'] ?? []);
         }
         $socio = $resultado['member'];
 
@@ -125,8 +133,11 @@ class MatriculaController extends Controller
             $mensaje .= " Login creado — correo: <b>{$credenciales['email']}</b>, contraseña inicial: <b>{$credenciales['password']}</b> (entrégala y que la cambie en su primer ingreso).";
         }
 
+        // De vuelta a donde se inició el trámite: la pestaña Registros de
+        // ventas. El mensaje lleva el código para que el operador ubique al
+        // cliente sin salir de la caja.
         return redirect()
-            ->route('admin.clientes.show', $socio)
+            ->route('admin.ventas.index', ['tipo' => 'membresia'])
             ->with('exito', $mensaje);
     }
 }

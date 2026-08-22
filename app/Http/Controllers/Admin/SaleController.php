@@ -68,20 +68,45 @@ class SaleController extends Controller
         );
         $aplicaPlanDiario = $asistieronHoy && $tipo === 'membresia';
 
-        $ventas = Sale::with(['member', 'soldBy', 'items'])
-            ->whereIn('sale_type', $this->tiposDePestana($tipo))
-            ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
-            ->when($aplicaPlanDiario, $soloPlanDiario)
-            ->latest('sold_at')->paginate(10)->onEachSide(1)->withQueryString();
+        // Pestaña Productos: ventas CON líneas de producto — mostrador puro
+        // o matrícula mixta (la matrícula con agua/suplementos viaja en la
+        // misma venta). El filtro es "tiene items", no sale_type: así la
+        // misma venta aparece con su total completo en Registros y con solo
+        // sus productos acá. Membresías sin consumo no tienen items y no
+        // aparecen.
+        if ($tipo === 'producto') {
+            $ventas = Sale::with(['member', 'soldBy', 'items'])
+                ->withSum('items as bruto_items', 'total')
+                ->whereHas('items')
+                ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
+                ->latest('sold_at')->paginate(10)->onEachSide(1)->withQueryString();
 
-        $totalRango = Sale::completadas()->whereIn('sale_type', $this->tiposDePestana($tipo))
-            ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
-            ->when($aplicaPlanDiario, $soloPlanDiario)
-            ->sum('total');
-        $conteoRango = Sale::completadas()->whereIn('sale_type', $this->tiposDePestana($tipo))
-            ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
-            ->when($aplicaPlanDiario, $soloPlanDiario)
-            ->count();
+            // Bruto de líneas: lo que sumó el producto vendido, al margen del
+            // descuento global del ticket (que puede pertenecer a la
+            // membresía de una venta mixta).
+            $conItems = Sale::completadas()->whereHas('items')
+                ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta]);
+
+            $totalRango = (clone $conItems)
+                ->join('sale_items', 'sale_items.sale_id', '=', 'sales.id')
+                ->sum('sale_items.total');
+            $conteoRango = $conItems->count();
+        } else {
+            $ventas = Sale::with(['member', 'soldBy', 'items'])
+                ->whereIn('sale_type', $this->tiposDePestana($tipo))
+                ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
+                ->when($aplicaPlanDiario, $soloPlanDiario)
+                ->latest('sold_at')->paginate(10)->onEachSide(1)->withQueryString();
+
+            $totalRango = Sale::completadas()->whereIn('sale_type', $this->tiposDePestana($tipo))
+                ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
+                ->when($aplicaPlanDiario, $soloPlanDiario)
+                ->sum('total');
+            $conteoRango = Sale::completadas()->whereIn('sale_type', $this->tiposDePestana($tipo))
+                ->whereBetween(DB::raw('DATE(sold_at)'), [$desde, $hasta])
+                ->when($aplicaPlanDiario, $soloPlanDiario)
+                ->count();
+        }
 
         return view('admin.ventas.index', [
             'tipo'           => $tipo,
@@ -90,6 +115,13 @@ class SaleController extends Controller
             'asistieronHoy'  => $asistieronHoy,
             'ventasHoy'      => Sale::completadas()->delDia()->sum('total'),
             'productos'      => Product::activos()->orderBy('name')->get(),
+            // Para el modal de matrícula en la pestaña Registros: mismo
+            // criterio que MemberController::index (activos, por precio).
+            // Solo se cargan si el usuario puede matricular — en la otra
+            // pestaña o sin permiso no hay modal que alimentar.
+            'planes'         => auth()->user()->tienePermiso('clientes.crear')
+                ? Plan::activos()->orderBy('price')->get()
+                : collect(),
             'ventas'         => $ventas,
             'totalRango'     => $totalRango,
             'conteoRango'    => $conteoRango,
@@ -137,13 +169,17 @@ class SaleController extends Controller
             ] : null,
             'vendido_por'   => $venta->soldBy?->name ?? '—',
             'metodo'        => $venta->metodo_legible,
+            // Valor crudo para el select del editor de venta del día.
+            'method'        => $venta->method,
             'concepto'      => $venta->concept,
             'subtotal'      => (float) $venta->subtotal,
             'descuento'     => (float) $venta->discount,
             'total'         => (float) $venta->total,
             'estado'        => $venta->status,
+            'editable'      => $venta->status === 'completada' && $venta->sold_at->isToday(),
             'notas'         => $venta->notes,
             'items'         => $venta->items->map(fn ($i) => [
+                'product_id' => $i->product_id,
                 'producto'   => $i->product_name,
                 'cantidad'   => $i->quantity,
                 'unit_price' => (float) $i->unit_price,
@@ -378,41 +414,168 @@ class SaleController extends Controller
     }
 
     /**
-     * Muestra el formulario de edición de una venta.
+     * Edita una venta del MISMO DÍA: agrega o quita productos, cambia
+     * cantidades y ajusta método/descuento. La caja cuadra por fecha real
+     * de cobro (AGENTS.md), así que tocar una venta de otro día
+     * reescribiría el histórico ya reportado — fuera de hoy solo queda
+     * anular y volver a registrar.
+     *
+     * El stock se mueve por DELTA contra lo que la venta ya descontó:
+     * subir 1→3 Gatorades emite una salida por 2; bajar 3→1 una entrada
+     * por 2. Nunca products.stock directo (ver AGENTS.md).
      */
-    public function edit(Sale $venta): View
+    public function update(Request $request, Sale $venta): RedirectResponse|JsonResponse
     {
-        $this->authorize('manage', $venta);
-        return view('admin.ventas.edit', compact('venta'));
-    }
+        if ($venta->status !== 'completada') {
+            return back()->with('error', "La venta {$venta->number} no está completada: anúlala en vez de editarla.");
+        }
 
-    /**
-     * Actualiza los datos de una venta.
-     */
-    public function update(Request $request, Sale $venta): RedirectResponse
-    {
-        $this->authorize('manage', $venta);
+        if (! $venta->sold_at->isToday()) {
+            return back()->with('error', "La venta {$venta->number} es de otro día. Solo se editan ventas de hoy; para el pasado, anula y vuelve a registrar.");
+        }
 
         $datos = $request->validate([
-            'concept'      => ['sometimes', 'string', 'max:120'],
-            'method'       => ['sometimes', 'required', 'in:efectivo,transferencia,yape,plin,tarjeta,otro'],
-            'status'       => ['sometimes', 'string'],
+            'method'             => ['sometimes', 'required', 'in:efectivo,transferencia,yape,plin,tarjeta,otro'],
+            'discount'           => ['nullable', 'numeric', 'min:0'],
+            // quantity 0 = quitar la línea del ticket.
+            'items'              => ['nullable', 'array'],
+            'items.*.product_id' => ['required_with:items', 'integer'],
+            'items.*.quantity'   => ['required_with:items', 'integer', 'min:0'],
         ]);
 
-        $venta->update($datos);
+        try {
+            DB::transaction(function () use ($datos, $venta, $request) {
+                // Releer con candado: entre el clic y acá otra caja pudo
+                // tocar el stock de los mismos productos.
+                $venta = Sale::lockForUpdate()->findOrFail($venta->id);
 
-        // Notificar al admin (aunque él mismo se está editando, por si hay
-        // otro admin que necesite enterarse)
-        app(NotificationService::class)->dispararA(
-            app(User::where('role_id', Role::where('slug', 'admin')->value('id'))->first()),
-            'venta.editada',
-            'Venta editada',
-            "Un admin editó la venta {$venta->number}",
-            'ventas',
-            'media',
-            $venta->id,
-            route('admin.ventas.show', $venta),
-        );
+                // Porción fija del ticket: el precio congelado del plan en
+                // una matrícula mixta (subtotal original − líneas). En
+                // mostrador puro da 0. Se lee ANTES de tocar las líneas.
+                $porcionFija = round((float) $venta->subtotal - (float) $venta->items()->sum('total'), 2);
+
+                $actuales = $venta->items->keyBy('product_id');
+
+                if (array_key_exists('items', $datos)) {
+                    foreach ($datos['items'] as $entrada) {
+                        $productoId = (int) $entrada['product_id'];
+                        $deseada    = (int) $entrada['quantity'];
+                        $actual     = $actuales->get($productoId)?->quantity ?? 0;
+
+                        if ($deseada === $actual) {
+                            continue;
+                        }
+
+                        // El scope de BelongsToGym aísla por sede: un id de
+                        // otra sede no aparece y cae como no disponible.
+                        $producto = Product::where('id', $productoId)->lockForUpdate()->first();
+
+                        if (! $producto) {
+                            throw ValidationException::withMessages([
+                                'items' => 'Un producto de la edición ya no está disponible.',
+                            ]);
+                        }
+
+                        if ($deseada > $actual) {
+                            $delta = $deseada - $actual;
+
+                            if ($producto->stock < $delta) {
+                                throw ValidationException::withMessages([
+                                    'items' => "Stock insuficiente de \"{$producto->name}\": quedan {$producto->stock}.",
+                                ]);
+                            }
+
+                            $nuevoStock = $producto->stock - $delta;
+
+                            StockMovement::create([
+                                'product_id'     => $producto->id,
+                                'user_id'        => $request->user()->id,
+                                'type'           => 'salida',
+                                'quantity'       => $delta,
+                                'stock_after'    => $nuevoStock,
+                                'reason'         => 'Edición venta ' . $venta->number,
+                                'reference_type' => Sale::class,
+                                'reference_id'   => $venta->id,
+                            ]);
+
+                            $producto->update(['stock' => $nuevoStock]);
+
+                            if ($actual === 0) {
+                                // Línea nueva: nombre y precio se congelan AHORA,
+                                // igual que en el registro original.
+                                $venta->items()->create([
+                                    'product_id'   => $producto->id,
+                                    'product_name' => $producto->name,
+                                    'quantity'     => $deseada,
+                                    'unit_price'   => $producto->sale_price,
+                                    'total'        => round((float) $producto->sale_price * $deseada, 2),
+                                ]);
+                            } else {
+                                $actuales[$productoId]->update([
+                                    'quantity' => $deseada,
+                                    'total'    => round((float) $actuales[$productoId]->unit_price * $deseada, 2),
+                                ]);
+                            }
+                        } else {
+                            $delta = $actual - $deseada;
+                            $nuevoStock = $producto->stock + $delta;
+
+                            StockMovement::create([
+                                'product_id'     => $producto->id,
+                                'user_id'        => $request->user()->id,
+                                'type'           => 'entrada',
+                                'quantity'       => $delta,
+                                'stock_after'    => $nuevoStock,
+                                'reason'         => 'Edición venta ' . $venta->number,
+                                'reference_type' => Sale::class,
+                                'reference_id'   => $venta->id,
+                            ]);
+
+                            $producto->update(['stock' => $nuevoStock]);
+
+                            if ($deseada === 0) {
+                                $actuales[$productoId]->delete();
+                            } else {
+                                $actuales[$productoId]->update([
+                                    'quantity' => $deseada,
+                                    'total'    => round((float) $actuales[$productoId]->unit_price * $deseada, 2),
+                                ]);
+                            }
+                        }
+                    }
+                }
+
+                // Una venta de mostrador sin líneas ya no es una venta.
+                if ($venta->sale_type === 'producto' && $venta->items()->doesntExist()) {
+                    throw ValidationException::withMessages([
+                        'items' => 'La venta quedaría vacía: deja al menos un producto o anúlala.',
+                    ]);
+                }
+
+                $brutoLineas = round((float) $venta->fresh('items')->items->sum('total'), 2);
+                $descuento   = array_key_exists('discount', $datos) ? (float) $datos['discount'] : (float) $venta->discount;
+                $subtotal    = round($porcionFija + $brutoLineas, 2);
+
+                $venta->update([
+                    'method'    => $datos['method'] ?? $venta->method,
+                    'subtotal'  => $subtotal,
+                    'discount'  => $descuento,
+                    'total'     => max($subtotal - $descuento, 0),
+                ]);
+            });
+        } catch (ValidationException $e) {
+            // El editor manda fetch con Accept: application/json: que el
+            // framework devuelva 422 con los mensajes, no un redirect.
+            if ($request->expectsJson()) {
+                throw $e;
+            }
+
+            return back()->withErrors($e->errors());
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'numero' => $venta->number]);
+        }
 
         return back()->with('exito', "Venta {$venta->number} actualizada.");
     }

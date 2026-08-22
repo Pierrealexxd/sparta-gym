@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Models\Member;
 use App\Models\Membership;
 use App\Models\Plan;
+use App\Models\Product;
 use App\Models\Role;
 use App\Models\Sale;
+use App\Models\StockMovement;
 use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Support\Carbon;
@@ -26,10 +28,15 @@ class MatriculaService
     /**
      * Da de alta un cliente nuevo con su primera membresía. No hay
      * `renewed_from`: por definición no existe una membresía anterior.
+     *
+     * $productos son las líneas de consumo inmediato (agua, suplementos…)
+     * que viajan en el mismo ticket: [['product_id' => x, 'quantity' => n], …].
+     * Se registran como sale_items de la MISMA venta — un solo cobro, y la
+     * pestaña Productos de ventas puede seguir desglosándolas por su lado.
      */
-    public function nuevaMatricula(array $datosSocio, Plan $plan, array $datosMembresia, User $registradoPor): array
+    public function nuevaMatricula(array $datosSocio, Plan $plan, array $datosMembresia, User $registradoPor, array $productos = []): array
     {
-        return DB::transaction(function () use ($datosSocio, $plan, $datosMembresia, $registradoPor) {
+        return DB::transaction(function () use ($datosSocio, $plan, $datosMembresia, $registradoPor, $productos) {
             $socio = Member::create([
                 'first_name' => $datosSocio['first_name'],
                 'last_name'  => $datosSocio['last_name'],
@@ -48,7 +55,7 @@ class MatriculaService
 
             $venta = null;
             if ($datosMembresia['registrar_pago'] ?? false) {
-                $venta = $this->registrarVenta($socio, $membresia, $plan, $datosMembresia, $registradoPor);
+                $venta = $this->registrarVenta($socio, $membresia, $plan, $datosMembresia, $registradoPor, $productos);
             }
 
             $this->notificarMatricula($socio, $membresia, $registradoPor, renovacion: false);
@@ -61,9 +68,9 @@ class MatriculaService
      * Renueva la membresía de un cliente que ya existe. La anterior (si la
      * hay y sigue activa) queda encadenada vía `renewed_from` y pasa a vencida.
      */
-    public function renovarMembresia(Member $socio, Plan $plan, array $datosMembresia, User $registradoPor): array
+    public function renovarMembresia(Member $socio, Plan $plan, array $datosMembresia, User $registradoPor, array $productos = []): array
     {
-        return DB::transaction(function () use ($socio, $plan, $datosMembresia, $registradoPor) {
+        return DB::transaction(function () use ($socio, $plan, $datosMembresia, $registradoPor, $productos) {
             $anterior = $socio->currentMembership;
 
             $membresia = $this->crearMembresia($socio, $plan, $datosMembresia, $registradoPor, renewedFrom: $anterior?->id);
@@ -76,7 +83,7 @@ class MatriculaService
 
             $venta = null;
             if ($datosMembresia['registrar_pago'] ?? true) {
-                $venta = $this->registrarVenta($socio, $membresia, $plan, $datosMembresia, $registradoPor);
+                $venta = $this->registrarVenta($socio, $membresia, $plan, $datosMembresia, $registradoPor, $productos);
             }
 
             $this->notificarMatricula($socio, $membresia, $registradoPor, renovacion: true);
@@ -171,22 +178,94 @@ class MatriculaService
         );
     }
 
-    private function registrarVenta(Member $socio, Membership $membresia, Plan $plan, array $datos, User $registradoPor): Sale
+    /**
+     * Venta del trámite: la membresía como línea principal y, si el cliente
+     * llevó productos, estos como sale_items del MISMO comprobante — un solo
+     * cobro en caja (Registros muestra el total completo; Productos puede
+     * desglosar las líneas por su lado).
+     *
+     * El stock se descuenta igual que en venta de mostrador: StockMovement
+     * de salida + saldo nuevo, nunca products.stock a mano (AGENTS.md). Con
+     * lockForUpdate, dos matrículas simultáneas no pueden vender la última
+     * unidad dos veces.
+     */
+    private function registrarVenta(Member $socio, Membership $membresia, Plan $plan, array $datos, User $registradoPor, array $productos = []): Sale
     {
-        return Sale::create([
+        $lineas = [];
+        $brutoProductos = 0;
+
+        foreach ($productos as $item) {
+            // El global scope de BelongsToGym filtra por sede: un id de otra
+            // sede simplemente no aparece aquí.
+            $producto = Product::where('id', $item['product_id'] ?? 0)->lockForUpdate()->first();
+
+            if (! $producto) {
+                throw ValidationException::withMessages([
+                    'productos' => 'Un producto de la venta ya no está disponible.',
+                ]);
+            }
+
+            if ($producto->stock < $item['quantity']) {
+                throw ValidationException::withMessages([
+                    'productos' => "Stock insuficiente de \"{$producto->name}\": quedan {$producto->stock}.",
+                ]);
+            }
+
+            $totalLinea = round((float) $producto->sale_price * $item['quantity'], 2);
+            $brutoProductos += $totalLinea;
+
+            $lineas[] = [
+                'producto'   => $producto,
+                'cantidad'   => $item['quantity'],
+                'unit_price' => $producto->sale_price,
+                'total'      => $totalLinea,
+            ];
+        }
+
+        $descuento = (float) ($datos['discount'] ?? 0);
+        $subtotal  = round((float) $plan->price + $brutoProductos, 2);
+
+        $venta = Sale::create([
             'member_id'     => $socio->id,
             'sale_type'     => 'membresia',
             'membership_id' => $membresia->id,
             'sold_by'       => $registradoPor->id,
             'number'        => Sale::siguienteNumero(),
-            'subtotal'      => $plan->price,
-            'discount'      => $datos['discount'] ?? 0,
-            'total'         => $plan->price - ($datos['discount'] ?? 0),
+            'subtotal'      => $subtotal,
+            'discount'      => $descuento,
+            'total'         => max($subtotal - $descuento, 0),
             'concept'       => "Membresía {$plan->name}",
             'reference'     => $datos['reference'] ?? null,
             'method'        => $datos['method'],
             'status'        => 'completada',
             'sold_at'       => now(),
         ]);
+
+        foreach ($lineas as $linea) {
+            $venta->items()->create([
+                'product_id'   => $linea['producto']->id,
+                'product_name' => $linea['producto']->name,
+                'quantity'     => $linea['cantidad'],
+                'unit_price'   => $linea['unit_price'],
+                'total'        => $linea['total'],
+            ]);
+
+            $nuevoStock = $linea['producto']->stock - $linea['cantidad'];
+
+            StockMovement::create([
+                'product_id'     => $linea['producto']->id,
+                'user_id'        => $registradoPor->id,
+                'type'           => 'salida',
+                'quantity'       => $linea['cantidad'],
+                'stock_after'    => $nuevoStock,
+                'reason'         => 'Venta ' . $venta->number,
+                'reference_type' => Sale::class,
+                'reference_id'   => $venta->id,
+            ]);
+
+            $linea['producto']->update(['stock' => $nuevoStock]);
+        }
+
+        return $venta;
     }
 }
