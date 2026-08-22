@@ -59,13 +59,19 @@ return [
     | Application Timezone
     |--------------------------------------------------------------------------
     |
-    | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | Fijada en código a propósito, no por env: el "día de negocio" es
+    | siempre el de Lima (el gimnasio opera en Perú, sin horario de
+    | verano). Dejarla configurable hizo que un despliegue con el reloj
+    | en UTC sellara ventas y asistencias de la noche (19:00+ Lima) con
+    | la fecha del día siguiente, y esas filas desaparecían de filtros
+    | como "Asistieron hoy" o la caja del día. Las columnas son DATETIME/
+    | DATE ingenuas — sin conversión de sesión MySQL — así que esta zona
+    | es la ÚNICA fuente de verdad temporal de la app: now(), today(),
+    | created_at y sold_at hablan todos el mismo idioma.
     |
     */
 
-    'timezone' => env('APP_TIMEZONE', 'America/Lima'),
+    'timezone' => 'America/Lima',
 
     /*
     |--------------------------------------------------------------------------
