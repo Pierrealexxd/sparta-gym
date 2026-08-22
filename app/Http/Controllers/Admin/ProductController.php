@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
-use App\Models\StockAlert;
 use App\Models\StockMovement;
 use App\Support\GymContext;
 use Illuminate\Contracts\View\View;
@@ -154,12 +153,14 @@ class ProductController extends Controller
 
     public function destroy(Product $producto): RedirectResponse
     {
-        $producto->update(['is_active' => false]);
+        // Las ventas quedan intactas: sale_items.product_id es nullOnDelete
+        // y el nombre/precio del producto ya estaban congelados en la venta.
+        $producto->delete();
 
-        return back()->with('exito', 'Producto desactivado.');
+        return back()->with('exito', 'Producto eliminado.');
     }
 
-    /** Desactiva en lote los productos seleccionados — misma lógica que destroy(). */
+    /** Elimina en lote los productos seleccionados — misma lógica que destroy(). */
     public function destroyMasivo(Request $request): RedirectResponse
     {
         $ids = array_values(array_filter(array_map('intval', (array) $request->input('ids', []))));
@@ -168,15 +169,11 @@ class ProductController extends Controller
             return back()->with('error', 'Selecciona al menos un producto.');
         }
 
-        $desactivados = Product::whereIn('id', $ids)->update(['is_active' => false]);
+        // Las alertas de stock se limpian solas: stock_alerts.product_id
+        // tiene cascadeOnDelete en la base de datos.
+        $eliminados = Product::whereIn('id', $ids)->delete();
 
-        // El update masivo no dispara eventos de modelo (ver observer en
-        // AppServiceProvider): sin esta limpieza, las alertas de esos
-        // productos quedarían huérfanas pidiendo reposición de un artículo
-        // que ya no se vende.
-        StockAlert::whereIn('product_id', $ids)->delete();
-
-        return redirect()->route('admin.inventario.index')->with('exito', "{$desactivados} productos desactivados.");
+        return redirect()->route('admin.inventario.index')->with('exito', "{$eliminados} productos eliminados.");
     }
 
     /**

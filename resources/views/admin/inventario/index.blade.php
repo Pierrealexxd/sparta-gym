@@ -128,9 +128,9 @@ $vacios = [
                                 @endif
                             </td>
                             <td data-etiqueta="nada">
-                                {{-- Acciones por icono, mismo patrón que Ventas:
-                                     ojo = ver (neutro), lápiz = editar (brasa),
-                                     papelera = desactivar (alerta). --}}
+                                 {{-- Acciones por icono, mismo patrón que Ventas:
+                                      ojo = ver (neutro), lápiz = editar (brasa),
+                                      papelera = eliminar (alerta). --}}
                                 <div class="acciones-icono">
                                     <a class="accion-icono" href="{{ route('admin.inventario.show', $producto) }}"
                                        title="Ver producto" aria-label="Ver producto {{ $producto->name }}">
@@ -154,12 +154,12 @@ $vacios = [
                                             <x-icono nombre="lapiz" />
                                         </button>
                                         <button class="accion-icono accion-icono--peligro" type="button"
-                                                title="Desactivar producto" aria-label="Desactivar producto {{ $producto->name }}"
+                                                title="Eliminar producto" aria-label="Eliminar producto {{ $producto->name }}"
                                                 @click="$store.confirmar.abrir({
                                                     accion: '{{ route('admin.inventario.destroy', $producto) }}',
-                                                    titulo: 'Desactivar producto',
-                                                    mensaje: '¿Desactivar {{ $producto->name }}? Dejará de poder venderse.',
-                                                    etiqueta: 'Desactivar'
+                                                    titulo: 'Eliminar producto',
+                                                    mensaje: '¿Eliminar {{ $producto->name }}? No podrá recuperarse.',
+                                                    etiqueta: 'Eliminar'
                                                 })">
                                             <x-icono nombre="papelera" />
                                         </button>
@@ -182,12 +182,12 @@ $vacios = [
                 <button class="btn btn--fuego" type="button"
                         @click="$store.confirmar.abrir({
                             accion: '{{ route('admin.inventario.masivo') }}',
-                            titulo: 'Desactivar seleccionados',
-                            mensaje: 'Se desactivarán ' + seleccionados.length + ' productos. Dejarán de poder venderse.',
-                            etiqueta: 'Desactivar',
+                            titulo: 'Eliminar seleccionados',
+                            mensaje: 'Se eliminarán ' + seleccionados.length + ' productos. No podrá recuperarse.',
+                            etiqueta: 'Eliminar',
                             ids: seleccionados.slice()
                         })">
-                    <x-icono nombre="papelera" /> Desactivar seleccionados
+                    <x-icono nombre="papelera" /> Eliminar seleccionados
                 </button>
             </div>
         @endif
